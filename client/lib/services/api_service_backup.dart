@@ -7,27 +7,38 @@ import '../web/proxy.dart';
 
 class ApiService {
   final ProxyClient client;
-  final bool _useLocalGrading =
-      false; // Ensure this is set to false to use the API
+  final bool _useForceOfflineMode =
+      true; // TEMPORARY FOR TESTING - Force offline mode
+
+  // Default fallback response for when API fails
+  final Map<String, dynamic> _defaultFallback = {
+    'grade': 'B',
+    'feedback':
+        'Your answer shows good understanding, but could be more detailed.',
+    'suggestions': [
+      'Try to be more specific in your answer',
+      'Include key facts or dates if relevant',
+      'Consider explaining the underlying concepts',
+    ],
+  };
 
   // Constructor
   ApiService() : client = ProxyClient(Constants.apiBaseUrl) {
     debugPrint(
-      'API Service initialized with server connection: ${Constants.apiBaseUrl}',
+      '⚠️ API Service initialized with FORCED OFFLINE MODE for testing',
     );
   }
 
   Future<answer_model.Answer> gradeAnswer(answer_model.Answer answer) async {
     debugPrint('Grading answer: ${answer.question} => ${answer.userAnswer}');
 
-    // Use local grading if requested (for offline mode or debugging)
-    if (_useLocalGrading) {
-      debugPrint('Using local grading - skipping API call');
+    // TEMPORARY FOR TESTING - Skip API call and use smart fallback
+    if (_useForceOfflineMode) {
+      debugPrint('⚠️ Using forced offline mode - skipping API call');
       return _createSmartFallbackAnswer(answer);
     }
 
     try {
-      debugPrint('Making API request to ${Constants.apiBaseUrl}/api/grade');
       final response = await client
           .post(
             '/api/grade',
@@ -38,7 +49,7 @@ class ApiService {
             },
           )
           .timeout(
-            const Duration(seconds: 15),
+            const Duration(seconds: 10),
             onTimeout: () {
               debugPrint('API request timed out');
               throw TimeoutException('Server took too long to respond');
@@ -174,7 +185,46 @@ class ApiService {
       }
     }
 
-    // Formula questions
+    // Special case: check if the question is about a country that might not explicitly mention "capital"
+    for (final country in capitals.keys) {
+      if (question == country || question.contains(country)) {
+        final correctCapital = capitals[country]!;
+        debugPrint('Found country mention: $country, capital: $correctCapital');
+
+        // Check if the answer is correct
+        if (userAnswer.contains(correctCapital) ||
+            correctCapital.contains(userAnswer)) {
+          return answer_model.Answer(
+            flashcardId: answer.flashcardId,
+            question: answer.question,
+            userAnswer: answer.userAnswer,
+            grade: 'A',
+            feedback:
+                'Correct! The capital of ${country.toUpperCase()} is ${correctCapital.toUpperCase()}.',
+            suggestions: [
+              'You could also mention that it is the political center of the country',
+              'Consider adding some facts about this capital city',
+            ],
+          );
+        } else {
+          return answer_model.Answer(
+            flashcardId: answer.flashcardId,
+            question: answer.question,
+            userAnswer: answer.userAnswer,
+            grade: 'F',
+            feedback:
+                'Your answer is incorrect. The capital of ${country.toUpperCase()} is ${correctCapital.toUpperCase()}, not $userAnswer.',
+            suggestions: [
+              'Review the capitals of major countries',
+              'Create flashcards specifically for capitals',
+              'Try to associate the capital with something memorable about the country',
+            ],
+          );
+        }
+      }
+    }
+
+    // For math formula questions
     if (question.contains('formula') && question.contains('circle')) {
       if (userAnswer.contains('pi') || userAnswer.contains('π')) {
         return answer_model.Answer(
@@ -182,8 +232,7 @@ class ApiService {
           question: answer.question,
           userAnswer: answer.userAnswer,
           grade: 'A',
-          feedback:
-              'Correct! The formula for the area of a circle is A = pi*r^2.',
+          feedback: 'Correct! The formula for the area of a circle is A = πr².',
           suggestions: [
             'Remember that r represents the radius of the circle',
             'Practice applying this formula to calculate areas of different circles',
@@ -198,7 +247,7 @@ class ApiService {
           feedback:
               'Your answer is incorrect. You provided a unit of measurement, not a formula.',
           suggestions: [
-            'The formula for the area of a circle is A = pi*r^2',
+            'The formula for the area of a circle is A = πr²',
             'Remember that formulas describe calculations, not units',
             'Review basic geometry formulas',
           ],
@@ -206,13 +255,15 @@ class ApiService {
       }
     }
 
-    // If we can't determine a specific question type, use a generic F grade
-    debugPrint('No specific question type detected, using generic F grade');
+    // If we can't determine a specific question type, log this and use a generic F grade instead of the default B
+    debugPrint(
+      'No specific question type detected, using generic F grade instead of default B',
+    );
     return answer_model.Answer(
       flashcardId: answer.flashcardId,
       question: answer.question,
       userAnswer: answer.userAnswer,
-      grade: 'F',
+      grade: 'F', // Change from 'B' to 'F' for unrecognized answers
       feedback: 'Your answer is incorrect or insufficient for this question.',
       suggestions: [
         'Review the material related to this topic',

@@ -1,0 +1,1 @@
+start cmd /k "cd C:\Users\ratho\Desktop\data analysis\clone_github\flashcard\grading_flashcard_app\server && python test_api_endpoint.py"

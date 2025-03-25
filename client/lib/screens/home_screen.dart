@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/flashcard_set.dart';
 import '../services/flashcard_service.dart';
 import '../services/user_service.dart';
 import '../widgets/search_bar_widget.dart';
@@ -37,62 +36,66 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: SearchBarWidget(),
-                  ),
-                  Consumer<UserService>(
-                    builder: (context, userService, _) => UserProgressWidget(
-                      level: userService.level,
-                      xp: userService.xp,
-                      maxXp: userService.maxXp,
+        child:
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: SearchBarWidget(),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Consumer<UserService>(
-                    builder: (context, userService, _) => StreakCalendarWidget(
-                      streakDays: userService.weeklyStreak,
-                      currentDay: userService.currentDay,
+                    Consumer<UserService>(
+                      builder:
+                          (context, userService, _) => UserProgressWidget(
+                            level: userService.level,
+                            xp: userService.xp,
+                            maxXp: userService.maxXp,
+                          ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildFilterDropdown(),
-                        Row(
-                          children: [
-                            const Text('Last Updated'),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_downward),
-                              onPressed: () {},
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.filter_list),
-                              onPressed: () {},
-                            ),
-                          ],
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+                    Consumer<UserService>(
+                      builder:
+                          (context, userService, _) => StreakCalendarWidget(
+                            streakDays: userService.weeklyStreak,
+                            currentDay: userService.currentDay,
+                          ),
                     ),
-                  ),
-                  Expanded(
-                    child: Consumer<FlashcardService>(
-                      builder: (context, flashcardService, _) => 
-                        flashcardService.sets.isEmpty
-                          ? _buildEmptyState()
-                          : FlashcardSetListWidget(
-                              flashcardSets: flashcardService.sets,
-                            ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildFilterDropdown(),
+                          Row(
+                            children: [
+                              const Text('Last Updated'),
+                              IconButton(
+                                icon: const Icon(Icons.arrow_downward),
+                                onPressed: () {},
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.filter_list),
+                                onPressed: () {},
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    Expanded(
+                      child: Consumer<FlashcardService>(
+                        builder:
+                            (context, flashcardService, _) =>
+                                flashcardService.sets.isEmpty
+                                    ? _buildEmptyState()
+                                    : FlashcardSetListWidget(
+                                      flashcardSets: flashcardService.sets,
+                                    ),
+                      ),
+                    ),
+                  ],
+                ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -130,18 +133,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.edit_outlined,
-            size: 48,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.edit_outlined, size: 48, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             'Press the + button to create',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
           ),
         ],
       ),

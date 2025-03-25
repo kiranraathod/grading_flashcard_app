@@ -4,6 +4,7 @@ import 'screens/home_screen.dart';
 import 'utils/theme.dart';
 import 'services/flashcard_service.dart';
 import 'services/user_service.dart';
+import 'services/network_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -18,6 +19,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => FlashcardService()),
         ChangeNotifierProvider(create: (_) => UserService()),
+        ChangeNotifierProvider(create: (_) => NetworkService()),
       ],
       child: MaterialApp(
         title: 'LLM Flashcards',

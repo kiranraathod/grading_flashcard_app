@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
 import '../models/answer.dart' as answer_model;
 import '../services/speech_to_text_service.dart';
@@ -80,21 +79,22 @@ class _StudyScreenState extends State<StudyScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ResultScreen(
-            answer: gradedAnswer,
-            correctAnswer: widget.set.flashcards[_currentIndex].answer,
-            onContinue: () {
-              Navigator.pop(context);
-              _navigateToNext();
-            },
-          ),
+          builder:
+              (context) => ResultScreen(
+                answer: gradedAnswer,
+                correctAnswer: widget.set.flashcards[_currentIndex].answer,
+                onContinue: () {
+                  Navigator.pop(context);
+                  _navigateToNext();
+                },
+              ),
         ),
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error submitting answer: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error submitting answer: $e')));
       }
     } finally {
       if (mounted) {
@@ -118,66 +118,69 @@ class _StudyScreenState extends State<StudyScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(
-                  child: PageView.builder(
-                    controller: _pageController,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _currentIndex = index;
-                        _isMarkedForReview = false;
-                      });
-                    },
-                    itemCount: widget.set.flashcards.length,
-                    itemBuilder: (context, index) {
-                      return FlashcardWidget(
-                        flashcard: widget.set.flashcards[index],
-                      );
-                    },
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                children: [
+                  Expanded(
+                    child: PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentIndex = index;
+                          _isMarkedForReview = false;
+                        });
+                      },
+                      itemCount: widget.set.flashcards.length,
+                      itemBuilder: (context, index) {
+                        return FlashcardWidget(
+                          flashcard: widget.set.flashcards[index],
+                        );
+                      },
+                    ),
                   ),
-                ),
-                AnswerInputWidget(
-                  speechService: _speechService,
-                  onSubmit: _submitAnswer,
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      ElevatedButton(
-                        onPressed: _currentIndex > 0 ? _navigateToPrevious : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6750A4),
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Previous'),
-                      ),
-                      Text(
-                        '${_currentIndex + 1}/${widget.set.flashcards.length}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: _currentIndex < widget.set.flashcards.length - 1
-                            ? _navigateToNext
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6750A4),
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Next'),
-                      ),
-                    ],
+                  AnswerInputWidget(
+                    speechService: _speechService,
+                    onSubmit: _submitAnswer,
                   ),
-                ),
-              ],
-            ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        ElevatedButton(
+                          onPressed:
+                              _currentIndex > 0 ? _navigateToPrevious : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6750A4),
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Previous'),
+                        ),
+                        Text(
+                          '${_currentIndex + 1}/${widget.set.flashcards.length}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed:
+                              _currentIndex < widget.set.flashcards.length - 1
+                                  ? _navigateToNext
+                                  : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6750A4),
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Next'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
     );
   }
 }

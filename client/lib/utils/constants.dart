@@ -17,4 +17,31 @@ class Constants {
     'D': 'Limited understanding',
     'F': 'Incorrect or insufficient answer',
   };
+  
+  // Default suggestions for different grades
+  static const Map<String, List<String>> defaultSuggestions = {
+    'A': [
+      'Great job! Try exploring more advanced concepts on this topic',
+      'Consider creating more challenging flashcards on this subject'
+    ],
+    'B': [
+      'Review the minor details you missed',
+      'Try rephrasing your answer for more clarity'
+    ],
+    'C': [
+      'Focus on the key concepts you missed',
+      'Try creating additional flashcards on this topic',
+      'Review related material to strengthen your understanding'
+    ],
+    'D': [
+      'Consider revisiting the fundamental concepts',
+      'Break down this topic into smaller, more manageable parts',
+      'Try using different learning resources for this topic'
+    ],
+    'F': [
+      'Review the core material thoroughly',
+      'Try a different approach to learning this topic',
+      'Consider seeking additional help or resources'
+    ],
+  };
 }

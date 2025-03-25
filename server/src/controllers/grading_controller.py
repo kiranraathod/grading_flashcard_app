@@ -1,5 +1,6 @@
 from src.services.llm_service import LLMService
 import logging
+import traceback
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -12,12 +13,12 @@ class GradingController:
     
     async def grade_answer(self, flashcard_id, question, user_answer):
         """Grade the user's answer to a flashcard question"""
-        logger.info(f"GradingController.grade_answer called with: flashcard_id={flashcard_id}, question={question}, user_answer={user_answer}")
+        logger.debug(f"GradingController.grade_answer called with: flashcard_id={flashcard_id}, question={question}, user_answer={user_answer}")
         
         try:
-            logger.info("Calling LLM service grade_answer method...")
+            logger.debug("Calling LLM service grade_answer method...")
             result = await self.llm_service.grade_answer(question, user_answer)
-            logger.info(f"LLM service returned result: {result}")
+            logger.debug(f"LLM service returned result: {result}")
             
             # Cache the suggestions for this flashcard
             if 'suggestions' in result and result['suggestions']:
@@ -25,15 +26,27 @@ class GradingController:
                 
             return result
         except Exception as e:
-            import traceback
             logger.error(f"Error in GradingController.grade_answer: {str(e)}")
             logger.error(traceback.format_exc())
-            raise
+            
+            # Create a default response to maintain stability
+            logger.warning("⚠️ Returning emergency default grade due to error!")
+            default_response = {
+                'grade': 'F',  # Default to F instead of B for safety
+                'feedback': f'Error grading answer. The system encountered an issue processing your response: {str(e)}',
+                'suggestions': [
+                    'Please try again with a different answer',
+                    'If this error persists, contact support'
+                ]
+            }
+            return default_response
     
     async def get_suggestions(self, flashcard_id):
         """Get improvement suggestions for a specific flashcard"""
+        logger.debug(f"Getting suggestions for flashcard_id={flashcard_id}")
         if flashcard_id in self.suggestion_cache:
             suggestions = self.suggestion_cache[flashcard_id]
+            logger.debug(f"Using cached suggestions: {suggestions}")
         else:
             # If no cached suggestions, provide generic ones
             suggestions = [
@@ -41,6 +54,7 @@ class GradingController:
                 "Review the key concepts related to this topic",
                 "Practice recalling this information regularly"
             ]
+            logger.debug(f"Using default suggestions: {suggestions}")
             
         return {
             'flashcardId': flashcard_id,
@@ -50,5 +64,6 @@ class GradingController:
     async def submit_feedback(self, flashcard_id, user_feedback):
         """Store user feedback on the grading process"""
         # In a real application, this would be stored in a database
+        logger.debug(f"Storing feedback for flashcard_id={flashcard_id}: {user_feedback}")
         self.feedback_store[flashcard_id] = user_feedback
         return True
