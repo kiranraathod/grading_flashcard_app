@@ -7,8 +7,6 @@ import '../web/proxy.dart';
 
 class ApiService {
   final ProxyClient client;
-  final bool _useLocalGrading =
-      false; // Ensure this is set to false to use the API
 
   // Constructor
   ApiService() : client = ProxyClient(Constants.apiBaseUrl) {
@@ -19,12 +17,6 @@ class ApiService {
 
   Future<answer_model.Answer> gradeAnswer(answer_model.Answer answer) async {
     debugPrint('Grading answer: ${answer.question} => ${answer.userAnswer}');
-
-    // Use local grading if requested (for offline mode or debugging)
-    if (_useLocalGrading) {
-      debugPrint('Using local grading - skipping API call');
-      return _createSmartFallbackAnswer(answer);
-    }
 
     try {
       debugPrint('Making API request to ${Constants.apiBaseUrl}/api/grade');
@@ -62,16 +54,16 @@ class ApiService {
             suggestions: List<String>.from(responseData['suggestions']),
           );
         } else {
-          debugPrint('Invalid response data format, using smart fallback');
-          return _createSmartFallbackAnswer(answer);
+          debugPrint('Invalid response data format');
+          return _createNotConnectedAnswer(answer);
         }
       } else {
         debugPrint('API error: ${response.statusCode} - ${response.body}');
-        return _createSmartFallbackAnswer(answer);
+        return _createNotConnectedAnswer(answer);
       }
     } catch (e) {
       debugPrint('Error during API call: $e');
-      return _createSmartFallbackAnswer(answer);
+      return _createNotConnectedAnswer(answer);
     }
   }
 
@@ -102,122 +94,17 @@ class ApiService {
     return true;
   }
 
-  answer_model.Answer _createSmartFallbackAnswer(answer_model.Answer answer) {
-    // Extract relevant information
-    final String question = answer.question.toLowerCase();
-    final String userAnswer = answer.userAnswer.toLowerCase();
-
-    debugPrint('Smart fallback grading: "$question" => "$userAnswer"');
-
-    // Create a map of countries and their capitals for checking
-    final Map<String, String> capitals = {
-      'usa': 'washington d.c.',
-      'united states': 'washington d.c.',
-      'america': 'washington d.c.',
-      'us': 'washington d.c.',
-      'india': 'delhi',
-      'france': 'paris',
-      'germany': 'berlin',
-      'japan': 'tokyo',
-      'uk': 'london',
-      'united kingdom': 'london',
-      'canada': 'ottawa',
-      'australia': 'canberra',
-      'china': 'beijing',
-      'russia': 'moscow',
-      'brazil': 'brasilia',
-      'italy': 'rome',
-      'spain': 'madrid',
-    };
-
-    // Check for capital city questions
-    if (question.contains('capital')) {
-      debugPrint('Detected capital question');
-
-      // Check which country is mentioned in the question
-      for (final country in capitals.keys) {
-        if (question.contains(country)) {
-          final correctCapital = capitals[country]!;
-          debugPrint('Found country: $country, capital: $correctCapital');
-
-          // Check if the answer is correct
-          if (userAnswer.contains(correctCapital) ||
-              correctCapital.contains(userAnswer)) {
-            return answer_model.Answer(
-              flashcardId: answer.flashcardId,
-              question: answer.question,
-              userAnswer: answer.userAnswer,
-              grade: 'A',
-              feedback:
-                  'Correct! The capital of ${country.toUpperCase()} is ${correctCapital.toUpperCase()}.',
-              suggestions: [
-                'You could also mention that it is the political center of the country',
-                'Consider adding some facts about this capital city',
-              ],
-            );
-          } else {
-            return answer_model.Answer(
-              flashcardId: answer.flashcardId,
-              question: answer.question,
-              userAnswer: answer.userAnswer,
-              grade: 'F',
-              feedback:
-                  'Your answer is incorrect. The capital of ${country.toUpperCase()} is ${correctCapital.toUpperCase()}, not $userAnswer.',
-              suggestions: [
-                'Review the capitals of major countries',
-                'Create flashcards specifically for capitals',
-                'Try to associate the capital with something memorable about the country',
-              ],
-            );
-          }
-        }
-      }
-    }
-
-    // Formula questions
-    if (question.contains('formula') && question.contains('circle')) {
-      if (userAnswer.contains('pi') || userAnswer.contains('π')) {
-        return answer_model.Answer(
-          flashcardId: answer.flashcardId,
-          question: answer.question,
-          userAnswer: answer.userAnswer,
-          grade: 'A',
-          feedback:
-              'Correct! The formula for the area of a circle is A = pi*r^2.',
-          suggestions: [
-            'Remember that r represents the radius of the circle',
-            'Practice applying this formula to calculate areas of different circles',
-          ],
-        );
-      } else if (userAnswer.contains('meter') || userAnswer.contains('cm')) {
-        return answer_model.Answer(
-          flashcardId: answer.flashcardId,
-          question: answer.question,
-          userAnswer: answer.userAnswer,
-          grade: 'F',
-          feedback:
-              'Your answer is incorrect. You provided a unit of measurement, not a formula.',
-          suggestions: [
-            'The formula for the area of a circle is A = pi*r^2',
-            'Remember that formulas describe calculations, not units',
-            'Review basic geometry formulas',
-          ],
-        );
-      }
-    }
-
-    // If we can't determine a specific question type, use a generic F grade
-    debugPrint('No specific question type detected, using generic F grade');
+  answer_model.Answer _createNotConnectedAnswer(answer_model.Answer answer) {
     return answer_model.Answer(
       flashcardId: answer.flashcardId,
       question: answer.question,
       userAnswer: answer.userAnswer,
-      grade: 'F',
-      feedback: 'Your answer is incorrect or insufficient for this question.',
+      grade: 'N/A',
+      feedback: 'Grading system is not connected',
       suggestions: [
-        'Review the material related to this topic',
-        'Try to be more specific in your answer',
-        'Consider studying this topic in more depth',
+        'Please check your internet connection',
+        'Ensure the grading server is running',
+        'Try again later',
       ],
     );
   }

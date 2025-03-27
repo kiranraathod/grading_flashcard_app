@@ -10,6 +10,10 @@ class Constants {
     }
   }
 
+  // Supabase configuration
+  static const String supabaseUrl = 'https://cdigijaqeovvtybvtbpl.supabase.co';
+  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkaWdpamFxZW92dnR5YnZ0YnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5NzY1MjksImV4cCI6MjA1ODU1MjUyOX0.j-AxiO_0hpkFqZ93Af9vfbDNaGP5YU1CSfTJLSk3ceQ';
+
   static const Map<String, String> gradeDescriptions = {
     'A': 'Excellent understanding',
     'B': 'Good understanding with minor gaps',

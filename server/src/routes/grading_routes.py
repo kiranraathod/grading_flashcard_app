@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 from src.controllers.grading_controller import GradingController
+from src.middleware.auth_middleware import auth_required
+from src.utils.async_utils import async_route
 import logging
 import traceback
 
@@ -11,6 +13,8 @@ grading_bp = Blueprint('grading', __name__)
 grading_controller = GradingController()
 
 @grading_bp.route('/grade', methods=['POST'])
+@auth_required
+@async_route
 async def grade_answer():
     try:
         data = request.json
@@ -62,6 +66,8 @@ async def grade_answer():
         }), 500
 
 @grading_bp.route('/suggestions', methods=['GET'])
+@auth_required
+@async_route
 async def get_suggestions():
     try:
         flashcard_id = request.args.get('flashcardId')
@@ -80,6 +86,8 @@ async def get_suggestions():
         return jsonify({'error': str(e)}), 500
 
 @grading_bp.route('/feedback', methods=['POST'])
+@auth_required
+@async_route
 async def submit_feedback():
     try:
         data = request.json

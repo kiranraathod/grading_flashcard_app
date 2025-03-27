@@ -6,6 +6,7 @@ import sys
 import json
 from dotenv import load_dotenv
 from src.routes.grading_routes import grading_bp
+from src.routes.spaced_repetition_routes import spaced_bp
 
 # Configure logging
 logging.basicConfig(
@@ -19,8 +20,10 @@ logger = logging.getLogger(__name__)
 
 # Set log levels for specific modules
 logging.getLogger('src.services.llm_service').setLevel(logging.DEBUG)
+logging.getLogger('src.services.supabase_service').setLevel(logging.DEBUG)
 logging.getLogger('src.controllers.grading_controller').setLevel(logging.DEBUG)
 logging.getLogger('src.routes.grading_routes').setLevel(logging.DEBUG)
+logging.getLogger('src.routes.spaced_repetition_routes').setLevel(logging.DEBUG)
 logging.getLogger('werkzeug').setLevel(logging.INFO)
 
 # Load environment variables
@@ -58,6 +61,7 @@ def create_app():
     
     # Register blueprints
     app.register_blueprint(grading_bp, url_prefix='/api')
+    app.register_blueprint(spaced_bp, url_prefix='/api/spaced')
     
     @app.route('/')
     def health_check():
