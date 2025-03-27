@@ -5,7 +5,12 @@ import 'signup_screen.dart';
 import 'reset_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final String? message;
+  
+  const LoginScreen({
+    super.key, 
+    this.message,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -61,10 +66,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Get the screen size for proper sizing when used as a popup
+    final Size screenSize = MediaQuery.of(context).size;
+    final bool isPopup = ModalRoute.of(context)?.settings.name != '/login';
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Log In'),
         centerTitle: true,
+        leading: isPopup ? IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.of(context).pop(),
+        ) : null,
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -92,7 +105,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Theme.of(context).primaryColor,
                   ),
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: 16),
+                
+                // Optional message
+                if (widget.message != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                    child: Text(
+                      widget.message!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 32),
                 
                 // Email field
                 TextFormField(

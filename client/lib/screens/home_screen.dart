@@ -41,10 +41,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   void _showLoginScreen() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const LoginScreen(),
-      ),
+    final flashcardService = Provider.of<FlashcardService>(context, listen: false);
+    final message = flashcardService.createdDecksCount > 2 
+        ? "You've created ${flashcardService.createdDecksCount} decks! Log in to save your progress and access your decks from any device."
+        : null;
+    
+    // Show as a dialog with settings to indicate it's a popup
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+              maxWidth: MediaQuery.of(context).size.width * 0.9,
+            ),
+            child: LoginScreen(message: message),
+          ),
+        );
+      },
     );
   }
 
@@ -173,25 +193,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showCreateOptions(BuildContext context) {
-    // Check if user is authenticated before allowing creation
     final userService = Provider.of<UserService>(context, listen: false);
-    if (!userService.isAuthenticated) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please log in to create flashcards'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      _showLoginScreen();
-      return;
-    }
+    final flashcardService = Provider.of<FlashcardService>(context, listen: false);
     
+    // Allow creation without login, but show login popup after creating more than two decks
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => const ImportModalScreen(),
-    );
+    ).then((_) {
+      // Check if user has created more than two decks and is not logged in
+      if (flashcardService.createdDecksCount > 2 && !userService.isAuthenticated) {
+        // Show login popup
+        _showLoginScreen();
+      }
+    });
   }
 }

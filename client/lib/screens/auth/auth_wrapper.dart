@@ -11,9 +11,7 @@ class AuthWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     final userService = Provider.of<UserService>(context);
     
-    // Listen to authentication state and return the appropriate screen
-    return userService.isAuthenticated 
-        ? const HomeScreen() 
-        : const LoginScreen();
+    // Always show the home screen, login will be shown conditionally
+    return const HomeScreen();
   }
 }

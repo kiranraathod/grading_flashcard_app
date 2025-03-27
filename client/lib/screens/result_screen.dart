@@ -16,19 +16,20 @@ class ResultScreen extends StatelessWidget {
   });
 
   Color _getGradeColor() {
-    switch (answer.grade) {
-      case 'A':
-        return AppTheme.gradeA;
-      case 'B':
-        return AppTheme.gradeB;
-      case 'C':
-        return AppTheme.gradeC;
-      case 'D':
-        return AppTheme.gradeD;
-      case 'F':
-        return AppTheme.gradeF;
-      default:
-        return Colors.grey;
+    final grade = answer.grade ?? '';
+    
+    if (grade.startsWith('A')) {
+      return AppTheme.gradeA;
+    } else if (grade.startsWith('B')) {
+      return AppTheme.gradeB;
+    } else if (grade.startsWith('C')) {
+      return AppTheme.gradeC;
+    } else if (grade.startsWith('D')) {
+      return AppTheme.gradeD;
+    } else if (grade.startsWith('F')) {
+      return AppTheme.gradeF;
+    } else {
+      return Colors.grey;
     }
   }
 
@@ -93,7 +94,10 @@ class ResultScreen extends StatelessWidget {
                         CircleAvatar(
                           backgroundColor: _getGradeColor(),
                           child: Text(
-                            answer.grade ?? '?',
+                            // Truncate long grade strings to prevent overflow
+                            (answer.grade?.length ?? 0) > 3 
+                                ? answer.grade!.substring(0, 2) 
+                                : (answer.grade ?? '?'),
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,

@@ -9,8 +9,10 @@ import 'supabase_service.dart';
 class FlashcardService extends ChangeNotifier {
   final SupabaseService _supabaseService = SupabaseService();
   final List<FlashcardSet> _sets = [];
+  int _createdDecksCount = 0; // Track number of decks created by user
   
   List<FlashcardSet> get sets => List.unmodifiable(_sets);
+  int get createdDecksCount => _createdDecksCount;
   
   FlashcardService() {
     // Load demo data immediately
@@ -18,6 +20,9 @@ class FlashcardService extends ChangeNotifier {
     
     // Then load sets from storage/API
     _loadSets();
+    
+    // Load created decks count
+    _loadCreatedDecksCount();
     
     // Listen for auth state changes
     _supabaseService.authStateChanges.listen((event) {
@@ -29,6 +34,26 @@ class FlashcardService extends ChangeNotifier {
         notifyListeners();
       }
     });
+  }
+  
+  // Load created decks count from shared preferences
+  Future<void> _loadCreatedDecksCount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _createdDecksCount = prefs.getInt('created_decks_count') ?? 0;
+    } catch (e) {
+      debugPrint('Error loading created decks count: $e');
+    }
+  }
+  
+  // Save created decks count to shared preferences
+  Future<void> _saveCreatedDecksCount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('created_decks_count', _createdDecksCount);
+    } catch (e) {
+      debugPrint('Error saving created decks count: $e');
+    }
   }
 
   Future<void> _loadSets() async {
@@ -215,6 +240,12 @@ class FlashcardService extends ChangeNotifier {
   }
 
   Future<void> createFlashcardSet(FlashcardSet set) async {
+    // Increment the deck counter when user creates a new set (excluding demo and basic sets)
+    if (set.id != 'demo1' && set.id != 'basic1') {
+      _createdDecksCount++;
+      await _saveCreatedDecksCount(); // Save the updated count
+    }
+      
     if (_supabaseService.isAuthenticated) {
       try {
         final userId = _supabaseService.currentUser!.id;
