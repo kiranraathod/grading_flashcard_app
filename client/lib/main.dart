@@ -5,14 +5,15 @@ import 'utils/theme.dart';
 import 'services/flashcard_service.dart';
 import 'services/user_service.dart';
 import 'services/network_service.dart';
-import 'services/supabase_service.dart';
+import 'services/local_auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Supabase
-  await SupabaseService().initialize();
-  
+
+  // Initialize local auth service
+  final authService = LocalAuthService();
+  await authService.initialize();
+
   runApp(const MyApp());
 }
 

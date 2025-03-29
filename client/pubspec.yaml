@@ -39,8 +39,8 @@ dependencies:
   flutter_animate: ^4.5.0
   dynamic_color: ^1.6.9
   google_fonts: ^6.1.0
-  supabase_flutter: ^2.3.4
   flutter_secure_storage: ^8.0.0
+  jwt_decoder: ^2.0.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

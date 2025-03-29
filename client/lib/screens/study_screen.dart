@@ -3,9 +3,12 @@ import '../models/flashcard_set.dart';
 import '../models/answer.dart' as answer_model;
 import '../services/speech_to_text_service.dart';
 import '../services/api_service.dart';
+import '../services/user_service.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/answer_input_widget.dart';
 import 'result_screen.dart';
+import 'auth/auth_wrapper.dart';
+import 'package:provider/provider.dart';
 
 class StudyScreen extends StatefulWidget {
   final FlashcardSet set;
@@ -23,12 +26,22 @@ class _StudyScreenState extends State<StudyScreen> {
   final SpeechToTextService _speechService = SpeechToTextService();
   bool _isLoading = false;
   bool _isMarkedForReview = false;
+  final bool _showedAuthMessage = false;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     _speechService.initialize();
+
+    // Check authentication status and show message if needed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthStatus();
+    });
+  }
+
+  void _checkAuthStatus() {
+    // Authentication no longer required for grading
   }
 
   @override
@@ -72,7 +85,10 @@ class _StudyScreenState extends State<StudyScreen> {
         userAnswer: userAnswer,
       );
 
-      final gradedAnswer = await _apiService.gradeAnswer(answerObj);
+      final gradedAnswer = await _apiService.gradeAnswer(
+        answerObj,
+        context: context,
+      );
 
       if (!mounted) return;
 
@@ -109,6 +125,7 @@ class _StudyScreenState extends State<StudyScreen> {
       appBar: AppBar(
         title: Text(widget.set.title),
         actions: [
+          // Login no longer required for grading
           IconButton(
             icon: Icon(
               _isMarkedForReview ? Icons.bookmark : Icons.bookmark_border,

@@ -1,123 +1,106 @@
-# Flutter Flashcard App with LLM Integration
+# Flashcard App with Local PostgreSQL
 
-A comprehensive mobile application for flashcard-based learning with intelligent grading powered by Large Language Models.
+This project is a flashcard application with a Flutter frontend and a Python Flask backend. It uses a local PostgreSQL database running in Docker to store user data, flashcards, and learning progress.
 
-## Project Overview
+## Prerequisites
 
-This project combines a Flutter mobile application with a custom Python REST API backend that leverages large language models (LLMs) for intelligent answer grading and personalized learning suggestions.
+- Docker and Docker Compose
+- Flutter SDK (3.7.2 or higher)
+- Python 3.9 or higher
+- Git
+
+## Getting Started
+
+Follow these steps to set up and run the application:
+
+### 1. Start the PostgreSQL Database
+
+```bash
+# From the project root directory
+docker-compose up -d
+```
+
+This will start both the PostgreSQL database and pgAdmin for database management.
+
+- PostgreSQL will be available at `localhost:5432`
+- pgAdmin will be available at `localhost:5050` (login with admin@example.com / admin)
+
+### 2. Set Up the Server
+
+```bash
+# From the project root directory
+cd server
+
+# Create a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the server
+python app.py
+```
+
+The server will start on `localhost:5000`.
+
+### 3. Run the Flutter App
+
+```bash
+# From the project root directory
+cd client
+
+# Get Flutter dependencies
+flutter pub get
+
+# Run the app
+flutter run
+```
 
 ## Features
 
-- **Interactive Flashcards**: Smooth card flip animations and intuitive navigation
-- **Dual Input Methods**: Type answers or use speech-to-text functionality
-- **LLM-Based Grading**: Submit answers for intelligent evaluation by Large Language Models
-- **Personalized Feedback**: Receive actionable feedback and improvement suggestions
-- **Cross-Platform Support**: Works on Android, iOS, and web platforms
+- **User Authentication**: Register, login, and password reset
+- **Flashcard Management**: Create, edit, and delete flashcard sets
+- **Study Mode**: Study flashcards with self-assessment
+- **Spaced Repetition**: Smart scheduling of card reviews based on performance
+- **Progress Tracking**: Track learning progress and statistics
 
-## Project Structure
+## Architecture
 
-The project is divided into two main components:
+### Backend (Flask)
 
-### 1. Flutter App (Client)
+- **Authentication Service**: Handles JWT-based authentication
+- **PostgreSQL Service**: Interacts with the local PostgreSQL database
+- **API Endpoints**: RESTful endpoints for all application features
 
-The mobile application that users interact with to practice flashcards.
+### Frontend (Flutter)
 
-```
-/client
-├── lib/
-│   ├── models/        # Data structures and state management
-│   ├── screens/       # Main application screens
-│   ├── services/      # API integration and device services
-│   ├── utils/         # Helper functions and constants
-│   ├── widgets/       # Reusable UI components
-│   └── main.dart      # Application entry point
-└── pubspec.yaml       # Flutter dependencies
-```
+- **Local Auth Service**: Handles JWT token management and authentication state
+- **Local API Service**: Interacts with the backend API
+- **User Service**: Manages user data and state
+- **Flashcard Service**: Manages flashcard data and state
 
-### 2. Python Backend (Server)
+### Database (PostgreSQL)
 
-REST API that integrates with LLMs for grading and suggestion generation.
+- **Tables**:
+  - `users`: User accounts
+  - `profiles`: User profiles
+  - `flashcard_sets`: Sets of flashcards
+  - `flashcards`: Individual flashcards
+  - `study_sessions`: User study sessions
+  - `flashcard_grades`: Grades for answered cards
+  - `user_feedback`: User feedback on card grading
+  - `user_progress`: User progress tracking for spaced repetition
 
-```
-/server
-├── src/
-│   ├── config/        # Configuration management
-│   ├── controllers/   # Request handlers
-│   ├── models/        # Data models
-│   ├── routes/        # API endpoint definitions
-│   ├── services/      # Business logic and LLM integration
-│   └── __init__.py    # Package initialization
-├── app.py             # API entry point
-├── requirements.txt   # Python dependencies
-└── .env.example       # Environment variable template
-```
+## Alternative Setup (Without Docker)
 
-## Setup Instructions
+If you prefer not to use Docker, you can set up PostgreSQL directly:
 
-### Client Setup
-
-1. Ensure Flutter is installed on your system (v3.0.0 or higher recommended)
-2. Navigate to the client directory:
-   ```bash
-   cd client
-   ```
-3. Install dependencies:
-   ```bash
-   flutter pub get
-   ```
-4. Run the application:
-   ```bash
-   flutter run
-   ```
-
-### Server Setup
-
-1. Ensure Python 3.8+ is installed on your system
-2. Navigate to the server directory:
-   ```bash
-   cd server
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Create a `.env` file based on the provided template:
-   ```bash
-   cp .env.example .env
-   ```
-5. Update the `.env` file with your LLM API keys and configuration
-6. Start the server:
-   ```bash
-   python app.py
-   ```
-
-## Environment Configuration
-
-The server requires the following environment variables:
-- `DEBUG`: Enable debug mode (True/False)
-- `PORT`: Port number to run the API on
-- `FLASK_ENV`: Environment (development/production)
-- `LLM_MODEL`: LLM model to use for grading
-- `GOOGLE_API_KEY`: Your Google API key for Gemini model access
-- `ALLOWED_ORIGINS`: Comma-separated list of allowed CORS origins
-
-## API Endpoints
-
-- `GET /`: Health check endpoint
-- `POST /api/grade`: Grade a flashcard answer
-- `GET /api/suggestions`: Get study suggestions
-- `POST /api/feedback`: Submit user feedback
-
-## Security Notes
-
-- Never commit your `.env` file with real API keys
-- In production, use a proper secrets management solution
-- Configure CORS settings appropriately for your deployment environment
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+1. Download and install PostgreSQL from the [official website](https://www.postgresql.org/download/)
+2. Create a database named "flashcards"
+3. Set your PostgreSQL username and password in `.env.local`
+4. Run the SQL scripts from `server/db/init` to create the schema
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+[MIT License](LICENSE)

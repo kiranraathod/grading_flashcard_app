@@ -1,8 +1,11 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import '../services/local_auth_service.dart';
 
 class ProxyClient {
   final String baseUrl;
+  final LocalAuthService _authService = LocalAuthService();
 
   ProxyClient(this.baseUrl);
 
@@ -16,6 +19,9 @@ class ProxyClient {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
+    
+    // No longer requiring authentication tokens for any endpoints
+    debugPrint('Making request to $endpoint without requiring authentication');
     
     final mergedHeaders = {...defaultHeaders, ...?headers};
     
@@ -35,6 +41,8 @@ class ProxyClient {
     final defaultHeaders = {
       'Accept': 'application/json',
     };
+    
+    // No longer requiring authentication tokens for any endpoints
     
     final mergedHeaders = {...defaultHeaders, ...?headers};
     
@@ -56,6 +64,8 @@ class ProxyClient {
       'Accept': 'application/json',
     };
     
+    // No longer requiring authentication tokens for any endpoints
+    
     final mergedHeaders = {...defaultHeaders, ...?headers};
     
     final response = await http.put(
@@ -74,6 +84,11 @@ class ProxyClient {
     final defaultHeaders = {
       'Accept': 'application/json',
     };
+    
+    // Add authentication token if available
+    if (_authService.isAuthenticated && _authService.token != null) {
+      defaultHeaders['Authorization'] = 'Bearer ${_authService.token}';
+    }
     
     final mergedHeaders = {...defaultHeaders, ...?headers};
     

@@ -74,19 +74,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _logout() async {
-    try {
-      final userService = Provider.of<UserService>(context, listen: false);
-      await userService.signOut();
-      
-      if (mounted && context.mounted) {
-        Navigator.pop(context); // Go back to wrapper which will redirect to login
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error signing out: ${e.toString()}')),
-      );
-    }
+  void _logout() {
+    final userService = Provider.of<UserService>(context, listen: false);
+    
+    // Show confirmation dialog
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Close the dialog first
+              Navigator.of(dialogContext).pop();
+              
+              // Then sign out
+              try {
+                await userService.signOut();
+                
+                // Use a new closure to navigate after async operation
+                if (mounted) {
+                  Navigator.of(context).pop(); // Go back to home screen
+                }
+              } catch (e) {
+                // Use a new closure to show error after async operation
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error signing out: ${e.toString()}')),
+                  );
+                }
+              }
+            },
+            child: const Text('SIGN OUT'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -115,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                color: Theme.of(context).primaryColor.withAlpha(25), // Using withAlpha instead of withOpacity
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -135,7 +163,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             
             // Email display
             Text(
-              userService.currentUser?.email ?? 'No email',
+              userService.currentUser != null && userService.currentUser!.containsKey('email')
+                  ? userService.currentUser!['email']
+                  : 'No email',
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

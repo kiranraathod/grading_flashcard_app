@@ -4,15 +4,11 @@ class Constants {
   // Dynamic base URL depending on platform
   static String get apiBaseUrl {
     if (kIsWeb) {
-      return 'http://localhost:3000'; // Point to the proxy server
+      return 'http://localhost:5000'; // Updated to match the Flask server port
     } else {
       return 'http://10.0.2.2:5000';
     }
   }
-
-  // Supabase configuration
-  static const String supabaseUrl = 'https://cdigijaqeovvtybvtbpl.supabase.co';
-  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkaWdpamFxZW92dnR5YnZ0YnBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5NzY1MjksImV4cCI6MjA1ODU1MjUyOX0.j-AxiO_0hpkFqZ93Af9vfbDNaGP5YU1CSfTJLSk3ceQ';
 
   static const Map<String, String> gradeDescriptions = {
     'A': 'Excellent understanding',

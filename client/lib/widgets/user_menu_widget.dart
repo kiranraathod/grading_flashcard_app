@@ -22,7 +22,7 @@ class UserMenuWidget extends StatelessWidget {
     return PopupMenuButton<String>(
       icon: CircleAvatar(
         radius: 16,
-        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+        backgroundColor: Theme.of(context).primaryColor.withAlpha(50), // Using withAlpha instead of withOpacity
         child: userService.avatarUrl != null
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(16),
@@ -105,10 +105,23 @@ class UserMenuWidget extends StatelessWidget {
     return IconButton(
       icon: const Icon(Icons.login),
       onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const LoginScreen(),
+        // Use Dialog instead of full screen
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            insetPadding: const EdgeInsets.all(16.0),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.0),
+            ),
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.9,
+                maxWidth: MediaQuery.of(context).size.width * 0.9,
+              ),
+              child: LoginScreen(
+                onClose: () => Navigator.of(context).pop(),
+              ),
+            ),
           ),
         );
       },

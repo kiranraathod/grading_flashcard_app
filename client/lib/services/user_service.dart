@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'supabase_service.dart';
+import 'local_auth_service.dart';
+import 'local_api_service.dart';
 
 class UserService extends ChangeNotifier {
-  final SupabaseService _supabaseService = SupabaseService();
+  final LocalAuthService _authService = LocalAuthService();
+  final LocalApiService _apiService = LocalApiService();
 
   int _level = 0;
   int _xp = 0;
@@ -22,8 +23,9 @@ class UserService extends ChangeNotifier {
   String? get avatarUrl => _avatarUrl;
 
   // Authentication getters
-  bool get isAuthenticated => _supabaseService.isAuthenticated;
-  User? get currentUser => _supabaseService.currentUser;
+  bool get isAuthenticated => _authService.isAuthenticated;
+  Map<String, dynamic>? get currentUser => _authService.user;
+  String? get userId => _authService.userId;
 
   // Placeholder for current day (in real app, would be calculated)
   int get currentDay =>
@@ -33,8 +35,9 @@ class UserService extends ChangeNotifier {
     _loadUserData();
 
     // Listen for auth state changes
-    _supabaseService.authStateChanges.listen((event) {
-      if (event.event == AuthChangeEvent.signedIn) {
+    _authService.authStateChanges.listen((event) {
+      if (event.event == AuthChangeEvent.signedIn || 
+          event.event == AuthChangeEvent.signedUp) {
         _loadUserData();
       } else if (event.event == AuthChangeEvent.signedOut) {
         _resetUserData();
@@ -44,69 +47,47 @@ class UserService extends ChangeNotifier {
 
   Future<void> _loadUserData() async {
     try {
-      if (_supabaseService.isAuthenticated) {
-        // Load from Supabase
-        final userId = _supabaseService.currentUser!.id;
+      if (_authService.isAuthenticated) {
+        // Load from API
+        try {
+          final profileData = await _apiService.getUserProfile();
+          
+          _level = profileData['level'] ?? 0;
+          _xp = profileData['xp'] ?? 0;
+          _maxXp = profileData['max_xp'] ?? 50;
+          _displayName = profileData['display_name'];
+          _avatarUrl = profileData['avatar_url'];
 
-        // Fetch profile data from Supabase
-        final response =
-            await _supabaseService.client
-                .from('profiles')
-                .select()
-                .eq('id', userId)
-                .maybeSingle();
-
-        if (response != null) {
-          _level = response['level'] ?? 0;
-          _xp = response['xp'] ?? 0;
-          _maxXp = response['max_xp'] ?? 50;
-          _displayName = response['display_name'];
-          _avatarUrl = response['avatar_url'];
-
-          // Fetch streak data (simplified approach)
+          // Get streak data
+          final streakData = await _apiService.getLearningStats();
+          
+          // Initialize streak array
+          _weeklyStreak = List.filled(7, false);
+          
+          // Set streak days based on session data
+          // This is simplified - your actual implementation may differ
+          final int streakDays = streakData['streakDays'] ?? 0;
           final DateTime now = DateTime.now();
-          final DateTime weekAgo = now.subtract(const Duration(days: 7));
-
-          final sessionResponse = await _supabaseService.client
-              .from('study_sessions')
-              .select('start_time')
-              .eq('user_id', userId)
-              .gte('start_time', weekAgo.toIso8601String())
-              .order('start_time');
-
-          if (sessionResponse != null) {
-            _weeklyStreak = List.filled(7, false);
-
-            for (var session in sessionResponse) {
-              final sessionDay =
-                  DateTime.parse(session['start_time']).weekday % 7;
-              _weeklyStreak[sessionDay] = true;
-            }
+          
+          for (int i = 0; i < streakDays && i < 7; i++) {
+            final int day = (now.subtract(Duration(days: i)).weekday) % 7;
+            _weeklyStreak[day] = true;
           }
+        } catch (e) {
+          debugPrint('Error loading data from API: $e');
+          // Fall back to local data if API fails
+          await _loadLocalData();
         }
       } else {
         // Fallback to SharedPreferences for non-authenticated users
-        final prefs = await SharedPreferences.getInstance();
-        _level = prefs.getInt('level') ?? 0;
-        _xp = prefs.getInt('xp') ?? 0;
-        _maxXp = prefs.getInt('maxXp') ?? 50;
-
-        final streakJson = prefs.getString('weeklyStreak');
-        if (streakJson != null) {
-          final streakList = json.decode(streakJson) as List;
-          _weeklyStreak = streakList.map((item) => item as bool).toList();
-        } else {
-          // In a real app, this would track actual user activity
-          // For now, just simulate some streak data
-          _weeklyStreak = List.generate(7, (index) => index < 3);
-        }
+        await _loadLocalData();
       }
 
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading user data: $e');
       // Fallback to local data if there's an error
-      _loadLocalData();
+      await _loadLocalData();
     }
   }
 
@@ -121,6 +102,10 @@ class UserService extends ChangeNotifier {
       if (streakJson != null) {
         final streakList = json.decode(streakJson) as List;
         _weeklyStreak = streakList.map((item) => item as bool).toList();
+      } else {
+        // In a real app, this would track actual user activity
+        // For now, just simulate some streak data
+        _weeklyStreak = List.generate(7, (index) => index < 3);
       }
 
       notifyListeners();
@@ -147,14 +132,9 @@ class UserService extends ChangeNotifier {
     if (day >= 0 && day < 7) {
       _weeklyStreak[day] = true;
 
-      if (_supabaseService.isAuthenticated) {
-        // Create a study session record
-        await _supabaseService.client.from('study_sessions').insert({
-          'user_id': _supabaseService.currentUser!.id,
-          'cards_studied': 1, // Minimal entry
-          'start_time': DateTime.now().toIso8601String(),
-          'end_time': DateTime.now().toIso8601String(),
-        });
+      if (_authService.isAuthenticated) {
+        // We don't need to call the API - your backend will handle the streak
+        // when you submit progress through study sessions
       }
 
       await _saveUserData();
@@ -164,32 +144,31 @@ class UserService extends ChangeNotifier {
 
   Future<void> _saveUserData() async {
     try {
-      if (_supabaseService.isAuthenticated) {
-        // Save to Supabase
-        final userId = _supabaseService.currentUser!.id;
-
-        // Update profile in Supabase
-        await _supabaseService.client
-            .from('profiles')
-            .update({
-              'level': _level,
-              'xp': _xp,
-              'max_xp': _maxXp,
-              'last_updated': DateTime.now().toIso8601String(),
-            })
-            .eq('id', userId);
+      if (_authService.isAuthenticated) {
+        // Update progress on the server
+        try {
+          await _apiService.updateUserProgress(_xp);
+          
+          // Update profile if needed
+          if (_displayName != null || _avatarUrl != null) {
+            await _apiService.updateUserProfile({
+              'display_name': _displayName,
+              'avatar_url': _avatarUrl,
+            });
+          }
+        } catch (e) {
+          debugPrint('Error saving data to API: $e');
+          // Fall back to local storage if API fails
+          await _saveLocalData();
+        }
       } else {
         // Save locally for non-authenticated users
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('level', _level);
-        await prefs.setInt('xp', _xp);
-        await prefs.setInt('maxXp', _maxXp);
-        await prefs.setString('weeklyStreak', json.encode(_weeklyStreak));
+        await _saveLocalData();
       }
     } catch (e) {
       debugPrint('Error saving user data: $e');
       // Fallback to local storage if there's an error
-      _saveLocalData();
+      await _saveLocalData();
     }
   }
 
@@ -217,28 +196,26 @@ class UserService extends ChangeNotifier {
 
   // Authentication methods
   Future<AuthResponse> signIn(String email, String password) async {
-    return await _supabaseService.signIn(email: email, password: password);
+    return await _authService.signIn(email: email, password: password);
   }
 
   Future<AuthResponse> signUp(String email, String password) async {
-    return await _supabaseService.signUp(email: email, password: password);
+    return await _authService.signUp(email: email, password: password);
   }
 
   Future<void> signOut() async {
-    await _supabaseService.signOut();
+    await _authService.signOut();
   }
 
   Future<void> resetPassword(String email) async {
-    await _supabaseService.resetPassword(email);
+    await _authService.resetPassword(email);
   }
 
   // Profile methods
   Future<void> updateProfile({String? displayName, String? avatarUrl}) async {
-    if (!_supabaseService.isAuthenticated) return;
+    if (!_authService.isAuthenticated) return;
 
     try {
-      final userId = _supabaseService.currentUser!.id;
-
       Map<String, dynamic> updates = {};
       if (displayName != null) {
         updates['display_name'] = displayName;
@@ -251,11 +228,7 @@ class UserService extends ChangeNotifier {
       }
 
       if (updates.isNotEmpty) {
-        await _supabaseService.client
-            .from('profiles')
-            .update(updates)
-            .eq('id', userId);
-
+        await _apiService.updateUserProfile(updates);
         notifyListeners();
       }
     } catch (e) {

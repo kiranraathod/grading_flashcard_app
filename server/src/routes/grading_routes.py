@@ -13,7 +13,7 @@ grading_bp = Blueprint('grading', __name__)
 grading_controller = GradingController()
 
 @grading_bp.route('/grade', methods=['POST'])
-@auth_required
+# Removed auth_required decorator to make this endpoint public
 @async_route
 async def grade_answer():
     try:

@@ -7,7 +7,6 @@ import '../widgets/user_progress_widget.dart';
 import '../widgets/streak_calendar_widget.dart';
 import '../widgets/flashcard_set_list_widget.dart';
 import 'import_modal_screen.dart';
-import 'profile_screen.dart';
 import 'auth/login_screen.dart';
 import '../widgets/user_menu_widget.dart';
 
@@ -31,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _checkAuthAndLoadData() async {
     // Simulate initial loading
     await Future.delayed(const Duration(milliseconds: 300));
-    
+
     // Load data for both authenticated and non-authenticated users
     if (mounted) {
       setState(() {
@@ -39,12 +38,9 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
   }
-  
+
   void _showLoginScreen() {
-    final flashcardService = Provider.of<FlashcardService>(context, listen: false);
-    final message = flashcardService.createdDecksCount > 2 
-        ? "You've created ${flashcardService.createdDecksCount} decks! Log in to save your progress and access your decks from any device."
-        : null;
+    debugPrint('Showing login screen popup after creating more than 2 decks');
     
     // Show as a dialog with settings to indicate it's a popup
     showDialog(
@@ -61,7 +57,9 @@ class _HomeScreenState extends State<HomeScreen> {
               maxHeight: MediaQuery.of(context).size.height * 0.9,
               maxWidth: MediaQuery.of(context).size.width * 0.9,
             ),
-            child: LoginScreen(message: message),
+            child: LoginScreen(
+              onClose: () => Navigator.of(context).pop(),
+            ),
           ),
         );
       },
@@ -88,62 +86,66 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: SearchBarWidget(),
-                  ),
-                  Consumer<UserService>(
-                    builder: (context, userService, _) => UserProgressWidget(
-                      level: userService.level,
-                      xp: userService.xp,
-                      maxXp: userService.maxXp,
+        child:
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: SearchBarWidget(),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Consumer<UserService>(
-                    builder: (context, userService, _) => StreakCalendarWidget(
-                      streakDays: userService.weeklyStreak,
-                      currentDay: userService.currentDay,
+                    Consumer<UserService>(
+                      builder:
+                          (context, userService, _) => UserProgressWidget(
+                            level: userService.level,
+                            xp: userService.xp,
+                            maxXp: userService.maxXp,
+                          ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildFilterDropdown(),
-                        Row(
-                          children: [
-                            const Text('Last Updated'),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_downward),
-                              onPressed: () {},
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.filter_list),
-                              onPressed: () {},
-                            ),
-                          ],
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+                    Consumer<UserService>(
+                      builder:
+                          (context, userService, _) => StreakCalendarWidget(
+                            streakDays: userService.weeklyStreak,
+                            currentDay: userService.currentDay,
+                          ),
                     ),
-                  ),
-                  Expanded(
-                    child: Consumer<FlashcardService>(
-                      builder: (context, flashcardService, _) =>
-                          flashcardService.sets.isEmpty
-                              ? _buildEmptyState()
-                              : FlashcardSetListWidget(
-                                  flashcardSets: flashcardService.sets,
-                                ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildFilterDropdown(),
+                          Row(
+                            children: [
+                              const Text('Last Updated'),
+                              IconButton(
+                                icon: const Icon(Icons.arrow_downward),
+                                onPressed: () {},
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.filter_list),
+                                onPressed: () {},
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                    Expanded(
+                      child: Consumer<FlashcardService>(
+                        builder:
+                            (context, flashcardService, _) =>
+                                flashcardService.sets.isEmpty
+                                    ? _buildEmptyState()
+                                    : FlashcardSetListWidget(
+                                      flashcardSets: flashcardService.sets,
+                                    ),
+                      ),
+                    ),
+                  ],
+                ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -194,8 +196,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showCreateOptions(BuildContext context) {
     final userService = Provider.of<UserService>(context, listen: false);
-    final flashcardService = Provider.of<FlashcardService>(context, listen: false);
-    
+    final flashcardService = Provider.of<FlashcardService>(
+      context,
+      listen: false,
+    );
+
     // Allow creation without login, but show login popup after creating more than two decks
     showModalBottomSheet(
       context: context,
@@ -205,8 +210,9 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) => const ImportModalScreen(),
     ).then((_) {
       // Check if user has created more than two decks and is not logged in
-      if (flashcardService.createdDecksCount > 2 && !userService.isAuthenticated) {
-        // Show login popup
+      if (flashcardService.createdDecksCount > 2 &&
+          !userService.isAuthenticated) {
+        // Show login popup only after user has created more than 2 decks
         _showLoginScreen();
       }
     });
