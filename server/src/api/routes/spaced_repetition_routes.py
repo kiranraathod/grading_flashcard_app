@@ -1,99 +1,121 @@
-from flask import Blueprint, request, jsonify, g
+from fastapi import APIRouter, Request, Depends, HTTPException, status, Query
 from src.services.supabase_service import SupabaseService
-from src.middleware.auth_middleware import auth_required, get_user_id
+from src.api.middleware.auth_middleware import StrictAuthRequired, get_current_user
+from src.api.models.models import CardProgressRequest, LearningStats, DueCardsResponse
 from src.utils.error_handler import AuthenticationError
 import logging
 
 # Set up logger
 logger = logging.getLogger(__name__)
 
-spaced_bp = Blueprint('spaced_repetition', __name__)
+router = APIRouter()
 supabase_service = SupabaseService()
+strict_auth_required = StrictAuthRequired()
 
-@spaced_bp.route('/due-cards', methods=['GET'])
-@auth_required
-def get_due_cards():
-    """Get flashcards that are due for review based on spaced repetition algorithm"""
+@router.get("/due-cards", response_model=DueCardsResponse, dependencies=[Depends(strict_auth_required)])
+async def get_due_cards(
+    request: Request,
+    user_id: str = Depends(get_current_user),
+    limit: int = Query(20, description="Maximum number of cards to return")
+):
+    """
+    Get flashcards that are due for review based on spaced repetition algorithm.
+    
+    - **limit**: Maximum number of cards to return (default: 20)
+    """
     try:
-        # Authentication required for this endpoint
-        user_id = get_user_id()
         if not user_id:
             raise AuthenticationError("Authentication required to access due cards")
-        
-        limit = request.args.get('limit', default=20, type=int)
         
         # Get due cards using Supabase function
         due_cards = supabase_service.get_due_cards(user_id, limit)
         
-        return jsonify({
+        return {
             'dueCards': due_cards,
             'count': len(due_cards)
-        })
+        }
     except AuthenticationError as e:
         logger.warning(f"Authentication error: {str(e)}")
-        return jsonify({'error': str(e)}), e.status_code
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
+        )
     except Exception as e:
         logger.error(f"Error getting due cards: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-@spaced_bp.route('/update-progress', methods=['POST'])
-@auth_required
-def update_card_progress():
-    """Update flashcard progress using SM-2 algorithm"""
+@router.post("/update-progress", status_code=status.HTTP_200_OK, dependencies=[Depends(strict_auth_required)])
+async def update_card_progress(
+    progress_request: CardProgressRequest,
+    request: Request,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Update flashcard progress using SM-2 algorithm.
+    
+    - **cardId**: Unique identifier for the flashcard
+    - **confidenceLevel**: User's confidence level (0-5)
+    """
     try:
-        # Authentication required for this endpoint
-        user_id = get_user_id()
         if not user_id:
             raise AuthenticationError("Authentication required to update progress")
         
-        data = request.json
-        
-        if not all(key in data for key in ['cardId', 'confidenceLevel']):
-            logger.error("Missing required fields in request")
-            return jsonify({'error': 'Missing required fields'}), 400
-        
-        card_id = data['cardId']
-        confidence_level = data['confidenceLevel']
-        
         # Validate confidence level (0-5)
-        if not isinstance(confidence_level, int) or confidence_level < 0 or confidence_level > 5:
-            return jsonify({'error': 'Confidence level must be an integer between 0 and 5'}), 400
+        confidence_level = progress_request.confidenceLevel
+        if confidence_level < 0 or confidence_level > 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Confidence level must be between 0 and 5"
+            )
         
         # Update card progress using Supabase function
         result = supabase_service.update_card_progress(
             user_id=user_id,
-            card_id=card_id,
+            card_id=progress_request.cardId,
             confidence_level=confidence_level
         )
         
-        return jsonify({'status': 'success'})
+        return {"status": "success"}
     except AuthenticationError as e:
         logger.warning(f"Authentication error: {str(e)}")
-        return jsonify({'error': str(e)}), e.status_code
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error updating card progress: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-@spaced_bp.route('/stats', methods=['GET'])
-@auth_required
-def get_learning_stats():
-    """Get user learning statistics"""
+@router.get("/stats", response_model=LearningStats, dependencies=[Depends(strict_auth_required)])
+async def get_learning_stats(
+    request: Request,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Get user learning statistics including cards learned, average confidence, and streak days.
+    """
     try:
-        # Authentication required for this endpoint
-        user_id = get_user_id()
         if not user_id:
             raise AuthenticationError("Authentication required to access learning stats")
         
         if not supabase_service.is_connected():
-            return jsonify({
+            return {
                 'error': 'Database not connected',
                 'cardsLearned': 0,
                 'averageConfidence': 0,
                 'streakDays': 0
-            }), 503
+            }
         
         try:
-            # Get cards learned count
+            # Get cards learned count using our custom client
             cards_result = supabase_service.client.table("user_progress") \
                 .select("id", count="exact") \
                 .eq("user_id", user_id) \
@@ -130,23 +152,29 @@ def get_learning_stats():
             
             streak_days = len(days)
             
-            return jsonify({
+            return {
                 'cardsLearned': cards_learned,
                 'averageConfidence': round(average_confidence, 2),
                 'streakDays': streak_days
-            })
+            }
         except Exception as db_error:
             logger.error(f"Database error getting stats: {str(db_error)}")
-            return jsonify({
+            return {
                 'error': str(db_error),
                 'cardsLearned': 0,
                 'averageConfidence': 0,
                 'streakDays': 0
-            }), 500
+            }
             
     except AuthenticationError as e:
         logger.warning(f"Authentication error: {str(e)}")
-        return jsonify({'error': str(e)}), e.status_code
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e)
+        )
     except Exception as e:
         logger.error(f"Error getting learning stats: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )

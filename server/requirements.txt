@@ -1,8 +1,35 @@
-flask==2.2.3
-flask-cors==3.0.10
-python-dotenv==1.0.0
+# FastAPI server dependencies
+fastapi==0.103.2
+uvicorn==0.23.2
+pydantic==2.4.2
+starlette==0.27.0
+python-multipart==0.0.6
+
+# Flask server dependencies (alternative)
+Flask==2.2.3
+Flask-Cors==3.0.10
+Werkzeug==2.2.2
+
+# Google AI
 google-generativeai==0.3.1
-openai==0.28.0
-werkzeug==2.2.2
+
+# OpenAI (if needed)
+openai==1.1.0
+
+# Utility libraries
+python-dotenv==1.0.0
+httpx==0.24.1
+asyncio==3.4.3
+
+# Authentication
+python-jose==3.3.0  # For JWT token verification
+
+# Testing
+pytest==7.4.0
+
+# Database (if using Supabase)
 supabase==2.3.1
-python-jose==3.3.0
+gotrue==2.9.1
+postgrest==0.13.2
+realtime==1.0.6
+storage3==0.7.7

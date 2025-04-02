@@ -1,45 +1,85 @@
-# Flashcard LLM API
-A Flask-based API for grading flashcard answers using LLM technology.
+# Flashcard Grading App - FastAPI Backend
 
-## Overview
-This project provides an API for grading user answers to flashcard questions, generating study suggestions, and collecting user feedback. It leverages natural language processing to evaluate the quality and correctness of user responses to flashcards.
+This is the backend server for the Flashcard Grading application. It provides APIs for grading flashcard responses, managing spaced repetition, and integrating with Supabase.
+
+## Technology Stack
+
+- **FastAPI**: Modern, high-performance web framework for building APIs
+- **Uvicorn**: ASGI server for running FastAPI applications
+- **Supabase**: Backend-as-a-Service for database, authentication, and storage
+- **Google Gemini**: AI language model for grading flashcard responses
 
 ## Features
-- **Answer Grading**: Evaluate user answers to flashcard questions
-- **Study Suggestions**: Generate personalized study suggestions based on user performance
-- **Feedback Collection**: Collect and process user feedback to improve the system
 
-## Setup
-1. Clone the repository
-2. Install dependencies:
+- **Automated Grading**: AI-powered assessment of flashcard answers
+- **Spaced Repetition**: SM-2 algorithm implementation for optimized learning
+- **Authentication**: JWT-based authentication with Supabase
+- **Performance Monitoring**: Request timing and performance tracking
+
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/grading_flashcard_app.git
+   cd grading_flashcard_app/server
    ```
+
+2. Create a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
    pip install -r requirements.txt
    ```
-3. Create a `.env` file based on the provided `.env.example`:
-   ```
+
+4. Set up environment variables:
+   ```bash
    cp .env.example .env
-   ```
-4. Update the `.env` file with your actual API keys and configuration
-5. Run the application:
-   ```
-   python app.py
+   # Edit .env with your configuration
    ```
 
-## Environment Configuration
-- `DEBUG`: Enable debug mode (True/False)
-- `PORT`: Port number to run the API on
-- `FLASK_ENV`: Environment (development/production)
-- `LLM_MODEL`: LLM model to use for grading
-- `GOOGLE_API_KEY`: Your Google API key for Gemini model access
-- `ALLOWED_ORIGINS`: Comma-separated list of allowed CORS origins
+## Running the Server
+
+```bash
+python start.py
+```
+
+Or with Uvicorn directly:
+```bash
+uvicorn main:app --reload --host 0.0.0.0 --port 3000
+```
+
+## API Documentation
+
+- **Swagger UI**: http://localhost:3000/docs
+- **ReDoc**: http://localhost:3000/redoc
 
 ## API Endpoints
-- `GET /`: Health check endpoint
-- `POST /api/grade`: Grade a flashcard answer
-- `GET /api/suggestions`: Get study suggestions
-- `POST /api/feedback`: Submit user feedback
 
-## Security Notes
-- Never commit your `.env` file with real API keys
-- In production, use a proper secrets management solution
-- Configure CORS settings appropriately for your deployment environment
+### Grading API
+
+- `POST /api/grade`: Grade a flashcard answer
+- `GET /api/suggestions`: Get improvement suggestions
+- `POST /api/feedback`: Submit user feedback on grading
+
+### Spaced Repetition API
+
+- `GET /api/spaced/due-cards`: Get cards due for review
+- `POST /api/spaced/update-progress`: Update card progress
+- `GET /api/spaced/stats`: Get learning statistics
+
+## Supabase Integration
+
+This application uses Supabase for:
+- User authentication and authorization
+- Data storage for flashcards and progress
+- Session management and secure access
+
+## Development Notes
+
+- The application has been migrated from Flask to FastAPI for improved performance
+- Async support is used throughout for better concurrency handling
+- All API requests and responses are validated using Pydantic models
