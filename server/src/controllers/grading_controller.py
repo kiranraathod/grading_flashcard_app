@@ -1,4 +1,4 @@
-from src.services.llm_service import LLMService
+from src.services.llm_service import LLMService, LLMConnectionError
 import logging
 import traceback
 
@@ -25,21 +25,37 @@ class GradingController:
                 self.suggestion_cache[flashcard_id] = result['suggestions']
                 
             return result
+        except LLMConnectionError as llm_error:
+            logger.error(f"LLM connection error in GradingController.grade_answer: {str(llm_error)}")
+            
+            # Return a clear error message about LLM connection
+            error_response = {
+                'grade': 'X',  # Use 'X' to indicate system error
+                'feedback': f'LLM Service Error: {str(llm_error)}',
+                'suggestions': [
+                    'The AI grading service is currently unavailable',
+                    'Please try again later or contact system administrator',
+                    'Verify your internet connection and API credentials'
+                ],
+                'error': 'llm_connection_error'
+            }
+            return error_response
         except Exception as e:
             logger.error(f"Error in GradingController.grade_answer: {str(e)}")
             logger.error(traceback.format_exc())
             
             # Create a default response to maintain stability
-            logger.warning("⚠️ Returning emergency default grade due to error!")
-            default_response = {
-                'grade': 'F',  # Default to F instead of B for safety
-                'feedback': f'Error grading answer. The system encountered an issue processing your response: {str(e)}',
+            logger.warning("⚠️ Returning system error response due to unexpected error!")
+            error_response = {
+                'grade': 'X',  # Use 'X' to indicate system error
+                'feedback': f'Error processing your answer: {str(e)}',
                 'suggestions': [
                     'Please try again with a different answer',
                     'If this error persists, contact support'
-                ]
+                ],
+                'error': 'system_error'
             }
-            return default_response
+            return error_response
     
     async def get_suggestions(self, flashcard_id):
         """Get improvement suggestions for a specific flashcard"""

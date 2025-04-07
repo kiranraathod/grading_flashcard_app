@@ -27,6 +27,8 @@ class ResultScreen extends StatelessWidget {
         return AppTheme.gradeD;
       case 'F':
         return AppTheme.gradeF;
+      case 'X': // System error indicator
+        return Colors.grey;
       default:
         return Colors.grey;
     }
@@ -34,6 +36,8 @@ class ResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isSystemError = answer.grade == 'X';
+    
     return Scaffold(
       appBar: AppBar(title: const Text('Results')),
       body: SingleChildScrollView(
@@ -66,16 +70,18 @@ class ResultScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(answer.userAnswer),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Correct Answer:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                    if (!isSystemError) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Correct Answer:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(correctAnswer),
+                      const SizedBox(height: 8),
+                      Text(correctAnswer),
+                    ],
                   ],
                 ),
               ),
@@ -93,7 +99,7 @@ class ResultScreen extends StatelessWidget {
                         CircleAvatar(
                           backgroundColor: _getGradeColor(),
                           child: Text(
-                            answer.grade ?? '?',
+                            isSystemError ? "!" : (answer.grade ?? '?'),
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -101,9 +107,9 @@ class ResultScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        const Text(
-                          'Your Grade',
-                          style: TextStyle(
+                        Text(
+                          isSystemError ? 'System Error' : 'Your Grade',
+                          style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
                           ),
@@ -111,22 +117,30 @@ class ResultScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Feedback:',
-                      style: TextStyle(
+                    Text(
+                      isSystemError ? 'Error Message:' : 'Feedback:',
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(answer.feedback ?? 'No feedback available'),
+                    Text(
+                      answer.feedback ?? 'No feedback available',
+                      style: TextStyle(
+                        color: isSystemError ? Colors.red[700] : null,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 16),
             if (answer.suggestions != null)
-              SuggestionsWidget(suggestions: answer.suggestions!),
+              SuggestionsWidget(
+                suggestions: answer.suggestions!,
+                title: isSystemError ? 'Troubleshooting Steps' : 'Improvement Suggestions',
+              ),
             const SizedBox(height: 24),
             Center(
               child: ElevatedButton(
@@ -139,7 +153,7 @@ class ResultScreen extends StatelessWidget {
                     vertical: 12,
                   ),
                 ),
-                child: const Text('Continue'),
+                child: Text(isSystemError ? 'Try Again Later' : 'Continue'),
               ),
             ),
           ],

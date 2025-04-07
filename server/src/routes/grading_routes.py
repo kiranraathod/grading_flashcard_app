@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify
+from fastapi import APIRouter, Depends, HTTPException
+from src.models.schema import GradeRequest, GradeResponse, SuggestionRequest, SuggestionResponse, FeedbackRequest, FeedbackResponse
 from src.controllers.grading_controller import GradingController
 import logging
 import traceback
@@ -7,94 +8,92 @@ import traceback
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-grading_bp = Blueprint('grading', __name__)  
-grading_controller = GradingController()
+router = APIRouter()
 
-@grading_bp.route('/grade', methods=['POST'])
-async def grade_answer():
+# Create a dependency for the grading controller
+def get_grading_controller():
+    return GradingController()
+
+@router.post("/grade", response_model=GradeResponse)
+async def grade_answer(
+    request: GradeRequest, 
+    controller: GradingController = Depends(get_grading_controller)
+):
     try:
-        data = request.json
-        logger.debug(f"Received grading request: {data}")
-        
-        if not all(key in data for key in ['flashcardId', 'question', 'userAnswer']):
-            logger.error("Missing required fields in request")
-            return jsonify({'error': 'Missing required fields'}), 400
+        logger.debug(f"Received grading request: {request.dict()}")
         
         logger.debug("Calling grading controller...")
         try:
-            result = await grading_controller.grade_answer(
-                data['flashcardId'], 
-                data['question'], 
-                data['userAnswer']
+            result = await controller.grade_answer(
+                request.flashcardId, 
+                request.question, 
+                request.userAnswer
             )
             logger.debug(f"Grading result: {result}")
             
             # Validate the response structure
             if 'grade' not in result or 'feedback' not in result or 'suggestions' not in result:
                 logger.error(f"Invalid response structure: {result}")
-                return jsonify({
-                    'error': 'Invalid response structure',
-                    'grade': 'F',
-                    'feedback': 'Error in grading system. Please try again.',
-                    'suggestions': ['Contact support if this error persists.']
-                }), 500
+                return GradeResponse(
+                    grade='F',
+                    feedback='Error in grading system. Please try again.',
+                    suggestions=['Contact support if this error persists.'],
+                    error='Invalid response structure'
+                )
             
-            response = jsonify(result)
-            return response
+            return result
         except Exception as inner_e:
             logger.error(f"Error in grading controller: {str(inner_e)}")
             logger.error(traceback.format_exc())
-            return jsonify({
-                'error': str(inner_e),
-                'grade': 'F',
-                'feedback': 'Error in grading system. Please try again.',
-                'suggestions': ['Contact support if this error persists.']
-            }), 500
+            return GradeResponse(
+                grade='F',
+                feedback='Error in grading system. Please try again.',
+                suggestions=['Contact support if this error persists.'],
+                error=str(inner_e)
+            )
             
     except Exception as e:
         logger.error(f"Error in grade_answer endpoint: {str(e)}")
         logger.error(traceback.format_exc())
-        return jsonify({
-            'error': str(e),
-            'grade': 'F',
-            'feedback': 'Error in grading system. Please try again.',
-            'suggestions': ['Contact support if this error persists.']
-        }), 500
+        raise HTTPException(
+            status_code=500, 
+            detail="An error occurred during grading"
+        )
 
-@grading_bp.route('/suggestions', methods=['GET'])
-async def get_suggestions():
+@router.get("/suggestions", response_model=SuggestionResponse)
+async def get_suggestions(
+    flashcardId: str,
+    controller: GradingController = Depends(get_grading_controller)
+):
     try:
-        flashcard_id = request.args.get('flashcardId')
-        logger.debug(f"Received suggestions request for flashcard_id={flashcard_id}")
+        logger.debug(f"Received suggestions request for flashcard_id={flashcardId}")
         
-        if not flashcard_id:
+        if not flashcardId:
             logger.error("Missing flashcardId parameter")
-            return jsonify({'error': 'Missing flashcardId parameter'}), 400
+            raise HTTPException(status_code=400, detail="Missing flashcardId parameter")
         
-        result = await grading_controller.get_suggestions(flashcard_id)
+        result = await controller.get_suggestions(flashcardId)
         logger.debug(f"Returning suggestions: {result}")
         
-        return jsonify(result)
+        return result
     except Exception as e:
         logger.error(f"Error in get_suggestions: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))
 
-@grading_bp.route('/feedback', methods=['POST'])
-async def submit_feedback():
+@router.post("/feedback", response_model=FeedbackResponse)
+async def submit_feedback(
+    request: FeedbackRequest,
+    controller: GradingController = Depends(get_grading_controller)
+):
     try:
-        data = request.json
-        logger.debug(f"Received feedback submission: {data}")
+        logger.debug(f"Received feedback submission: {request.dict()}")
         
-        if not all(key in data for key in ['flashcardId', 'userFeedback']):
-            logger.error("Missing required fields in feedback request")
-            return jsonify({'error': 'Missing required fields'}), 400
-        
-        await grading_controller.submit_feedback(
-            data['flashcardId'], 
-            data['userFeedback']
+        await controller.submit_feedback(
+            request.flashcardId, 
+            request.userFeedback
         )
         
-        return jsonify({'status': 'success'})
+        return FeedbackResponse(status="success")
     except Exception as e:
         logger.error(f"Error in submit_feedback: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        raise HTTPException(status_code=500, detail=str(e))

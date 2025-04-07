@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 
 class SuggestionsWidget extends StatelessWidget {
   final List<String> suggestions;
+  final String title;
 
-  const SuggestionsWidget({super.key, required this.suggestions});
+  const SuggestionsWidget({
+    super.key, 
+    required this.suggestions,
+    this.title = 'Improvement Suggestions',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -13,13 +18,18 @@ class SuggestionsWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.lightbulb_outline, color: Colors.amber),
-                SizedBox(width: 8),
+                Icon(
+                  title.contains('Trouble') 
+                      ? Icons.warning_amber_outlined 
+                      : Icons.lightbulb_outline,
+                  color: title.contains('Trouble') ? Colors.orange : Colors.amber,
+                ),
+                const SizedBox(width: 8),
                 Text(
-                  'Improvement Suggestions',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
               ],
             ),
@@ -39,7 +49,10 @@ class SuggestionsWidget extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.arrow_right, color: Colors.blue),
+          Icon(
+            Icons.arrow_right, 
+            color: title.contains('Trouble') ? Colors.orange : Colors.blue,
+          ),
           const SizedBox(width: 8),
           Expanded(child: Text(suggestion)),
         ],
