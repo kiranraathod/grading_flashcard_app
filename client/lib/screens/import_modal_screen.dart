@@ -27,6 +27,7 @@ class ImportModalScreen extends StatelessWidget {
             icon: Icons.cloud_download,
             iconColor: Colors.blue,
             title: 'Import flashcards',
+            description: 'Import flashcards from files or other sources',
             onTap: () {
               Navigator.pop(context);
               // Navigate to import screen - to be implemented
@@ -37,9 +38,10 @@ class ImportModalScreen extends StatelessWidget {
           ),
           _buildOption(
             context,
-            icon: Icons.description,
-            iconColor: Colors.grey,
-            title: 'Flashcards',
+            icon: Icons.add_card,
+            iconColor: Colors.green,
+            title: 'Create New Flashcards',
+            description: 'Start a new set of flashcards from scratch',
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -55,6 +57,7 @@ class ImportModalScreen extends StatelessWidget {
             icon: Icons.create_new_folder,
             iconColor: Colors.grey,
             title: 'Create folder',
+            description: 'Organize your flashcards in folders',
             onTap: () {
               Navigator.pop(context);
               // Folder creation to be implemented
@@ -73,6 +76,7 @@ class ImportModalScreen extends StatelessWidget {
     required IconData icon,
     required Color iconColor,
     required String title,
+    String? description,
     required VoidCallback onTap,
   }) {
     return ListTile(
@@ -81,6 +85,7 @@ class ImportModalScreen extends StatelessWidget {
         child: Icon(icon, color: iconColor),
       ),
       title: Text(title),
+      subtitle: description != null ? Text(description) : null,
       onTap: onTap,
     );
   }

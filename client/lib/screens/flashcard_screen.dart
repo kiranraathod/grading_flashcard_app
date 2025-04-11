@@ -5,10 +5,8 @@ import '../models/answer.dart';
 import '../services/api_service.dart';
 import '../services/speech_to_text_service.dart';
 import '../services/network_service.dart';
-import '../utils/constants.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/answer_input_widget.dart';
-import '../widgets/connectivity_banner.dart';
 import 'result_screen.dart';
 
 class FlashcardScreen extends StatefulWidget {

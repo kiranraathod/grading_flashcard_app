@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/answer_input_widget.dart';
 import 'result_screen.dart';
+import 'create_flashcard_screen.dart';
 
 class StudyScreen extends StatefulWidget {
   final FlashcardSet set;
@@ -60,6 +61,18 @@ class _StudyScreenState extends State<StudyScreen> {
       _isMarkedForReview = !_isMarkedForReview;
     });
   }
+  
+  void _editFlashcardSet() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateFlashcardScreen(editSet: widget.set),
+      ),
+    ).then((_) {
+      // Refresh screen if user returns from editing
+      setState(() {});
+    });
+  }
 
   Future<void> _submitAnswer(String userAnswer) async {
     setState(() => _isLoading = true);
@@ -109,12 +122,37 @@ class _StudyScreenState extends State<StudyScreen> {
       appBar: AppBar(
         title: Text(widget.set.title),
         actions: [
+          // Edit button
+          IconButton(
+            icon: const Icon(Icons.edit),
+            tooltip: 'Edit this flashcard set',
+            onPressed: _editFlashcardSet,
+          ),
+          // Bookmark button
           IconButton(
             icon: Icon(
               _isMarkedForReview ? Icons.bookmark : Icons.bookmark_border,
               color: _isMarkedForReview ? Colors.orange : null,
             ),
+            tooltip: 'Mark for review',
             onPressed: _toggleMarkForReview,
+          ),
+          // More options
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'edit') {
+                _editFlashcardSet();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: ListTile(
+                  leading: Icon(Icons.edit),
+                  title: Text('Edit Set'),
+                ),
+              ),
+            ],
           ),
         ],
       ),

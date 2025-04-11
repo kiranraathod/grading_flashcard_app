@@ -19,11 +19,12 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
   final _descriptionController = TextEditingController();
   bool _showDescription = false;
   List<Flashcard> _flashcards = [];
+  bool get _isEditMode => widget.editSet != null;
 
   @override
   void initState() {
     super.initState();
-    if (widget.editSet != null) {
+    if (_isEditMode) {
       _titleController.text = widget.editSet!.title;
       _descriptionController.text = widget.editSet!.description;
       _showDescription = widget.editSet!.description.isNotEmpty;
@@ -72,38 +73,62 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
 
   void _saveFlashcardSet() async {
     // Remove empty flashcards
-    final validFlashcards = _flashcards.where(
-      (card) => card.question.isNotEmpty || card.answer.isNotEmpty
-    ).toList();
-    
+    final validFlashcards =
+        _flashcards
+            .where((card) => card.question.isNotEmpty || card.answer.isNotEmpty)
+            .toList();
+
     if (validFlashcards.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please add at least one flashcard')),
       );
       return;
     }
-    
-    final flashcardService = Provider.of<FlashcardService>(context, listen: false);
-    
+
+    final flashcardService = Provider.of<FlashcardService>(
+      context,
+      listen: false,
+    );
+
     final newSet = FlashcardSet(
-      id: widget.editSet?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      title: _titleController.text.isNotEmpty ? _titleController.text : 'Untitled',
+      id:
+          widget.editSet?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
+      title:
+          _titleController.text.isNotEmpty ? _titleController.text : 'Untitled',
       description: _descriptionController.text,
       flashcards: validFlashcards,
       isDraft: true,
     );
-    
-    if (widget.editSet != null) {
-      await flashcardService.updateFlashcardSet(newSet);
-    } else {
-      await flashcardService.createFlashcardSet(newSet);
-    }
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Flashcard set saved')),
-      );
-      Navigator.of(context).pop();
+
+    try {
+      if (_isEditMode) {
+        await flashcardService.updateFlashcardSet(newSet);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Flashcard set updated successfully')),
+          );
+        }
+      } else {
+        await flashcardService.createFlashcardSet(newSet);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Flashcard set created successfully')),
+          );
+        }
+      }
+
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving flashcard set: ${e.toString()}'),
+          ),
+        );
+      }
     }
   }
 
@@ -115,14 +140,14 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('Flashcards'),
+        title: Text(_isEditMode ? 'Edit Flashcards' : 'Create Flashcards'),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16),
             child: ElevatedButton.icon(
               onPressed: _saveFlashcardSet,
-              icon: const Icon(Icons.edit),
-              label: const Text('Create'),
+              icon: Icon(_isEditMode ? Icons.save : Icons.edit),
+              label: Text(_isEditMode ? 'Update' : 'Create'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF03DAC6),
                 foregroundColor: Colors.black,
@@ -141,10 +166,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
           children: [
             const Text(
               'Title',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -178,10 +200,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                 children: [
                   const Text(
                     'Description',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   TextField(
@@ -204,12 +223,13 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
               physics: const NeverScrollableScrollPhysics(),
               shrinkWrap: true,
               itemCount: _flashcards.length,
-              separatorBuilder: (context, index) => Center(
-                child: IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  onPressed: _addNewCard,
-                ),
-              ),
+              separatorBuilder:
+                  (context, index) => Center(
+                    child: IconButton(
+                      icon: const Icon(Icons.add_circle_outline),
+                      onPressed: _addNewCard,
+                    ),
+                  ),
               itemBuilder: (context, index) {
                 return FlashcardTermWidget(
                   initialTerm: _flashcards[index].question,
@@ -235,6 +255,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _addNewCard,
         backgroundColor: const Color(0xFF1A5E34),
+        tooltip: 'Add new flashcard',
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );

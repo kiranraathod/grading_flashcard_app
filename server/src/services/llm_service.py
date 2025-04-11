@@ -159,23 +159,40 @@ class LLMService:
             return False
             
         # Check if suggestions is a list
-        if not isinstance(response['suggestions'], list) or len(response['suggestions']) == 0:
+        if not isinstance(response['suggestions'], list):
             logger.error(f"Invalid suggestions format: {response['suggestions']}")
             return False
             
+        # If suggestions array is empty, add default suggestions based on grade
+        if len(response['suggestions']) == 0:
+            logger.warning("Empty suggestions array detected, adding default suggestions")
+            if response['grade'] == 'A':
+                response['suggestions'] = [
+                    "Continue practicing to maintain your understanding",
+                    "Try applying this knowledge to more complex problems",
+                    "Consider exploring related topics to deepen your understanding"
+                ]
+            else:
+                response['suggestions'] = [
+                    "Review the core concepts related to this topic",
+                    "Practice with similar problems to reinforce your understanding",
+                    "Consider creating additional flashcards on this subject"
+                ]
+                
         return True
     
     async def _grade_answer_sync(self, question, user_answer):
         """Synchronous implementation of grading to avoid asyncio issues"""
         # Format the prompt
         prompt = f"""
-        You are a precise and helpful grading assistant. 
+        You are a precise, helpful, and encouraging grading assistant. 
         
         Question: {question}
         
         Student's Answer: {user_answer}
         
         Please grade this answer and provide constructive feedback. Be specific about why the answer is correct or incorrect.
+        Always include encouraging language in your feedback to motivate the student.
         
         When referring to mathematical formulas, use simple text notation like "pi*r^2" for πr² to avoid encoding issues.
         Also, avoid using × symbol for multiplication, use * instead.
@@ -183,9 +200,15 @@ class LLMService:
         Your response should be in JSON format with the following structure:
         {{
             "grade": [A single letter grade: A, B, C, D, or F only - no + or - modifiers],
-            "feedback": [Detailed feedback on the answer's strengths and weaknesses],
-            "suggestions": [Array of 2-3 specific suggestions for improvement]
+            "feedback": [Detailed feedback on the answer's strengths and weaknesses, including encouraging language],
+            "suggestions": [Array of 2-3 specific suggestions]
         }}
+        
+        For suggestions:
+        - For correct answers (grade A), provide 2-3 suggestions for further exploration of the topic, related concepts to study, or applications of this knowledge
+        - For incorrect or partially correct answers, provide 2-3 specific suggestions for improvement
+        
+        The suggestions array must never be empty, even for perfect answers.
         
         Return only the JSON object, nothing else.
         """
