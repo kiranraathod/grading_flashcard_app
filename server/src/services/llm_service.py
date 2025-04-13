@@ -1,66 +1,92 @@
-from dotenv import load_dotenv
-import os
+"""
+LLM service for interacting with Google's Gemini model.
+"""
 import json
 import asyncio
 import logging
-import traceback
 import re
 import sys
+import traceback
+from typing import Dict, Any, List
 
-# Load environment variables
-load_dotenv()
+# Import from our custom modules
+from src.config.config import config
+from src.utils.exceptions import (
+    LLMConnectionError,
+    LLMResponseParsingError,
+    InvalidInputError
+)
 
 # Set up logger
-logging.basicConfig(level=logging.DEBUG, handlers=[logging.StreamHandler(sys.stdout)])
 logger = logging.getLogger(__name__)
 
-class LLMConnectionError(Exception):
-    """Custom exception for LLM connection issues"""
-    pass
-
 class LLMService:
+    """Service for interacting with Google's Gemini model."""
+    
     def __init__(self):
-        self.model = os.getenv('LLM_MODEL', 'gemini-2.0-flash')
+        """Initialize the LLM service."""
+        self.model = config.LLM_MODEL
+        self.timeout = config.LLM_TIMEOUT
+        self.max_tokens = config.LLM_MAX_TOKENS
+        self.temperature = config.LLM_TEMPERATURE
+        
         try:
             self._init_client()
             self.is_connected = True
-            logger.debug(f"LLMService initialized with model: {self.model}")
+            logger.info(f"LLMService initialized with model: {self.model}")
         except Exception as e:
             self.is_connected = False
             logger.error(f"Failed to initialize LLM service: {str(e)}")
+            # We don't raise here to allow the service to start even if LLM is not available
 
-    def _init_client(self):
-        """Initialize the Google Gemini client"""
+    def _init_client(self) -> None:
+        """Initialize the Google Gemini client with error handling."""
         try:
             import google.generativeai as genai
-            api_key = os.getenv('GOOGLE_API_KEY')
-            if not api_key:
-                raise ValueError("GOOGLE_API_KEY environment variable is not set")
             
-            genai.configure(api_key=api_key)
+            if not config.GOOGLE_API_KEY:
+                raise InvalidInputError("GOOGLE_API_KEY environment variable is not set")
+            
+            genai.configure(api_key=config.GOOGLE_API_KEY)
             self.client = genai
             logger.info(f"Google GenerativeAI client initialized with model: {self.model}")
         except ImportError as e:
-            logger.error(f"Failed to import google.generativeai. Make sure it's installed: {e}")
-            raise
+            error_msg = f"Failed to import google.generativeai. Make sure it's installed: {e}"
+            logger.error(error_msg)
+            raise LLMConnectionError(error_msg, status_code=500)
         except Exception as e:
-            logger.error(f"Error initializing Google Gemini client: {str(e)}")
+            error_msg = f"Error initializing Google Gemini client: {str(e)}"
+            logger.error(error_msg)
             logger.error(traceback.format_exc())
-            raise
+            raise LLMConnectionError(error_msg, status_code=500)
     
-    async def grade_answer(self, question, user_answer):
-        """Grade the user's answer using Gemini"""
-        logger.debug(f"grade_answer called with question='{question}', answer='{user_answer}'")
+    async def grade_answer(self, question: str, user_answer: str, correct_answer: str) -> Dict[str, Any]:
+        """
+        Grade the user's answer using Gemini LLM.
+        
+        Args:
+            question: The flashcard question
+            user_answer: The user's answer to grade
+            correct_answer: The correct answer from the flashcard
+            
+        Returns:
+            Dict containing grade, feedback, and suggestions
+            
+        Raises:
+            LLMConnectionError: If there's a problem connecting to the LLM service
+            LLMResponseParsingError: If there's a problem parsing the LLM response
+        """
+        logger.debug(f"grade_answer called with question='{question}', answer='{user_answer}', correct_answer='{correct_answer}'")
         
         # Check if LLM service is connected
         if not self.is_connected:
             logger.error("LLM service is not connected")
-            raise LLMConnectionError("LLM service is not connected")
+            raise LLMConnectionError("LLM service is not connected", status_code=503)
         
         try:
             # Use the LLM for grading
             logger.debug("Attempting to use LLM for grading")
-            response = await self._grade_answer_sync(question, user_answer)
+            response = await self._execute_grading_request(question, user_answer, correct_answer)
             logger.debug(f"Received processed response from API: {response}")
             
             # Normalize the grade (remove + or -)
@@ -69,68 +95,59 @@ class LLMService:
                 response['grade'] = response['grade'][0]
             
             # Validate response structure
-            if self._validate_response(response):
-                # Fix mathematical symbols in the response
-                response = self._fix_mathematical_symbols(response)
-                return response
-            else:
-                logger.error("LLM returned invalid response format")
-                raise LLMConnectionError("LLM returned invalid response format")
-                
+            self._validate_response(response)
+            
+            # Fix mathematical symbols in the response
+            response = self._fix_mathematical_symbols(response)
+            return response
+        except LLMConnectionError:
+            # Re-raise LLMConnectionError without wrapping
+            raise
+        except LLMResponseParsingError:
+            # Re-raise LLMResponseParsingError without wrapping
+            raise
         except Exception as e:
-            logger.error(f"Error during grading: {str(e)}")
+            logger.error(f"Unexpected error during grading: {str(e)}")
             logger.error(traceback.format_exc())
-            
-            # Raise exception instead of falling back to mock implementation
-            raise LLMConnectionError(f"LLM grading failed: {str(e)}")
+            raise LLMConnectionError(f"Unexpected error during grading: {str(e)}", status_code=500)
     
-    def _fix_mathematical_symbols(self, response):
-        """Fix common mathematical symbols in the response for better display"""
-        def fix_text(text):
-            # Fix π symbol
-            text = text.replace('π', 'pi')
-            text = text.replace('Ï', 'pi')
+    def _fix_mathematical_symbols(self, response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Fix common mathematical symbols in the response for better display.
+        
+        Args:
+            response: The response dictionary containing feedback and suggestions
             
-            # Fix squared notation
-            text = text.replace('²', '^2')
-            text = text.replace('Â²', '^2')
-            text = text.replace('³', '^3')
-            text = text.replace('Â³', '^3')
+        Returns:
+            Updated response with fixed mathematical symbols
+        """
+        def fix_text(text: str) -> str:
+            """Helper function to fix text with mathematical symbols."""
+            replacements = {
+                # Greek letters
+                'π': 'pi', 'Ï': 'pi', 'θ': 'theta', 'Θ': 'Theta',
+                'σ': 'sigma', 'Σ': 'Sigma', 'δ': 'delta', 'Δ': 'Delta',
+                'μ': 'mu', 'α': 'alpha', 'β': 'beta', 'γ': 'gamma',
+                'Γ': 'Gamma', 'ω': 'omega', 'Ω': 'Omega',
+                
+                # Mathematical operators and symbols
+                '²': '^2', 'Â²': '^2', '³': '^3', 'Â³': '^3',
+                '×': '*', 'Ã': '*', '÷': '/', '√': 'sqrt', '∛': 'cbrt',
+                '≤': '<=', '≥': '>=', '≠': '!=',
+            }
             
-            # Fix multiplication symbol
-            text = text.replace('×', '*')
-            text = text.replace('Ã', '*')
+            # Apply simple replacements
+            for old, new in replacements.items():
+                text = text.replace(old, new)
             
-            # Fix division symbol
-            text = text.replace('÷', '/')
+            # Fix common mathematical patterns with regex
+            patterns = {
+                r'πr²|πr\^2|pir²|pir\^2|Ïr²|ÏrÂ²': 'pi*r^2',
+                r'a²\+b²|aÂ²\+bÂ²': 'a^2+b^2',
+            }
             
-            # Fix square/cube root symbols
-            text = text.replace('√', 'sqrt')
-            text = text.replace('∛', 'cbrt')
-            
-            # Fix inequality symbols
-            text = text.replace('≤', '<=')
-            text = text.replace('≥', '>=')
-            text = text.replace('≠', '!=')
-            
-            # Fix Greek letters often used in math
-            text = text.replace('θ', 'theta')
-            text = text.replace('Θ', 'Theta')
-            text = text.replace('σ', 'sigma')
-            text = text.replace('Σ', 'Sigma')
-            text = text.replace('δ', 'delta')
-            text = text.replace('Δ', 'Delta')
-            text = text.replace('μ', 'mu')
-            text = text.replace('α', 'alpha')
-            text = text.replace('β', 'beta')
-            text = text.replace('γ', 'gamma')
-            text = text.replace('Γ', 'Gamma')
-            text = text.replace('ω', 'omega')
-            text = text.replace('Ω', 'Omega')
-            
-            # Fix common mathematical patterns
-            text = re.sub(r'πr²|πr\^2|pir²|pir\^2|Ïr²|ÏrÂ²', 'pi*r^2', text)
-            text = re.sub(r'a²\+b²|aÂ²\+bÂ²', 'a^2+b^2', text)
+            for pattern, replacement in patterns.items():
+                text = re.sub(pattern, replacement, text)
             
             return text
         
@@ -144,24 +161,37 @@ class LLMService:
             
         return response
     
-    def _validate_response(self, response):
-        """Validate that the response has the expected structure"""
+    def _validate_response(self, response: Dict[str, Any]) -> None:
+        """
+        Validate that the response has the expected structure.
+        
+        Args:
+            response: The response dictionary to validate
+            
+        Raises:
+            LLMResponseParsingError: If the response is invalid
+        """
         required_keys = ['grade', 'feedback', 'suggestions']
         
         # Check if all required keys exist
-        if not all(key in response for key in required_keys):
-            logger.error(f"Missing keys in response. Found: {list(response.keys())}")
-            return False
+        missing_keys = [key for key in required_keys if key not in response]
+        if missing_keys:
+            error_msg = f"Missing keys in response: {missing_keys}"
+            logger.error(error_msg)
+            raise LLMResponseParsingError(error_msg)
         
         # Check if grade is valid
-        if response['grade'] not in ['A', 'B', 'C', 'D', 'F']:
-            logger.error(f"Invalid grade: {response['grade']}")
-            return False
+        valid_grades = ['A', 'B', 'C', 'D', 'F']
+        if response['grade'] not in valid_grades:
+            error_msg = f"Invalid grade: {response['grade']}"
+            logger.error(error_msg)
+            raise LLMResponseParsingError(error_msg)
             
         # Check if suggestions is a list
         if not isinstance(response['suggestions'], list):
-            logger.error(f"Invalid suggestions format: {response['suggestions']}")
-            return False
+            error_msg = f"Invalid suggestions format: {response['suggestions']}"
+            logger.error(error_msg)
+            raise LLMResponseParsingError(error_msg)
             
         # If suggestions array is empty, add default suggestions based on grade
         if len(response['suggestions']) == 0:
@@ -178,75 +208,117 @@ class LLMService:
                     "Practice with similar problems to reinforce your understanding",
                     "Consider creating additional flashcards on this subject"
                 ]
-                
-        return True
     
-    async def _grade_answer_sync(self, question, user_answer):
-        """Synchronous implementation of grading to avoid asyncio issues"""
-        # Format the prompt
+    async def _execute_grading_request(self, question: str, user_answer: str, correct_answer: str) -> Dict[str, Any]:
+        """
+        Execute the grading request to the LLM with improved error handling.
+        
+        Args:
+            question: The flashcard question
+            user_answer: The user's answer to grade
+            correct_answer: The correct answer from the flashcard
+            
+        Returns:
+            Dict containing grade, feedback, and suggestions
+            
+        Raises:
+            LLMConnectionError: If there's a problem connecting to the LLM service
+            LLMResponseParsingError: If there's a problem parsing the LLM response
+        """
+        # Format the prompt with explicit JSON structure to reduce parsing issues
         prompt = f"""
-        You are a precise, helpful, and encouraging grading assistant. 
+        You are a precise, helpful, and encouraging grading assistant. You will evaluate a student's answer against the correct answer provided on a flashcard.
         
         Question: {question}
         
+        Correct Answer: {correct_answer}
+        
         Student's Answer: {user_answer}
         
-        Please grade this answer and provide constructive feedback. Be specific about why the answer is correct or incorrect.
-        Always include encouraging language in your feedback to motivate the student.
+        GRADING INSTRUCTIONS:
+        1. Consider semantic equivalence - if the student's answer conveys the same meaning as the correct answer, it should be considered correct even if phrased differently.
+        2. Ignore minor differences in capitalization, punctuation, and formatting unless they change the meaning.
+        3. For mathematical answers, accept equivalent forms (e.g., "1/2" and "0.5" are equivalent).
+        4. For factual answers, focus on the key concepts rather than exact wording.
+        
+        GRADING SCALE:
+        - A: The answer is completely correct or semantically equivalent to the correct answer.
+        - B: The answer is mostly correct with minor omissions or inaccuracies (80-90% correct).
+        - C: The answer shows partial understanding but has significant gaps (70-80% correct).
+        - D: The answer shows minimal understanding with major errors (60-70% correct).
+        - F: The answer is completely incorrect or shows fundamental misunderstanding (<60% correct).
+        
+        When providing feedback, be specific about the comparison between the student's answer and the correct answer. Always include encouraging language, even for incorrect answers.
         
         When referring to mathematical formulas, use simple text notation like "pi*r^2" for πr² to avoid encoding issues.
-        Also, avoid using × symbol for multiplication, use * instead.
+        Also, avoid using * instead of × for multiplication.
         
-        Your response should be in JSON format with the following structure:
+        Your response must strictly conform to this JSON format:
         {{
-            "grade": [A single letter grade: A, B, C, D, or F only - no + or - modifiers],
-            "feedback": [Detailed feedback on the answer's strengths and weaknesses, including encouraging language],
-            "suggestions": [Array of 2-3 specific suggestions]
+            "grade": "LETTER",
+            "feedback": "DETAILED_FEEDBACK",
+            "suggestions": ["SUGGESTION_1", "SUGGESTION_2", "SUGGESTION_3"]
         }}
         
-        For suggestions:
-        - For correct answers (grade A), provide 2-3 suggestions for further exploration of the topic, related concepts to study, or applications of this knowledge
-        - For incorrect or partially correct answers, provide 2-3 specific suggestions for improvement
+        Where:
+        - LETTER must be a single letter grade (A, B, C, D, or F) based on how well the student's answer matches the correct answer
+        - DETAILED_FEEDBACK must include specific comparison to the correct answer and encouragement
+        - There must be 2-3 specific suggestions in the suggestions array that help the student improve
         
-        The suggestions array must never be empty, even for perfect answers.
+        For excellent answers (grade A), provide suggestions that extend the student's knowledge.
+        For other grades, provide targeted suggestions to help improve understanding of the concept.
         
-        Return only the JSON object, nothing else.
+        Do not include any explanations, markdown formatting or any text outside the JSON structure.
+        Return only the valid JSON object, nothing else.
         """
         
         # Setup the model
         try:
-            model = self.client.GenerativeModel(self.model)
+            model = self.client.GenerativeModel(
+                self.model,
+                generation_config={
+                    "temperature": self.temperature,
+                    "max_output_tokens": self.max_tokens,
+                }
+            )
             logger.debug(f"Initialized model: {self.model}")
         except Exception as e:
             logger.error(f"Error initializing model: {str(e)}")
             logger.error(traceback.format_exc())
             raise LLMConnectionError(f"Failed to initialize LLM model: {str(e)}")
         
-        # Generate content
+        # Generate content with timeout protection
         logger.debug("Sending request to Gemini API...")
         
-        def generate_content():
+        async def generate_with_timeout():
+            """Generate content with timeout protection."""
             try:
-                logger.debug("In generate_content function...")
-                response = model.generate_content(prompt)
-                logger.debug(f"Received response from Gemini")
-                return response.text
+                # Use asyncio.to_thread to run the synchronous API call without blocking
+                return await asyncio.wait_for(
+                    asyncio.to_thread(lambda: model.generate_content(prompt).text),
+                    timeout=self.timeout
+                )
+            except asyncio.TimeoutError:
+                logger.error(f"LLM request timed out after {self.timeout} seconds")
+                raise LLMConnectionError(f"LLM request timed out after {self.timeout} seconds", status_code=504)
             except Exception as e:
-                logger.error(f"Error in generate_content: {str(e)}")
+                logger.error(f"Error generating content: {str(e)}")
                 logger.error(traceback.format_exc())
-                raise
+                raise LLMConnectionError(f"Error generating content: {str(e)}")
             
-        # Use asyncio.to_thread to run the synchronous code
         try:
-            logger.debug("Calling asyncio.to_thread with generate_content...")
-            content = await asyncio.to_thread(generate_content)
-            logger.debug(f"Processing content from API response")
+            logger.debug("Executing LLM request with timeout...")
+            content = await generate_with_timeout()
+            logger.debug(f"Received raw content from API: {content[:100]}...")
+        except LLMConnectionError:
+            # Re-raise without wrapping
+            raise
         except Exception as e:
-            logger.error(f"Error in asyncio.to_thread: {str(e)}")
+            logger.error(f"Unexpected error in generate_with_timeout: {str(e)}")
             logger.error(traceback.format_exc())
             raise LLMConnectionError(f"Failed to connect to LLM API: {str(e)}")
         
-        # Parse the content
+        # Parse the content with improved error handling
         try:
             # Clean up the content - handle various response formats
             # Remove markdown code blocks if present
@@ -267,8 +339,13 @@ class LLMService:
             content = content.strip()
             
             # Parse JSON
-            result = json.loads(content)
-            logger.debug(f"Successfully parsed JSON result: {result}")
+            try:
+                result = json.loads(content)
+                logger.debug(f"Successfully parsed JSON result: {result}")
+            except json.JSONDecodeError as json_error:
+                logger.error(f"JSON parsing error: {str(json_error)}")
+                logger.error(f"Raw content: {content}")
+                raise LLMResponseParsingError(f"Failed to parse JSON: {str(json_error)}")
             
             # Ensure suggestions is a list
             if 'suggestions' in result and not isinstance(result['suggestions'], list):
@@ -280,9 +357,10 @@ class LLMService:
                     result['suggestions'] = []
                     
             return result
+        except LLMResponseParsingError:
+            # Re-raise without wrapping
+            raise
         except Exception as e:
-            logger.error(f"Error parsing JSON: {str(e)}")
+            logger.error(f"Error processing LLM response: {str(e)}")
             logger.error(f"Raw content: {content}")
-            raise LLMConnectionError(f"Failed to parse LLM response: {str(e)}")
-    
-
+            raise LLMResponseParsingError(f"Failed to process LLM response: {str(e)}")

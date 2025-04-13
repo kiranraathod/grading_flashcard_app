@@ -83,6 +83,7 @@ class _StudyScreenState extends State<StudyScreen> {
         flashcardId: widget.set.flashcards[_currentIndex].id,
         question: widget.set.flashcards[_currentIndex].question,
         userAnswer: userAnswer,
+        correctAnswer: widget.set.flashcards[_currentIndex].answer, // Added this line
       );
 
       final gradedAnswer = await _apiService.gradeAnswer(answerObj);

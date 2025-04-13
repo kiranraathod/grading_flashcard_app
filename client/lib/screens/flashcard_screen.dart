@@ -94,11 +94,12 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Create initial answer object
+      // Create initial answer object with correct answer
       final answer = Answer(
         flashcardId: widget.flashcards[_currentIndex].id,
         question: widget.flashcards[_currentIndex].question,
         userAnswer: userAnswer,
+        correctAnswer: widget.flashcards[_currentIndex].answer, // Added this line
       );
 
       // Check network status from provider

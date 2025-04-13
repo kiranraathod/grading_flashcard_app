@@ -2,6 +2,7 @@ class Answer {
   final String flashcardId;
   final String question;
   final String userAnswer;
+  final String correctAnswer;  // Add this field
   final String? grade;
   final String? feedback;
   final List<String>? suggestions;
@@ -10,6 +11,7 @@ class Answer {
     required this.flashcardId,
     required this.question,
     required this.userAnswer,
+    required this.correctAnswer,  // Make it required
     this.grade,
     this.feedback,
     this.suggestions,
@@ -20,6 +22,7 @@ class Answer {
       flashcardId: json['flashcardId'],
       question: json['question'],
       userAnswer: json['userAnswer'],
+      correctAnswer: json['correctAnswer'],
       grade: json['grade'],
       feedback: json['feedback'],
       suggestions:
@@ -34,6 +37,7 @@ class Answer {
       'flashcardId': flashcardId,
       'question': question,
       'userAnswer': userAnswer,
+      'correctAnswer': correctAnswer,
       if (grade != null) 'grade': grade,
       if (feedback != null) 'feedback': feedback,
       if (suggestions != null) 'suggestions': suggestions,
