@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../services/flashcard_service.dart';
 import '../services/user_service.dart';
 import '../widgets/search_bar_widget.dart';
-import '../widgets/user_progress_widget.dart';
 import '../widgets/streak_calendar_widget.dart';
 import '../widgets/flashcard_set_list_widget.dart';
 import 'import_modal_screen.dart';
@@ -45,15 +44,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: EdgeInsets.all(16.0),
                       child: SearchBarWidget(),
                     ),
-                    Consumer<UserService>(
-                      builder:
-                          (context, userService, _) => UserProgressWidget(
-                            level: userService.level,
-                            xp: userService.xp,
-                            maxXp: userService.maxXp,
-                          ),
-                    ),
-                    const SizedBox(height: 16),
                     Consumer<UserService>(
                       builder:
                           (context, userService, _) => StreakCalendarWidget(

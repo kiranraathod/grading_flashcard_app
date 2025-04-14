@@ -17,8 +17,6 @@ class AppConfig {
   
   // Storage keys
   static const String flashcardSetsKey = 'flashcard_sets';
-  static const String userLevelKey = 'level';
-  static const String userXpKey = 'xp';
-  static const String userMaxXpKey = 'maxXp';
+  // Removed level and XP related keys
   static const String userStreakKey = 'weeklyStreak';
 }

@@ -3,14 +3,10 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserService extends ChangeNotifier {
-  int _level = 0;
-  int _xp = 0;
-  int _maxXp = 50;
+  // Removed level and XP related properties
   List<bool> _weeklyStreak = List.filled(7, false);
   
-  int get level => _level;
-  int get xp => _xp;
-  int get maxXp => _maxXp;
+  // Removed level and XP related getters
   List<bool> get weeklyStreak => List.unmodifiable(_weeklyStreak);
   
   // Placeholder for current day (in real app, would be calculated)
@@ -23,9 +19,6 @@ class UserService extends ChangeNotifier {
   Future<void> _loadUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _level = prefs.getInt('level') ?? 0;
-      _xp = prefs.getInt('xp') ?? 0;
-      _maxXp = prefs.getInt('maxXp') ?? 50;
       
       final streakJson = prefs.getString('weeklyStreak');
       if (streakJson != null) {
@@ -43,19 +36,7 @@ class UserService extends ChangeNotifier {
     }
   }
   
-  Future<void> addXp(int amount) async {
-    _xp += amount;
-    
-    // Level up if XP threshold reached
-    if (_xp >= _maxXp) {
-      _level++;
-      _xp = _xp - _maxXp;
-      _maxXp = (_maxXp * 1.2).round(); // Increase XP needed for next level
-    }
-    
-    await _saveUserData();
-    notifyListeners();
-  }
+  // Removed addXp method
   
   Future<void> markDayComplete(int day) async {
     if (day >= 0 && day < 7) {
@@ -68,9 +49,7 @@ class UserService extends ChangeNotifier {
   Future<void> _saveUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('level', _level);
-      await prefs.setInt('xp', _xp);
-      await prefs.setInt('maxXp', _maxXp);
+      // Removed level and XP related saving
       await prefs.setString('weeklyStreak', json.encode(_weeklyStreak));
     } catch (e) {
       debugPrint('Error saving user data: $e');
@@ -84,11 +63,8 @@ class UserService extends ChangeNotifier {
     notifyListeners();
   }
   
-  // Reset user (for testing)
+  // Reset user (for testing) - simplified to only reset streak
   Future<void> resetUser() async {
-    _level = 0;
-    _xp = 0;
-    _maxXp = 50;
     _weeklyStreak = List.filled(7, false);
     await _saveUserData();
     notifyListeners();

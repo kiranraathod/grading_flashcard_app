@@ -108,6 +108,14 @@ def create_app():
             'llm_available': True  # This would be dynamically checked in a real implementation
         }
     
+    @app.get("/api/ping")
+    def ping():
+        """Simple ping endpoint for connectivity testing from the client."""
+        return {
+            'status': 'pong',
+            'message': 'Server is reachable'
+        }
+    
     return app
 
 # Create the app instance

@@ -37,9 +37,12 @@ class NetworkService extends ChangeNotifier {
 
   Future<void> _checkInternetConnection() async {
     try {
-      // Try to reach a reliable external service
-      final response = await http.get(Uri.parse('https://www.google.com'))
-          .timeout(const Duration(seconds: 5));
+      // Use our own backend for connectivity check instead of Google
+      // This avoids CORS issues when running in a web browser
+      final response = await http.get(
+        Uri.parse('${Constants.apiBaseUrl}/api/ping'),
+      ).timeout(const Duration(seconds: 5));
+      
       _isOnline = response.statusCode >= 200 && response.statusCode < 300;
       debugPrint('Internet connectivity: $_isOnline');
     } catch (e) {
@@ -50,7 +53,7 @@ class NetworkService extends ChangeNotifier {
 
   Future<void> _checkServerConnection() async {
     try {
-      // Try to reach the API server health endpoint
+      // Check if API server is reachable and responsive
       final response = await http.get(
         Uri.parse('${Constants.apiBaseUrl}/'),
       ).timeout(const Duration(seconds: 5));
