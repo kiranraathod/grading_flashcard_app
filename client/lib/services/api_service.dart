@@ -2,11 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../models/answer.dart' as answer_model;
+import '../models/app_error.dart';
+import '../services/error_service.dart';
 import '../utils/constants.dart';
+import '../utils/config.dart';
 import '../web/proxy.dart';
 
 class ApiService {
   final ProxyClient client;
+  final ErrorService _errorService = ErrorService();
   final bool _useLocalGrading = false; // Ensure this is set to false to use the API
 
   // Constructor
@@ -35,14 +39,24 @@ class ApiService {
               'flashcardId': answer.flashcardId,
               'question': answer.question,
               'userAnswer': answer.userAnswer,
-              'correctAnswer': answer.correctAnswer,  // Include correct answer
+              'correctAnswer': answer.correctAnswer,
             },
           )
           .timeout(
-            const Duration(seconds: 15),
+            AppConfig.apiTimeout,
             onTimeout: () {
               debugPrint('API request timed out');
-              throw TimeoutException('Server took too long to respond');
+              final error = AppError.api(
+                'The server took too long to respond',
+                code: 'api_timeout',
+                severity: ErrorSeverity.warning,
+                context: {
+                  'endpoint': '/api/grade',
+                  'timeout': AppConfig.apiTimeout.inSeconds,
+                },
+              );
+              _errorService.reportError(error);
+              throw error;
             },
           );
 
@@ -65,14 +79,53 @@ class ApiService {
           );
         } else {
           debugPrint('Invalid response data format, using smart fallback');
+          final error = AppError.api(
+            'Invalid response format from server',
+            code: 'invalid_response',
+            severity: ErrorSeverity.warning,
+            context: {
+              'endpoint': '/api/grade',
+              'responseData': responseData,
+            },
+          );
+          _errorService.reportError(error);
           return _createSmartFallbackAnswer(answer);
         }
       } else {
         debugPrint('API error: ${response.statusCode} - ${response.body}');
+        final error = AppError.api(
+          'Server returned an error',
+          code: 'server_error',
+          severity: ErrorSeverity.warning,
+          details: 'Status code: ${response.statusCode}',
+          context: {
+            'endpoint': '/api/grade',
+            'statusCode': response.statusCode,
+            'responseBody': response.body,
+          },
+        );
+        _errorService.reportError(error);
         return _createSmartFallbackAnswer(answer);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Error during API call: $e');
+      
+      // If we already have a structured error, just propagate it
+      if (e is AppError) {
+        return _createSmartFallbackAnswer(answer);
+      }
+      
+      // Otherwise, create a new error
+      final error = AppError.unknown(
+        e,
+        stackTrace: stackTrace,
+        context: {
+          'endpoint': '/api/grade',
+          'flashcardId': answer.flashcardId,
+          'question': answer.question,
+        },
+      );
+      _errorService.reportError(error);
       return _createSmartFallbackAnswer(answer);
     }
   }
@@ -126,8 +179,8 @@ class ApiService {
 
     // Different levels of matching for more nuanced grading
     final bool isExactMatch = userAnswer == correctAnswer;
-    final bool isStrongMatch = _calculateSimilarity(userAnswer, correctAnswer) > 0.8;
-    final bool isPartialMatch = _calculateSimilarity(userAnswer, correctAnswer) > 0.5;
+    final bool isStrongMatch = _calculateSimilarity(userAnswer, correctAnswer) > AppConfig.strongMatchThreshold;
+    final bool isPartialMatch = _calculateSimilarity(userAnswer, correctAnswer) > AppConfig.partialMatchThreshold;
     final bool hasKeyElements = _containsKeyElements(userAnswer, correctAnswer);
 
     // Grade determination based on answer similarity
@@ -240,6 +293,6 @@ class ApiService {
     }
     
     // Return true if at least 30% of key elements are present
-    return matchCount / correctKeywords.length >= 0.3;
+    return matchCount / correctKeywords.length >= AppConfig.keyElementsMatchThreshold;
   }
 }

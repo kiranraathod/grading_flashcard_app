@@ -1,217 +1,258 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../blocs/study/study_bloc.dart';
+import '../blocs/study/study_event.dart';
+import '../blocs/study/study_state.dart';
 import '../models/flashcard_set.dart';
-import '../models/answer.dart' as answer_model;
-import '../services/speech_to_text_service.dart';
 import '../services/api_service.dart';
+import '../services/speech_to_text_service.dart';
+import '../utils/colors.dart';
+import '../utils/design_system.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/answer_input_widget.dart';
-import 'result_screen.dart';
 import 'create_flashcard_screen.dart';
+import 'result_screen.dart';
 
-class StudyScreen extends StatefulWidget {
+class StudyScreen extends StatelessWidget {
   final FlashcardSet set;
-
+  
   const StudyScreen({super.key, required this.set});
-
+  
   @override
-  State<StudyScreen> createState() => _StudyScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => StudyBloc(
+        apiService: ApiService(),
+      )..add(StudyStarted(flashcardSet: set)),
+      child: const StudyView(),
+    );
+  }
 }
 
-class _StudyScreenState extends State<StudyScreen> {
-  late PageController _pageController;
-  int _currentIndex = 0;
-  final ApiService _apiService = ApiService();
-  final SpeechToTextService _speechService = SpeechToTextService();
-  bool _isLoading = false;
-  bool _isMarkedForReview = false;
+class StudyView extends StatefulWidget {
+  const StudyView({super.key});
 
+  @override
+  State<StudyView> createState() => _StudyViewState();
+}
+
+class _StudyViewState extends State<StudyView> {
+  late PageController _pageController;
+  final SpeechToTextService _speechService = SpeechToTextService();
+  
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
     _speechService.initialize();
   }
-
+  
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
-
-  void _navigateToNext() {
-    if (_currentIndex < widget.set.flashcards.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _navigateToPrevious() {
-    if (_currentIndex > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _toggleMarkForReview() {
-    setState(() {
-      _isMarkedForReview = !_isMarkedForReview;
-    });
-  }
   
-  void _editFlashcardSet() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CreateFlashcardScreen(editSet: widget.set),
-      ),
-    ).then((_) {
-      // Refresh screen if user returns from editing
-      setState(() {});
-    });
-  }
-
-  Future<void> _submitAnswer(String userAnswer) async {
-    setState(() => _isLoading = true);
-
-    try {
-      // Using the explicit constructor from the Answer model
-      final answerObj = answer_model.Answer(
-        flashcardId: widget.set.flashcards[_currentIndex].id,
-        question: widget.set.flashcards[_currentIndex].question,
-        userAnswer: userAnswer,
-        correctAnswer: widget.set.flashcards[_currentIndex].answer, // Added this line
-      );
-
-      final gradedAnswer = await _apiService.gradeAnswer(answerObj);
-
-      if (!mounted) return;
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder:
-              (context) => ResultScreen(
-                answer: gradedAnswer,
-                correctAnswer: widget.set.flashcards[_currentIndex].answer,
-                onContinue: () {
-                  Navigator.pop(context);
-                  _navigateToNext();
-                },
-              ),
-        ),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error submitting answer: $e')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
+  // Store a global key for the NavigatorState to be able to properly handle navigation
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  
+  // Flag to track if result screen is currently displayed
+  bool _isResultScreenShowing = false;
+  
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.set.title),
-        actions: [
-          // Edit button
-          IconButton(
-            icon: const Icon(Icons.edit),
-            tooltip: 'Edit this flashcard set',
-            onPressed: _editFlashcardSet,
-          ),
-          // Bookmark button
-          IconButton(
-            icon: Icon(
-              _isMarkedForReview ? Icons.bookmark : Icons.bookmark_border,
-              color: _isMarkedForReview ? Colors.orange : null,
-            ),
-            tooltip: 'Mark for review',
-            onPressed: _toggleMarkForReview,
-          ),
-          // More options
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'edit') {
-                _editFlashcardSet();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: ListTile(
-                  leading: Icon(Icons.edit),
-                  title: Text('Edit Set'),
+    return BlocConsumer<StudyBloc, StudyState>(
+      listener: (context, state) {
+        // Handle error messages
+        if (state.status == StudyStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.errorMessage ?? 'An error occurred')),
+          );
+        }
+        
+        // Update page controller when index changes
+        if (_pageController.hasClients && 
+            _pageController.page?.round() != state.currentIndex) {
+          _pageController.animateToPage(
+            state.currentIndex,
+            duration: DS.durationMedium,
+            curve: Curves.easeInOut,
+          );
+        }
+        
+        // Show result screen when a graded answer is available
+        if (state.status == StudyStatus.loaded && 
+            state.gradedAnswer != null && 
+            !_isResultScreenShowing) {
+          
+          _isResultScreenShowing = true;
+          
+          // Use WidgetsBinding to avoid showing the dialog during build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            // Get the bloc before navigation to ensure we have the correct instance
+            final bloc = BlocProvider.of<StudyBloc>(context);
+            
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (dialogContext) {
+                return ResultScreen(
+                  answer: state.gradedAnswer!,
+                  correctAnswer: state.currentFlashcard!.answer,
+                  onContinue: () {
+                    // First dispatch the event to move to the next card
+                    bloc.add(NextFlashcardRequested());
+                    
+                    // After a short delay, close the dialog to ensure state update happens first
+                    Future.delayed(Duration(milliseconds: 100), () {
+                      if (dialogContext.mounted) {
+                        Navigator.of(dialogContext).pop();
+                        _isResultScreenShowing = false;
+                      }
+                    });
+                  },
+                );
+              },
+            );
+          });
+        }
+      },
+      builder: (context, state) {
+        final bloc = context.read<StudyBloc>();
+        
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(state.flashcardSet?.title ?? 'Study'),
+            actions: [
+              // Edit button
+              IconButton(
+                icon: const Icon(Icons.edit),
+                tooltip: 'Edit this flashcard set',
+                onPressed: () {
+                  bloc.add(EditFlashcardSetRequested());
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CreateFlashcardScreen(
+                        editSet: state.flashcardSet!,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              // Bookmark button
+              IconButton(
+                icon: Icon(
+                  state.isMarkedForReview ? Icons.bookmark : Icons.bookmark_border,
+                  color: state.isMarkedForReview ? Colors.orange : null,
                 ),
+                tooltip: 'Mark for review',
+                onPressed: () {
+                  if (state.currentFlashcard != null) {
+                    bloc.add(
+                      FlashcardMarkedForReview(
+                        flashcard: state.currentFlashcard!,
+                        isMarked: !state.isMarkedForReview,
+                      ),
+                    );
+                  }
+                },
+              ),
+              // More options
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    bloc.add(EditFlashcardSetRequested());
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CreateFlashcardScreen(
+                          editSet: state.flashcardSet!,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit),
+                      title: Text('Edit Set'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
+          body: Stack(
+            children: [
+              // Always show the flashcard content
+              Column(
                 children: [
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
                       onPageChanged: (index) {
-                        setState(() {
-                          _currentIndex = index;
-                          _isMarkedForReview = false;
-                        });
+                        if (index != state.currentIndex) {
+                          if (index > state.currentIndex) {
+                            bloc.add(NextFlashcardRequested());
+                          } else {
+                            bloc.add(PreviousFlashcardRequested());
+                          }
+                        }
                       },
-                      itemCount: widget.set.flashcards.length,
+                      itemCount: state.flashcardSet?.flashcards.length ?? 0,
                       itemBuilder: (context, index) {
                         return FlashcardWidget(
-                          flashcard: widget.set.flashcards[index],
+                          flashcard: state.flashcardSet!.flashcards[index],
                         );
                       },
                     ),
                   ),
                   AnswerInputWidget(
                     speechService: _speechService,
-                    onSubmit: _submitAnswer,
+                    onSubmit: (answer) {
+                      if (state.currentFlashcard != null) {
+                        // Simply dispatch the event, the listener will handle showing the result
+                        bloc.add(
+                          FlashcardAnswered(
+                            answer: answer,
+                            flashcard: state.currentFlashcard!,
+                          ),
+                        );
+                      }
+                    },
+                    isDisabled: state.status == StudyStatus.grading,
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: EdgeInsets.all(DS.spacingM),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         ElevatedButton(
-                          onPressed:
-                              _currentIndex > 0 ? _navigateToPrevious : null,
+                          onPressed: state.canGoPrevious && state.status != StudyStatus.grading
+                              ? () => bloc.add(PreviousFlashcardRequested())
+                              : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6750A4),
-                            foregroundColor: Colors.white,
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.textOnPrimary,
                           ),
                           child: const Text('Previous'),
                         ),
                         Text(
-                          '${_currentIndex + 1}/${widget.set.flashcards.length}',
-                          style: const TextStyle(
-                            fontSize: 16,
+                          '${state.currentIndex + 1}/${state.flashcardSet?.flashcards.length ?? 0}',
+                          style: DS.bodyLarge.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         ElevatedButton(
-                          onPressed:
-                              _currentIndex < widget.set.flashcards.length - 1
-                                  ? _navigateToNext
-                                  : null,
+                          onPressed: state.canGoNext && state.status != StudyStatus.grading
+                              ? () => bloc.add(NextFlashcardRequested())
+                              : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF6750A4),
-                            foregroundColor: Colors.white,
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.textOnPrimary,
                           ),
                           child: const Text('Next'),
                         ),
@@ -220,6 +261,30 @@ class _StudyScreenState extends State<StudyScreen> {
                   ),
                 ],
               ),
+              // Show loading overlay during grading
+              if (state.status == StudyStatus.grading)
+                Container(
+                  color: Color.fromRGBO(0, 0, 0, 0.5),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                        SizedBox(height: DS.spacingM),
+                        Text(
+                          'Grading your answer...',
+                          style: DS.bodyLarge.copyWith(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

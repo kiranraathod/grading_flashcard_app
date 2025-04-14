@@ -4,11 +4,13 @@ import '../services/speech_to_text_service.dart';
 class AnswerInputWidget extends StatefulWidget {
   final SpeechToTextService speechService;
   final Function(String) onSubmit;
+  final bool isDisabled;
 
   const AnswerInputWidget({
     super.key,
     required this.speechService,
     required this.onSubmit,
+    this.isDisabled = false,
   });
 
   @override
@@ -83,6 +85,7 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
                   ),
                   maxLines: 3,
                   minLines: 1,
+                  enabled: !widget.isDisabled,
                 ),
               ),
               const SizedBox(width: 8),
@@ -90,9 +93,13 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
                 IconButton(
                   icon: Icon(
                     _isListening ? Icons.mic : Icons.mic_none,
-                    color: _isListening ? Colors.red : null,
+                    color: _isListening 
+                        ? Colors.red 
+                        : (widget.isDisabled ? Colors.grey : null),
                   ),
-                  onPressed: _isListening ? _stopListening : _startListening,
+                  onPressed: widget.isDisabled 
+                      ? null 
+                      : (_isListening ? _stopListening : _startListening),
                   tooltip:
                       _isListening ? 'Stop listening' : 'Start speech to text',
                 ),
@@ -100,7 +107,7 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: _submitAnswer,
+            onPressed: widget.isDisabled ? null : _submitAnswer,
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
             ),

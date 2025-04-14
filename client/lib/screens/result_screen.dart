@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/answer.dart' as answer_model;
 import '../widgets/suggestions_widget.dart';
-import '../utils/theme.dart';
+import '../utils/colors.dart';
+import '../utils/design_system.dart';
 
-class ResultScreen extends StatelessWidget {
+class ResultScreen extends StatefulWidget {
   final answer_model.Answer answer;
   final String correctAnswer;
   final VoidCallback onContinue;
@@ -15,18 +16,26 @@ class ResultScreen extends StatelessWidget {
     required this.onContinue,
   });
 
+  @override
+  State<ResultScreen> createState() => _ResultScreenState();
+}
+
+class _ResultScreenState extends State<ResultScreen> {
+  // Add a flag to prevent multiple clicks
+  bool _continuePressed = false;
+
   Color _getGradeColor() {
-    switch (answer.grade) {
+    switch (widget.answer.grade) {
       case 'A':
-        return AppTheme.gradeA;
+        return AppColors.gradeA;
       case 'B':
-        return AppTheme.gradeB;
+        return AppColors.gradeB;
       case 'C':
-        return AppTheme.gradeC;
+        return AppColors.gradeC;
       case 'D':
-        return AppTheme.gradeD;
+        return AppColors.gradeD;
       case 'F':
-        return AppTheme.gradeF;
+        return AppColors.gradeF;
       case 'X': // System error indicator
         return Colors.grey;
       default:
@@ -36,61 +45,58 @@ class ResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isSystemError = answer.grade == 'X';
+    final bool isSystemError = widget.answer.grade == 'X';
     
     return Scaffold(
       appBar: AppBar(title: const Text('Results')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(DS.spacingM),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(DS.spacingM),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Question:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
+                      style: DS.headingSmall,
                     ),
-                    const SizedBox(height: 8),
-                    Text(answer.question),
-                    const SizedBox(height: 16),
-                    const Text(
+                    SizedBox(height: DS.spacingXs),
+                    Text(widget.answer.question, style: DS.bodyMedium),
+                    SizedBox(height: DS.spacingM),
+                    Text(
                       'Your Answer:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
+                      style: DS.headingSmall,
                     ),
-                    const SizedBox(height: 8),
-                    Text(answer.userAnswer),
+                    SizedBox(height: DS.spacingXs),
+                    Text(widget.answer.userAnswer, style: DS.bodyMedium),
                     if (!isSystemError) ...[
-                      const SizedBox(height: 16),
-                      const Text(
+                      SizedBox(height: DS.spacingM),
+                      Text(
                         'Correct Answer:',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
+                        style: DS.headingSmall,
                       ),
-                      const SizedBox(height: 8),
-                      Text(correctAnswer),
+                      SizedBox(height: DS.spacingXs),
+                      Text(widget.correctAnswer, style: DS.bodyMedium),
                     ],
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: DS.spacingM),
             Card(
-              color: _getGradeColor().withAlpha(50),
+              // Using RGBA values with fromRGBO instead of withOpacity
+              color: Color.fromRGBO(
+                _getGradeColor().red,
+                _getGradeColor().green,
+                _getGradeColor().blue,
+                0.2,
+              ),
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(DS.spacingM),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -99,34 +105,28 @@ class ResultScreen extends StatelessWidget {
                         CircleAvatar(
                           backgroundColor: _getGradeColor(),
                           child: Text(
-                            isSystemError ? "!" : (answer.grade ?? '?'),
-                            style: const TextStyle(
+                            isSystemError ? "!" : (widget.answer.grade ?? '?'),
+                            style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: DS.spacingM),
                         Text(
                           isSystemError ? 'System Error' : 'Your Grade',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
+                          style: DS.headingSmall,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: DS.spacingM),
                     Text(
                       isSystemError ? 'Error Message:' : 'Feedback:',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      style: DS.bodyLarge.copyWith(fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: DS.spacingXs),
                     Text(
-                      answer.feedback ?? 'No feedback available',
+                      widget.answer.feedback ?? 'No feedback available',
                       style: TextStyle(
                         color: isSystemError ? Colors.red[700] : null,
                       ),
@@ -135,23 +135,26 @@ class ResultScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            if (answer.suggestions != null)
+            SizedBox(height: DS.spacingM),
+            if (widget.answer.suggestions != null)
               SuggestionsWidget(
-                suggestions: answer.suggestions!,
+                suggestions: widget.answer.suggestions!,
                 title: isSystemError ? 'Troubleshooting Steps' : 'Improvement Suggestions',
               ),
-            const SizedBox(height: 24),
+            SizedBox(height: DS.spacingL),
             Center(
               child: ElevatedButton(
-                onPressed: onContinue,
+                onPressed: _continuePressed ? null : _handleContinue,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 12,
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.textOnPrimary,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: DS.spacingL,
+                    vertical: DS.spacingS,
                   ),
+                  // Disabled style
+                  disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
+                  disabledForegroundColor: AppColors.textOnPrimary.withOpacity(0.5),
                 ),
                 child: Text(isSystemError ? 'Try Again Later' : 'Continue'),
               ),
@@ -160,5 +163,15 @@ class ResultScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+  
+  void _handleContinue() {
+    // Prevent multiple clicks
+    setState(() {
+      _continuePressed = true;
+    });
+    
+    // Call the continue callback
+    widget.onContinue();
   }
 }

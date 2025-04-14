@@ -1,72 +1,61 @@
 import 'package:flutter/material.dart';
+import 'colors.dart';
+import 'design_system.dart';
 
 class AppTheme {
-  // Main colors based on screenshots
-  static const Color primaryColor = Color(0xFF6750A4);
-  static const Color secondaryColor = Color(0xFF03DAC6);
-  static const Color backgroundColor = Color(0xFFF5F5F5);
-  static const Color cardColor = Colors.white;
-  
-  // Grade colors
-  static const Color gradeA = Color(0xFF4CAF50);
-  static const Color gradeB = Color(0xFF8BC34A);
-  static const Color gradeC = Color(0xFFFF9800);
-  static const Color gradeD = Color(0xFFFF5722);
-  static const Color gradeF = Color(0xFFF44336);
-  
   // Create light theme
   static ThemeData lightTheme() {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
+        seedColor: AppColors.primary,
         brightness: Brightness.light,
       ),
-      scaffoldBackgroundColor: backgroundColor,
-      cardTheme: const CardTheme(
-        color: cardColor,
+      scaffoldBackgroundColor: AppColors.background,
+      cardTheme: CardTheme(
+        color: AppColors.surfaceLight,
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+          borderRadius: BorderRadius.all(Radius.circular(DS.borderRadiusMedium)),
         ),
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: backgroundColor,
-        foregroundColor: primaryColor,
+      appBarTheme: AppBarTheme(
+        backgroundColor: AppColors.background,
+        foregroundColor: AppColors.primary,
         elevation: 0,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.textOnPrimary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(DS.borderRadiusLarge),
           ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24, 
-            vertical: 12,
+          padding: EdgeInsets.symmetric(
+            horizontal: DS.spacingL, 
+            vertical: DS.spacingS,
           ),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: Color(0xFF1A5E34), // Dark green from screenshots
-        foregroundColor: Colors.white,
-        shape: CircleBorder(),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.textOnPrimary,
+        shape: const CircleBorder(),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.surfaceLight,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(DS.borderRadiusMedium),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(DS.borderRadiusMedium),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: primaryColor),
+          borderRadius: BorderRadius.circular(DS.borderRadiusMedium),
+          borderSide: BorderSide(color: AppColors.primary),
         ),
       ),
     );
@@ -77,24 +66,23 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
+        seedColor: AppColors.primary,
         brightness: Brightness.dark,
       ),
-      // Other theme configurations similar to light theme but with dark variants
       cardTheme: CardTheme(
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(DS.borderRadiusMedium),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(DS.borderRadiusLarge),
           ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24, 
-            vertical: 12,
+          padding: EdgeInsets.symmetric(
+            horizontal: DS.spacingL, 
+            vertical: DS.spacingS,
           ),
         ),
       ),
@@ -104,23 +92,5 @@ class AppTheme {
         shape: CircleBorder(),
       ),
     );
-  }
-
-  // Get color for grade
-  static Color getGradeColor(String grade) {
-    switch (grade) {
-      case 'A':
-        return gradeA;
-      case 'B':
-        return gradeB;
-      case 'C':
-        return gradeC;
-      case 'D':
-        return gradeD;
-      case 'F':
-        return gradeF;
-      default:
-        return Colors.grey;
-    }
   }
 }
