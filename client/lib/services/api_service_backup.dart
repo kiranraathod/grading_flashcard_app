@@ -9,16 +9,16 @@ class ApiService {
   final ProxyClient client;
   final bool _useForceOfflineMode = true; // TEMPORARY FOR TESTING - Force offline mode
 
-  // Default fallback response for when API fails
-  final Map<String, dynamic> _defaultFallback = {
-    'grade': 'B',
-    'feedback': 'Your answer shows good understanding, but could be more detailed.',
-    'suggestions': [
-      'Try to be more specific in your answer',
-      'Include key facts or dates if relevant',
-      'Consider explaining the underlying concepts',
-    ],
-  };
+  // Default fallback response for when API fails - commented out since not currently used
+  // final Map<String, dynamic> _defaultFallback = {
+  //   'grade': 'B',
+  //   'feedback': 'Your answer shows good understanding, but could be more detailed.',
+  //   'suggestions': [
+  //     'Try to be more specific in your answer',
+  //     'Include key facts or dates if relevant',
+  //     'Consider explaining the underlying concepts',
+  //   ],
+  // };
 
   // Constructor
   ApiService() : client = ProxyClient(Constants.apiBaseUrl) {

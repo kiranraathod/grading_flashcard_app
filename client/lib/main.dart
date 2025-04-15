@@ -38,8 +38,8 @@ class MyApp extends StatelessWidget {
       ],
       child: ErrorHandler(
         child: MaterialApp(
-          title: 'LLM Flashcards',
-          theme: AppTheme.lightTheme(),
+          title: 'FlashMaster',
+          theme: AppTheme.lightTheme(), // Updated theme with new design system
           darkTheme: AppTheme.darkTheme(),
           themeMode: ThemeMode.system,
           home: const HomeScreen(),

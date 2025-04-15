@@ -53,9 +53,6 @@ class _StudyViewState extends State<StudyView> {
     super.dispose();
   }
   
-  // Store a global key for the NavigatorState to be able to properly handle navigation
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-  
   // Flag to track if result screen is currently displayed
   bool _isResultScreenShowing = false;
   

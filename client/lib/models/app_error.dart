@@ -64,7 +64,6 @@ class AppError extends Equatable {
       case ErrorSource.system:
         return 'There was a system error. Please restart the app.';
       case ErrorSource.unknown:
-      default:
         return 'An unexpected error occurred. Please try again.';
     }
   }
