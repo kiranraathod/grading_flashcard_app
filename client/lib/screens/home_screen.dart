@@ -20,9 +20,20 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _activeTab = 'Decks';
   
-  // Mock data for streak calendar
+  // Data for streak calendar
   final int _weeklyGoal = 7;
   final int _daysCompleted = 5;
+  
+  // Calculate the progress percentage based on completed flashcards
+  int _calculateProgress(FlashcardSet set) {
+    if (set.flashcards.isEmpty) return 0;
+    
+    // Count completed flashcards
+    int completedCount = set.flashcards.where((card) => card.isCompleted).length;
+    
+    // Calculate percentage - always start at zero for clean state
+    return (completedCount / set.flashcards.length * 100).round();
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -346,21 +357,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   Widget _buildDecksTab(FlashcardService flashcardService) {
-    // Get flashcard sets from service or use mock data
+    // Get flashcard sets from service
     final flashcardSets = flashcardService.sets;
     
     // If no sets, show empty state
     if (flashcardSets.isEmpty) {
       return _buildEmptyState('No flashcard decks yet', 'Create your first deck');
     }
-    
-    // Mock data for decks (replace with actual data in production)
-    final List<Map<String, dynamic>> decks = [
-      {'title': 'Python Basics', 'category': 'Python', 'cards': 12, 'progress': 75},
-      {'title': 'Python Classes', 'category': 'Python', 'cards': 8, 'progress': 25},
-      {'title': 'Python Data Types', 'category': 'Python', 'cards': 15, 'progress': 40},
-      {'title': 'Python Functions', 'category': 'Python', 'cards': 10, 'progress': 0},
-    ];
     
     // Responsive grid layout similar to the React code
     // (grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6)
@@ -383,26 +386,35 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisSpacing: 24, // gap-6 in Tailwind is 1.5rem (24px)
       mainAxisSpacing: 24, // gap-6
       children: [
-        ...decks.map((deck) => FlashcardDeckCard(
-              title: deck['title'],
-              category: deck['category'],
-              cardCount: deck['cards'],
-              progressPercent: deck['progress'],
+        ...flashcardSets.map((set) => FlashcardDeckCard(
+              title: set.title,
+              category: set.description.isNotEmpty ? set.description : 'Python',
+              cardCount: set.flashcards.length,
+              progressPercent: _calculateProgress(set),
               isStudyDeck: true,
-              onTap: () {
-                // Navigate to study screen
-                Navigator.push(
-                  context,
+              onTap: () async {
+                // Navigate to study screen with the actual flashcard set
+                await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => StudyScreen(
-                      set: FlashcardSet(
-                        id: '1',
-                        title: deck['title'],
-                        flashcards: [],
-                      ),
+                      set: set,
                     ),
                   ),
-                );
+                ).then((_) {
+                  // Explicitly reload flashcard sets after returning
+                  final flashcardService = Provider.of<FlashcardService>(context, listen: false);
+                  flashcardService.reloadSets(); // Use the public reload method
+                  
+                  // Extra safety - force state refresh
+                  setState(() {
+                    debugPrint('Forcing home screen refresh after returning from study');
+                  });
+                });
+                
+                // Force refresh after returning
+                setState(() {
+                  debugPrint('Refreshing home screen after study session');
+                });
               },
             )),
         CreateDeckCard(

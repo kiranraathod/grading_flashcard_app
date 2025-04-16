@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart';
 import '../../models/answer.dart';
 import '../../models/app_error.dart';
+import '../../models/flashcard.dart';
 import '../../services/api_service.dart';
 import '../../services/error_service.dart';
 import 'study_event.dart';
@@ -23,6 +24,18 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
   }
 
   void _onStudyStarted(StudyStarted event, Emitter<StudyState> emit) {
+    // Check if flashcard set has cards
+    if (event.flashcardSet.flashcards.isEmpty) {
+      emit(
+        state.copyWith(
+          status: StudyStatus.error,
+          flashcardSet: event.flashcardSet,
+          errorMessage: "This flashcard set is empty. Please add flashcards to study.",
+        ),
+      );
+      return;
+    }
+    
     emit(
       state.copyWith(
         status: StudyStatus.loaded,
@@ -55,10 +68,68 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
       );
 
       final gradedAnswer = await _apiService.gradeAnswer(answer);
-
-      emit(
-        state.copyWith(status: StudyStatus.loaded, gradedAnswer: gradedAnswer),
-      );
+      
+      // Log the grade received for debugging
+      debugPrint('Answer grade received: ${gradedAnswer.grade} for card ${event.flashcard.id}');
+      
+      // Only mark flashcard as completed if the answer is correct (grade A, B, or C)
+      // This is the ONLY place where progress is updated, and only on user answer submission
+      if (gradedAnswer.grade == 'A' || gradedAnswer.grade == 'B' || gradedAnswer.grade == 'C') {
+        debugPrint('Marking card ${event.flashcard.id} as completed');
+        
+        // Create a copy of the flashcard set with the updated flashcard
+        final updatedFlashcards = List<Flashcard>.from(state.flashcardSet?.flashcards ?? []);
+        final cardIndex = updatedFlashcards.indexWhere((card) => card.id == event.flashcard.id);
+        
+        if (cardIndex >= 0) {
+          // Only update if the card wasn't already completed
+          final isAlreadyCompleted = updatedFlashcards[cardIndex].isCompleted;
+          
+          if (!isAlreadyCompleted) {
+            debugPrint('Card was not previously completed - updating progress');
+            
+            // Update the specific flashcard's completion status
+            final updatedCard = Flashcard(
+              id: updatedFlashcards[cardIndex].id,
+              question: updatedFlashcards[cardIndex].question,
+              answer: updatedFlashcards[cardIndex].answer,
+              isMarkedForReview: updatedFlashcards[cardIndex].isMarkedForReview,
+              isCompleted: true,
+            );
+            
+            updatedFlashcards[cardIndex] = updatedCard;
+            
+            // Create updated flashcard set
+            final updatedSet = state.flashcardSet!.copyWith(
+              flashcards: updatedFlashcards,
+              lastUpdated: DateTime.now(), // Update the timestamp to trigger rerenders
+            );
+            
+            emit(
+              state.copyWith(
+                status: StudyStatus.loaded, 
+                gradedAnswer: gradedAnswer,
+                flashcardSet: updatedSet,
+              ),
+            );
+          } else {
+            debugPrint('Card was already completed - not updating progress');
+            emit(
+              state.copyWith(status: StudyStatus.loaded, gradedAnswer: gradedAnswer),
+            );
+          }
+        } else {
+          debugPrint('Card index not found - not updating progress');
+          emit(
+            state.copyWith(status: StudyStatus.loaded, gradedAnswer: gradedAnswer),
+          );
+        }
+      } else {
+        debugPrint('Answer incorrect (grade: ${gradedAnswer.grade}) - not updating progress');
+        emit(
+          state.copyWith(status: StudyStatus.loaded, gradedAnswer: gradedAnswer),
+        );
+      }
     } catch (e, stackTrace) {
       debugPrint('Error in StudyBloc._onFlashcardAnswered: $e');
 

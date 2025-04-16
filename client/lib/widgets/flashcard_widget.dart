@@ -92,14 +92,31 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              widget.flashcard.question,
+              widget.flashcard.question.isNotEmpty 
+                  ? widget.flashcard.question 
+                  : 'No question available. Please edit this flashcard.',
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             const Text(
               'Tap to reveal answer',
               style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            // Add a hint icon to encourage user interaction
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey.shade200,
+              ),
+              child: Icon(
+                Icons.touch_app,
+                color: Colors.grey.shade600,
+                size: 20,
+              ),
             ),
           ],
         ),
@@ -129,14 +146,31 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
             ),
             const SizedBox(height: 16),
             Text(
-              widget.flashcard.answer,
+              widget.flashcard.answer.isNotEmpty
+                  ? widget.flashcard.answer
+                  : 'No answer available. Please edit this flashcard.',
               style: const TextStyle(fontSize: 20),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             const Text(
               'Tap to see question',
               style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            // Add a hint icon to encourage user interaction
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.grey.shade200,
+              ),
+              child: Icon(
+                Icons.flip,
+                color: Colors.grey.shade600,
+                size: 20,
+              ),
             ),
           ],
         ),

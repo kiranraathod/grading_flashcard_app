@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/speech_to_text_service.dart';
+import '../utils/colors.dart';
 
 class AnswerInputWidget extends StatefulWidget {
   final SpeechToTextService speechService;
@@ -74,6 +75,32 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
+          // Hint text about progress tracking
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.blue.shade100),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue.shade700, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Submit your answer to track your progress',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
           Row(
             children: [
               Expanded(
@@ -106,12 +133,15 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
             ],
           ),
           const SizedBox(height: 16),
-          ElevatedButton(
+          ElevatedButton.icon(
             onPressed: widget.isDisabled ? null : _submitAnswer,
             style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
             ),
-            child: const Text('Submit Answer'),
+            icon: const Icon(Icons.send),
+            label: const Text('Submit Answer to Update Progress'),
           ),
         ],
       ),

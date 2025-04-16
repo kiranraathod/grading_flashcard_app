@@ -46,7 +46,7 @@ class _ResultScreenState extends State<ResultScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isSystemError = widget.answer.grade == 'X';
-    
+
     return Scaffold(
       appBar: AppBar(title: const Text('Results')),
       body: SingleChildScrollView(
@@ -60,25 +60,16 @@ class _ResultScreenState extends State<ResultScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Question:',
-                      style: DS.headingSmall,
-                    ),
+                    Text('Question:', style: DS.headingSmall),
                     SizedBox(height: DS.spacingXs),
                     Text(widget.answer.question, style: DS.bodyMedium),
                     SizedBox(height: DS.spacingM),
-                    Text(
-                      'Your Answer:',
-                      style: DS.headingSmall,
-                    ),
+                    Text('Your Answer:', style: DS.headingSmall),
                     SizedBox(height: DS.spacingXs),
                     Text(widget.answer.userAnswer, style: DS.bodyMedium),
                     if (!isSystemError) ...[
                       SizedBox(height: DS.spacingM),
-                      Text(
-                        'Correct Answer:',
-                        style: DS.headingSmall,
-                      ),
+                      Text('Correct Answer:', style: DS.headingSmall),
                       SizedBox(height: DS.spacingXs),
                       Text(widget.correctAnswer, style: DS.bodyMedium),
                     ],
@@ -88,9 +79,9 @@ class _ResultScreenState extends State<ResultScreen> {
             ),
             SizedBox(height: DS.spacingM),
             Card(
-              // Using RGBA values with fromRGBO instead of withOpacity
+              // Using constructor with individual color components
               color: Color.fromRGBO(
-                _getGradeColor().red,
+                _getGradeColor().red, // Use direct integer values here
                 _getGradeColor().green,
                 _getGradeColor().blue,
                 0.2,
@@ -139,9 +130,38 @@ class _ResultScreenState extends State<ResultScreen> {
             if (widget.answer.suggestions != null)
               SuggestionsWidget(
                 suggestions: widget.answer.suggestions!,
-                title: isSystemError ? 'Troubleshooting Steps' : 'Improvement Suggestions',
+                title:
+                    isSystemError
+                        ? 'Troubleshooting Steps'
+                        : 'Improvement Suggestions',
               ),
             SizedBox(height: DS.spacingL),
+            // Show progress update message when answer is correct
+            if (widget.answer.grade == 'A' ||
+                widget.answer.grade == 'B' ||
+                widget.answer.grade == 'C')
+              Container(
+                padding: EdgeInsets.all(DS.spacingM),
+                margin: EdgeInsets.only(bottom: DS.spacingM),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green),
+                    SizedBox(width: DS.spacingS),
+                    Expanded(
+                      child: Text(
+                        'Your progress has been updated!',
+                        style: TextStyle(color: Colors.green.shade800),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             Center(
               child: ElevatedButton(
                 onPressed: _continuePressed ? null : _handleContinue,
@@ -152,9 +172,19 @@ class _ResultScreenState extends State<ResultScreen> {
                     horizontal: DS.spacingL,
                     vertical: DS.spacingS,
                   ),
-                  // Disabled style
-                  disabledBackgroundColor: AppColors.primary.withOpacity(0.5),
-                  disabledForegroundColor: AppColors.textOnPrimary.withOpacity(0.5),
+                  // Instead of using withValues or withOpacity, create new Color objects
+                  disabledBackgroundColor: Color.fromARGB(
+                    (AppColors.primary.alpha * 0.5).round(),
+                    AppColors.primary.red,
+                    AppColors.primary.green,
+                    AppColors.primary.blue,
+                  ),
+                  disabledForegroundColor: Color.fromARGB(
+                    (AppColors.textOnPrimary.alpha * 0.5).round(),
+                    AppColors.textOnPrimary.red,
+                    AppColors.textOnPrimary.green,
+                    AppColors.textOnPrimary.blue,
+                  ),
                 ),
                 child: Text(isSystemError ? 'Try Again Later' : 'Continue'),
               ),
@@ -164,13 +194,13 @@ class _ResultScreenState extends State<ResultScreen> {
       ),
     );
   }
-  
+
   void _handleContinue() {
     // Prevent multiple clicks
     setState(() {
       _continuePressed = true;
     });
-    
+
     // Call the continue callback
     widget.onContinue();
   }

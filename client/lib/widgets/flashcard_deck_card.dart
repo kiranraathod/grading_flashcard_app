@@ -129,7 +129,7 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Card count and progress
+                  // Card count (always show)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -142,17 +142,6 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                           color: Colors.grey.shade500,
                         ),
                       ),
-                      if (widget.isStudyDeck && widget.progressPercent > 0)
-                        Text(
-                          '${widget.progressPercent}% complete',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: widget.isStudyDeck
-                                ? Color(0xFF10B981) // emerald-600
-                                : Color(0xFF8B5CF6), // purple-600
-                          ),
-                        ),
                       if (!widget.isStudyDeck)
                         Text(
                           'Updated 2d ago',
@@ -164,38 +153,45 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                     ],
                   ),
                   
-                  // Progress bar or "Not started" text
-                  if (widget.isStudyDeck && widget.progressPercent > 0) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: (MediaQuery.of(context).size.width / 4 - 32) * 
-                                (widget.progressPercent / 100),
-                            decoration: BoxDecoration(
-                              color: Color(0xFF10B981), // emerald-500
-                              borderRadius: BorderRadius.circular(3),
-                            ),
+                  // Always show progress bar, but with zero width for 0%
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: Row(
+                      children: [
+                        // Progress bar - visible even at 0%
+                        Container(
+                          width: (MediaQuery.of(context).size.width / 4 - 32) * 
+                              (widget.progressPercent > 0 ? widget.progressPercent / 100 : 0.001),
+                          decoration: BoxDecoration(
+                            color: Color(0xFF10B981), // emerald-500
+                            borderRadius: BorderRadius.circular(3),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ] else if (widget.isStudyDeck) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Not started',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade400,
-                      ),
+                  ),
+                  
+                  // Text status below progress bar
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.progressPercent > 0 
+                        ? '${widget.progressPercent}% complete' 
+                        : 'Not started',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: widget.progressPercent > 0
+                          ? Color(0xFF10B981) // emerald-600 for completed
+                          : Colors.grey.shade400,
+                      fontWeight: widget.progressPercent > 0
+                          ? FontWeight.w500
+                          : FontWeight.normal,
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),

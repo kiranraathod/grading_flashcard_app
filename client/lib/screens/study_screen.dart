@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import '../blocs/study/study_bloc.dart';
 import '../blocs/study/study_event.dart';
 import '../blocs/study/study_state.dart';
 import '../models/flashcard_set.dart';
 import '../services/api_service.dart';
+import '../services/flashcard_service.dart';
 import '../services/speech_to_text_service.dart';
 import '../utils/colors.dart';
 import '../utils/design_system.dart';
@@ -20,23 +22,56 @@ class StudyScreen extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => StudyBloc(
-        apiService: ApiService(),
-      )..add(StudyStarted(flashcardSet: set)),
-      child: const StudyView(),
+    // Get a reference to the FlashcardService for updating progress
+    final flashcardService = Provider.of<FlashcardService>(context, listen: false);
+    
+    // Create the bloc outside the build method to ensure it persists
+    final studyBloc = StudyBloc(apiService: ApiService())
+      ..add(StudyStarted(flashcardSet: set));
+      
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<StudyBloc>.value(
+          value: studyBloc,
+        ),
+      ],
+      child: Builder(
+        builder: (context) {
+          return WillPopScope(
+            // Capture when user navigates back
+            onWillPop: () async {
+              try {
+                final bloc = BlocProvider.of<StudyBloc>(context);
+                if (bloc.state.flashcardSet != null) {
+                  // Save progress when navigating back
+                  await flashcardService.updateFlashcardSet(bloc.state.flashcardSet!);
+                  debugPrint('Progress saved on back navigation');
+                }
+              } catch (e) {
+                debugPrint('Error saving progress on back: $e');
+              }
+              return true;
+            },
+            child: StudyView(
+              flashcardService: flashcardService,
+            ),
+          );
+        }
+      ),
     );
   }
 }
 
 class StudyView extends StatefulWidget {
-  const StudyView({super.key});
+  final FlashcardService flashcardService;
+  
+  const StudyView({super.key, required this.flashcardService});
 
   @override
   State<StudyView> createState() => _StudyViewState();
 }
 
-class _StudyViewState extends State<StudyView> {
+class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
   late PageController _pageController;
   final SpeechToTextService _speechService = SpeechToTextService();
   
@@ -45,10 +80,32 @@ class _StudyViewState extends State<StudyView> {
     super.initState();
     _pageController = PageController();
     _speechService.initialize();
+    
+    // Add lifecycle observer to catch app pauses/resumes
+    WidgetsBinding.instance.addObserver(this);
+  }
+  
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Save progress when app is paused or inactive
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _saveProgress();
+    }
+  }
+  
+  void _saveProgress() {
+    final bloc = context.read<StudyBloc>();
+    if (bloc.state.flashcardSet != null) {
+      // Save immediately when a card is completed
+      debugPrint('Saving progress from lifecycle change');
+      widget.flashcardService.updateFlashcardSet(bloc.state.flashcardSet!);
+    }
   }
   
   @override
   void dispose() {
+    // Remove lifecycle observer
+    WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
     super.dispose();
   }
@@ -84,11 +141,20 @@ class _StudyViewState extends State<StudyView> {
           
           _isResultScreenShowing = true;
           
+          // Get the bloc before navigation to ensure we have the correct instance
+          final bloc = BlocProvider.of<StudyBloc>(context);
+          
+          // IMPORTANT: Save progress immediately when a card is completed
+          if (state.gradedAnswer!.grade == 'A' || 
+              state.gradedAnswer!.grade == 'B' || 
+              state.gradedAnswer!.grade == 'C') {
+            // This is the critical part - save immediately after grading
+            debugPrint('Saving progress after correct answer');
+            widget.flashcardService.updateFlashcardSet(state.flashcardSet!);
+          }
+          
           // Use WidgetsBinding to avoid showing the dialog during build
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            // Get the bloc before navigation to ensure we have the correct instance
-            final bloc = BlocProvider.of<StudyBloc>(context);
-            
             showDialog(
               context: context,
               barrierDismissible: false,
@@ -119,6 +185,18 @@ class _StudyViewState extends State<StudyView> {
         
         return Scaffold(
           appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                // Save progress before navigating back
+                if (bloc.state.flashcardSet != null) {
+                  debugPrint('Saving progress from manual back button');
+                  widget.flashcardService.updateFlashcardSet(bloc.state.flashcardSet!);
+                }
+                // Use Navigator.of(context).pop() to ensure we're going back properly
+                Navigator.of(context).pop();
+              },
+            ),
             title: Text(state.flashcardSet?.title ?? 'Study'),
             actions: [
               // Edit button
@@ -187,6 +265,29 @@ class _StudyViewState extends State<StudyView> {
               // Always show the flashcard content
               Column(
                 children: [
+                  // Add Back button for web view
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16.0, top: 8.0),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Save progress before navigating back
+                          if (bloc.state.flashcardSet != null) {
+                            debugPrint('Saving progress from web view back button');
+                            widget.flashcardService.updateFlashcardSet(bloc.state.flashcardSet!);
+                          }
+                          // Use Navigator.of(context).pop() to ensure we're going back properly
+                          Navigator.of(context).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey.shade200,
+                          foregroundColor: Colors.black87,
+                        ),
+                        child: const Text('Back'),
+                      ),
+                    ),
+                  ),
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
@@ -211,7 +312,16 @@ class _StudyViewState extends State<StudyView> {
                     speechService: _speechService,
                     onSubmit: (answer) {
                       if (state.currentFlashcard != null) {
-                        // Simply dispatch the event, the listener will handle showing the result
+                        // Show a brief loading indicator to indicate processing
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Processing your answer...'),
+                            duration: Duration(milliseconds: 500),
+                          )
+                        );
+                        
+                        // Dispatch the event, the listener will handle showing the result
+                        // This is the only place where the answer is submitted and progress can be updated
                         bloc.add(
                           FlashcardAnswered(
                             answer: answer,

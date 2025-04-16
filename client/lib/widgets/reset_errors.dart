@@ -10,7 +10,7 @@ updating code, try running:
 */
 
 class ResetErrors extends StatelessWidget {
-  const ResetErrors({Key? key}) : super(key: key);
+  const ResetErrors({super.key});
 
   @override
   Widget build(BuildContext context) {
