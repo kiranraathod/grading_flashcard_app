@@ -81,9 +81,9 @@ class _ResultScreenState extends State<ResultScreen> {
             Card(
               // Using constructor with individual color components
               color: Color.fromRGBO(
-                _getGradeColor().red, // Use direct integer values here
-                _getGradeColor().green,
-                _getGradeColor().blue,
+                _getGradeColor().r.toInt(), // Convert from double to int
+                _getGradeColor().g.toInt(),
+                _getGradeColor().b.toInt(),
                 0.2,
               ),
               child: Padding(
@@ -174,16 +174,16 @@ class _ResultScreenState extends State<ResultScreen> {
                   ),
                   // Instead of using withValues or withOpacity, create new Color objects
                   disabledBackgroundColor: Color.fromARGB(
-                    (AppColors.primary.alpha * 0.5).round(),
-                    AppColors.primary.red,
-                    AppColors.primary.green,
-                    AppColors.primary.blue,
+                    (AppColors.primary.a * 0.5).round(),
+                    AppColors.primary.r.toInt(),
+                    AppColors.primary.g.toInt(),
+                    AppColors.primary.b.toInt(),
                   ),
                   disabledForegroundColor: Color.fromARGB(
-                    (AppColors.textOnPrimary.alpha * 0.5).round(),
-                    AppColors.textOnPrimary.red,
-                    AppColors.textOnPrimary.green,
-                    AppColors.textOnPrimary.blue,
+                    (AppColors.textOnPrimary.a * 0.5).round(),
+                    AppColors.textOnPrimary.r.toInt(),
+                    AppColors.textOnPrimary.g.toInt(),
+                    AppColors.textOnPrimary.b.toInt(),
                   ),
                 ),
                 child: Text(isSystemError ? 'Try Again Later' : 'Continue'),

@@ -37,20 +37,23 @@ class StudyScreen extends StatelessWidget {
       ],
       child: Builder(
         builder: (context) {
-          return WillPopScope(
+          return PopScope(
             // Capture when user navigates back
-            onWillPop: () async {
-              try {
-                final bloc = BlocProvider.of<StudyBloc>(context);
-                if (bloc.state.flashcardSet != null) {
-                  // Save progress when navigating back
-                  await flashcardService.updateFlashcardSet(bloc.state.flashcardSet!);
-                  debugPrint('Progress saved on back navigation');
+            canPop: true,
+            onPopInvokedWithResult: (bool didPop, value) async {
+              if (didPop) {
+                try {
+                  final bloc = BlocProvider.of<StudyBloc>(context);
+                  if (bloc.state.flashcardSet != null) {
+                    // Save progress when navigating back
+                    await flashcardService.updateFlashcardSet(bloc.state.flashcardSet!);
+                    debugPrint('Progress saved on back navigation');
+                  }
+                } catch (e) {
+                  debugPrint('Error saving progress on back: $e');
                 }
-              } catch (e) {
-                debugPrint('Error saving progress on back: $e');
               }
-              return true;
+              // Do not return anything as this is a Future<void> function
             },
             child: StudyView(
               flashcardService: flashcardService,

@@ -72,8 +72,18 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: Colors.grey.shade100,
-        selectedColor: AppColors.primary.withOpacity(0.1),
-        secondarySelectedColor: AppColors.primary.withOpacity(0.1),
+        selectedColor: Color.fromRGBO(
+          AppColors.primary.r.toInt(),
+          AppColors.primary.g.toInt(),
+          AppColors.primary.b.toInt(),
+          0.1,
+        ),
+        secondarySelectedColor: Color.fromRGBO(
+          AppColors.primary.r.toInt(),
+          AppColors.primary.g.toInt(),
+          AppColors.primary.b.toInt(),
+          0.1,
+        ),
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacingS,
           vertical: DS.spacing2xs,
@@ -88,7 +98,12 @@ class AppTheme {
           borderRadius: DS.borderMedium,
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Color.fromRGBO(
+                Colors.grey.r.toInt(),
+                Colors.grey.g.toInt(),
+                Colors.grey.b.toInt(),
+                0.1,
+              ),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

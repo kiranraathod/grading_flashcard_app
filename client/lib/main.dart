@@ -7,6 +7,7 @@ import 'services/user_service.dart';
 import 'services/network_service.dart';
 import 'services/api_service.dart';
 import 'services/speech_to_text_service.dart';
+import 'services/interview_service.dart';
 import 'widgets/error_handler.dart';
 
 void main() {
@@ -24,6 +25,7 @@ class MyApp extends StatelessWidget {
     final flashcardService = FlashcardService();
     final userService = UserService();
     final networkService = NetworkService();
+    final interviewService = InterviewService();
 
     return MultiProvider(
       providers: [
@@ -31,6 +33,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => flashcardService),
         ChangeNotifierProvider(create: (_) => userService),
         ChangeNotifierProvider(create: (_) => networkService),
+        ChangeNotifierProvider(create: (_) => interviewService),
 
         // Services as Repositories for BLoCs
         Provider<ApiService>.value(value: apiService),

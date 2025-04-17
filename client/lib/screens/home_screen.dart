@@ -6,8 +6,10 @@ import '../utils/colors.dart';
 import '../utils/design_system.dart';
 import 'create_flashcard_screen.dart';
 import 'study_screen.dart';
+import 'interview_questions_screen.dart';
 import '../models/flashcard_set.dart';
 import '../services/flashcard_service.dart';
+import '../widgets/interview/arrow_painter.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -202,37 +204,52 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               
-                              // Interview Questions tab
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _activeTab = 'Interview Questions';
-                                  });
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: _activeTab == 'Interview Questions' ? Colors.white : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                    boxShadow: _activeTab == 'Interview Questions' ? [
-                                      BoxShadow(
-                                        color: Color.fromRGBO(128, 128, 128, 0.1),
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      )
-                                    ] : null,
-                                  ),
-                                  child: Text(
-                                    'Interview Questions',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: _activeTab == 'Interview Questions' 
-                                        ? AppColors.primary
-                                        : Colors.grey.shade600,
+                              // Interview Questions tab with arrow
+                              Stack(
+                                children: [
+                                  InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _activeTab = 'Interview Questions';
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: _activeTab == 'Interview Questions' ? Colors.white : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: _activeTab == 'Interview Questions' ? [
+                                          BoxShadow(
+                                            color: const Color.fromRGBO(128, 128, 128, 0.1),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          )
+                                        ] : null,
+                                      ),
+                                      child: Text(
+                                        'Interview Questions',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: _activeTab == 'Interview Questions' 
+                                            ? AppColors.primary
+                                            : Colors.grey.shade600,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                  
+                                  // Arrow indicator (only show when tab is active)
+                                  if (_activeTab == 'Interview Questions')
+                                    Positioned(
+                                      top: -15,
+                                      right: 20,
+                                      child: CustomPaint(
+                                        size: const Size(20, 15),
+                                        painter: ArrowPainter(color: Colors.red),
+                                      ),
+                                    ),
+                                ],
                               ),
                               
                               // Recent tab
@@ -401,14 +418,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ).then((_) {
-                  // Explicitly reload flashcard sets after returning
-                  final flashcardService = Provider.of<FlashcardService>(context, listen: false);
-                  flashcardService.reloadSets(); // Use the public reload method
-                  
-                  // Extra safety - force state refresh
-                  setState(() {
-                    debugPrint('Forcing home screen refresh after returning from study');
-                  });
+                  // Check if the widget is still mounted before accessing context
+                  if (mounted) {
+                    // Explicitly reload flashcard sets after returning
+                    final flashcardService = Provider.of<FlashcardService>(context, listen: false);
+                    flashcardService.reloadSets(); // Use the public reload method
+                    
+                    // Extra safety - force state refresh
+                    setState(() {
+                      debugPrint('Forcing home screen refresh after returning from study');
+                    });
+                  }
                 });
                 
                 // Force refresh after returning
@@ -432,44 +452,186 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   Widget _buildInterviewTab() {
-    // Mock data for interview decks
-    final List<Map<String, dynamic>> interviewDecks = [
-      {'title': 'Data Scientist Interview', 'category': 'Data Science', 'cards': 24},
-      {'title': 'Data Analyst', 'category': 'Data Analysis', 'cards': 18},
-      {'title': 'Junior Developer', 'category': 'Web Development', 'cards': 15},
-      {'title': 'ML Engineer', 'category': 'Machine Learning', 'cards': 22},
-    ];
-    
-    // Responsive grid layout similar to the React code
-    final screenWidth = MediaQuery.of(context).size.width;
-    int crossAxisCount = 1;
-    
-    if (screenWidth >= 1024) { // lg breakpoint
-      crossAxisCount = 4;
-    } else if (screenWidth >= 640) { // sm breakpoint
-      crossAxisCount = 2;
-    } else {
-      crossAxisCount = 1;
-    }
-    
-    return GridView.count(
-      crossAxisCount: crossAxisCount,
-      childAspectRatio: 0.85, // Cards are slightly taller than wide
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: DS.spacingS,
-      mainAxisSpacing: DS.spacingS,
-      children: interviewDecks.map((deck) => FlashcardDeckCard(
-            title: deck['title'],
-            category: deck['category'],
-            cardCount: deck['cards'],
-            progressPercent: 0,
-            isStudyDeck: false,
-            onTap: () {
-              // Navigate to interview practice screen
-              // This would be implemented similarly to study screen
-            },
-          )).toList(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Consolidated Data Science Interview Questions card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(DS.spacingM),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+            border: Border.all(color: Colors.blue.shade100),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Data Science Interview Questions',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: DS.spacingS),
+              
+              // Question count and update time
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '64 questions total',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  Text(
+                    'Updated 2d ago',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: DS.spacingS),
+              
+              // Progress bar (empty for now)
+              Container(
+                height: 6,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                // Progress bar would go here
+              ),
+              
+              const SizedBox(height: 4),
+              
+              // Status text
+              Text(
+                'Not started',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+              
+              const SizedBox(height: DS.spacingM),
+              
+              // Practice Questions button
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const InterviewQuestionsScreen(
+                        category: 'Data Science',
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacingM,
+                    vertical: DS.spacingS,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                  ),
+                ),
+                child: const Text('Practice Questions'),
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: DS.spacingL),
+        
+        // Other interview categories in a grid (simplified)
+        Text(
+          'Other Interview Categories',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        
+        const SizedBox(height: DS.spacingM),
+        
+        // Simplified grid
+        GridView.count(
+          crossAxisCount: 3,
+          childAspectRatio: 2.5,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: DS.spacingS,
+          mainAxisSpacing: DS.spacingS,
+          children: [
+            _buildCategoryChip('Data Analysis', 18),
+            _buildCategoryChip('Web Development', 15),
+            _buildCategoryChip('Machine Learning', 22),
+            _buildCategoryChip('SQL', 10),
+            _buildCategoryChip('Python', 14),
+            _buildCategoryChip('Data Visualization', 8),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Helper method for category chips
+  Widget _buildCategoryChip(String title, int count) {
+    return InkWell(
+      onTap: () {
+        // Navigate to interview questions for this category
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => InterviewQuestionsScreen(
+              category: title,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacingS,
+          vertical: DS.spacing2xs,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Text(
+              '$count questions',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
   
