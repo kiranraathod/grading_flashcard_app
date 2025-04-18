@@ -10,6 +10,8 @@ import '../services/interview_service.dart';
 import '../utils/design_system.dart';
 import '../utils/colors.dart';
 import 'create_interview_question_screen.dart';
+import 'interview_practice_screen.dart';
+import 'interview_practice_batch_screen.dart';
 
 class InterviewQuestionsScreen extends StatefulWidget {
   final String category;
@@ -289,7 +291,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                 
                 const SizedBox(height: DS.spacingL),
                 
-                // Questions header with count
+                // Questions header with count and practice all button
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -302,9 +304,44 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                       ),
                     ),
                     
-                    // Refresh and add buttons
+                    // Practice all, refresh and add buttons
                     Row(
                       children: [
+                        // Practice all button
+                        ElevatedButton.icon(
+                          onPressed: filteredQuestions.isNotEmpty
+                              ? () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => InterviewPracticeBatchScreen(
+                                        questions: filteredQuestions,
+                                        categoryName: widget.category,
+                                      ),
+                                    ),
+                                  ).then((_) {
+                                    // Refresh the questions list when returning
+                                    setState(() {});
+                                  });
+                                }
+                              : null,
+                          icon: const Icon(
+                            Icons.play_circle,
+                            size: 16,
+                          ),
+                          label: const Text('Practice All'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            textStyle: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        
+                        const SizedBox(width: DS.spacingS),
                         TextButton.icon(
                           onPressed: () {
                             setState(() {
@@ -377,14 +414,20 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                   return InterviewQuestionCard(
                     question: question,
                     onPractice: () {
-                      // Navigate to practice screen - would be implemented in a real app
-                      // For now, just show a snackbar
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Practice mode for "${question.text.substring(0, 30)}..." would launch here'),
-                          duration: const Duration(seconds: 2),
+                      // Navigate to practice screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => InterviewPracticeScreen(
+                            question: question,
+                            questionList: filteredQuestions,
+                            currentIndex: filteredQuestions.indexOf(question),
+                          ),
                         ),
-                      );
+                      ).then((_) {
+                        // Refresh the questions list when returning
+                        setState(() {});
+                      });
                     },
                     onViewAnswer: () {
                       // Show answer modal

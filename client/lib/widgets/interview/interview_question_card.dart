@@ -195,23 +195,64 @@ class InterviewQuestionCard extends StatelessWidget {
                 
                 const SizedBox(height: DS.spacingM),
                 
-                // Action buttons
+                // Status and action buttons
                 Row(
                   children: [
-                    // Practice button
-                    TextButton(
-                      onPressed: onPractice,
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        foregroundColor: AppColors.primary,
+                    // Completion indicator
+                    if (question.isCompleted)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8, 
+                          vertical: 2
+                        ),
+                        margin: const EdgeInsets.only(right: DS.spacingS),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              size: 12,
+                              color: Colors.green.shade700,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Completed',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.green.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: const Text(
+                    // Practice button
+                    TextButton.icon(
+                      onPressed: onPractice,
+                      icon: const Icon(
+                        Icons.play_circle_outline,
+                        size: 16,
+                      ),
+                      label: const Text(
                         'Practice',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: AppColors.primary,
+                        backgroundColor: Colors.blue.shade50,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
                     ),
