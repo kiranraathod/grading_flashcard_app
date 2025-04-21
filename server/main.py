@@ -10,8 +10,9 @@ import sys
 import json
 from fastapi.responses import JSONResponse
 
-# Import the router
+# Import the routers
 from src.routes.grading_routes import router as grading_router
+from src.routes.interview_routes import router as interview_router
 from src.utils.exceptions import BaseFlashcardAPIError
 from src.config.config import config
 
@@ -87,6 +88,7 @@ def create_app():
     
     # Register routers
     app.include_router(grading_router, prefix="/api")
+    app.include_router(interview_router, prefix="/api")
     
     @app.get("/")
     def health_check():

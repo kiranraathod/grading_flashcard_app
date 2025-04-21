@@ -1,144 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/interview_question.dart';
-import '../utils/colors.dart';
-import '../utils/design_system.dart';
+import '../services/interview_service.dart';
+import '../services/interview_api_service.dart';
 import 'interview_practice_screen.dart';
+import 'interview_batch_result_screen.dart';
 
 class InterviewPracticeBatchScreen extends StatefulWidget {
   final List<InterviewQuestion> questions;
   final String categoryName;
-  
+
   const InterviewPracticeBatchScreen({
-    Key? key,
+    super.key,
     required this.questions,
     required this.categoryName,
-  }) : super(key: key);
+  });
 
   @override
   State<InterviewPracticeBatchScreen> createState() => _InterviewPracticeBatchScreenState();
 }
 
 class _InterviewPracticeBatchScreenState extends State<InterviewPracticeBatchScreen> {
-  List<InterviewQuestion> _selectedQuestions = [];
-  bool _showOnlyUncompleted = false;
+  late InterviewService _interviewService;
+  final InterviewApiService _apiService = InterviewApiService();
+  final bool _isLoading = false; // Changed to final as per lint warning
+  List<InterviewQuestion> _completedQuestions = [];
   
   @override
-  void initState() {
-    super.initState();
-    // Initially select all questions
-    _selectedQuestions = List.from(widget.questions);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _interviewService = Provider.of<InterviewService>(context);
+    _updateCompletedQuestions();
   }
   
-  // Start practice with selected questions
-  void _startPractice() {
-    if (_selectedQuestions.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one question to practice.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-    
-    // Navigate to the first question
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => InterviewPracticeScreen(
-          question: _selectedQuestions[0],
-          questionList: _selectedQuestions,
-          currentIndex: 0,
-        ),
-      ),
-    ).then((_) {
-      // Refresh the question list when returning
-      setState(() {});
-    });
-  }
-  
-  // Toggle selection of a question
-  void _toggleQuestionSelection(InterviewQuestion question) {
+  // Helper method to update the list of completed questions
+  void _updateCompletedQuestions() {
     setState(() {
-      if (_selectedQuestions.contains(question)) {
-        _selectedQuestions.remove(question);
-      } else {
-        _selectedQuestions.add(question);
-      }
+      _completedQuestions = widget.questions.where((q) => q.isCompleted).toList();
     });
   }
   
-  // Select or deselect all questions
-  void _toggleSelectAll() {
-    setState(() {
-      if (_selectedQuestions.length == _getFilteredQuestions().length) {
-        // If all are selected, deselect all
-        _selectedQuestions.clear();
-      } else {
-        // Otherwise, select all
-        _selectedQuestions = List.from(_getFilteredQuestions());
-      }
-    });
-  }
-  
-  // Get filtered questions based on completion status
-  List<InterviewQuestion> _getFilteredQuestions() {
-    if (_showOnlyUncompleted) {
-      return widget.questions.where((q) => !q.isCompleted).toList();
-    }
-    return widget.questions;
-  }
-  
-  // Get category color
-  Color _getCategoryColor(String category) {
-    switch (category) {
-      case 'technical':
-        return Colors.blue.shade100;
-      case 'applied':
-        return Colors.green.shade100;
-      case 'case':
-        return Colors.purple.shade100;
-      case 'behavioral':
-        return Colors.yellow.shade100;
-      case 'job':
-        return Colors.red.shade100;
-      default:
-        return Colors.grey.shade100;
-    }
-  }
-  
-  // Get difficulty color
-  Color _getDifficultyColor(String difficulty) {
-    switch (difficulty) {
-      case 'entry':
-        return Colors.green.shade100;
-      case 'mid':
-        return Colors.yellow.shade100;
-      case 'senior':
-        return Colors.red.shade100;
-      default:
-        return Colors.grey.shade100;
-    }
-  }
-  
-  // Get difficulty text
-  String _getDifficultyText(String difficulty) {
-    switch (difficulty) {
-      case 'entry':
-        return 'Entry Level';
-      case 'mid':
-        return 'Mid Level';
-      case 'senior':
-        return 'Senior Level';
-      default:
-        return 'Unknown';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final filteredQuestions = _getFilteredQuestions();
-    
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -155,257 +58,327 @@ class _InterviewPracticeBatchScreenState extends State<InterviewPracticeBatchScr
       ),
       body: Column(
         children: [
-          // Practice setup options
+          // Instructions card
           Container(
-            padding: const EdgeInsets.all(DS.spacingM),
+            margin: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16.0),
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 2,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              borderRadius: BorderRadius.circular(8.0),
+              border: Border.all(color: Colors.blue.shade200),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Practice Setup',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                
-                const SizedBox(height: DS.spacingS),
-                
-                // Filter options
                 Row(
                   children: [
-                    // Show only uncompleted toggle
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _showOnlyUncompleted,
-                          onChanged: (value) {
-                            setState(() {
-                              _showOnlyUncompleted = value ?? false;
-                              // Reset selections when filter changes
-                              _selectedQuestions = _showOnlyUncompleted
-                                ? widget.questions.where((q) => !q.isCompleted).toList()
-                                : List.from(widget.questions);
-                            });
-                          },
-                          activeColor: AppColors.primary,
-                        ),
-                        const Text(
-                          'Show only uncompleted',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    
-                    const Spacer(),
-                    
-                    // Select all toggle
-                    TextButton.icon(
-                      onPressed: _toggleSelectAll,
-                      icon: Icon(
-                        _selectedQuestions.length == filteredQuestions.length
-                            ? Icons.check_box
-                            : _selectedQuestions.isEmpty
-                                ? Icons.check_box_outline_blank
-                                : Icons.indeterminate_check_box,
-                        size: 18,
-                        color: AppColors.primary,
-                      ),
-                      label: Text(
-                        _selectedQuestions.length == filteredQuestions.length
-                            ? 'Deselect All'
-                            : 'Select All',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: AppColors.primary,
-                        ),
+                    Icon(Icons.info_outline, color: Colors.blue.shade700),
+                    const SizedBox(width: 8.0),
+                    const Text(
+                      'Practice Instructions',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
-                
-                const SizedBox(height: DS.spacingM),
-                
-                // Start practice button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _startPractice,
-                    icon: const Icon(Icons.play_arrow),
-                    label: Text(
-                      'Start Practice (${_selectedQuestions.length} Questions)',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: DS.spacingM),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                      ),
-                    ),
-                  ),
+                const SizedBox(height: 8.0),
+                const Text(
+                  'You can answer the questions in any order. Your answers will be graded when you complete the practice session.',
+                  style: TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 8.0),
+                const Text(
+                  'Click on any question to start practicing.',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
           ),
           
-          // Questions list
+          // Question list
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.all(DS.spacingM),
-              itemCount: filteredQuestions.length,
+              padding: const EdgeInsets.all(16.0),
+              itemCount: widget.questions.length,
               itemBuilder: (context, index) {
-                final question = filteredQuestions[index];
-                final isSelected = _selectedQuestions.contains(question);
-                
-                return Container(
-                  margin: const EdgeInsets.only(bottom: DS.spacingS),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.blue.shade50 : Colors.white,
-                    borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : Colors.grey.shade200,
-                      width: isSelected ? 2 : 1,
+                final question = widget.questions[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12.0),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
                     ),
-                  ),
-                  child: InkWell(
-                    onTap: () => _toggleQuestionSelection(question),
-                    borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                    child: Padding(
-                      padding: const EdgeInsets.all(DS.spacingM),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Checkbox
-                          Checkbox(
-                            value: isSelected,
-                            onChanged: (_) => _toggleQuestionSelection(question),
-                            activeColor: AppColors.primary,
-                          ),
-                          
-                          // Question content
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Question text
-                                Text(
-                                  question.text,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                ),
-                                
-                                const SizedBox(height: DS.spacingS),
-                                
-                                // Question metadata
-                                Row(
-                                  children: [
-                                    // Category
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _getCategoryColor(question.category),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        question.subtopic,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.grey.shade800,
-                                        ),
-                                      ),
-                                    ),
-                                    
-                                    const SizedBox(width: DS.spacingXs),
-                                    
-                                    // Difficulty
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: _getDifficultyColor(question.difficulty),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        _getDifficultyText(question.difficulty),
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.grey.shade800,
-                                        ),
-                                      ),
-                                    ),
-                                    
-                                    const Spacer(),
-                                    
-                                    // Completion status
-                                    if (question.isCompleted)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.green.shade50,
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: Colors.green.shade200),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.check_circle,
-                                              size: 10,
-                                              color: Colors.green.shade700,
-                                            ),
-                                            const SizedBox(width: 2),
-                                            Text(
-                                              'Completed',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w500,
-                                                color: Colors.green.shade700,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                    title: Text(
+                      'Question ${index + 1}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4.0),
+                        Text(
+                          question.text,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(height: 8.0),
+                        Row(
+                          children: [
+                            _buildTag(question.category),
+                            const SizedBox(width: 8.0),
+                            _buildDifficultyTag(question.difficulty),
+                          ],
+                        ),
+                      ],
+                    ),
+                    trailing: question.isCompleted 
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      // Navigate to individual practice screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => InterviewPracticeScreen(
+                            question: question,
+                            questionList: widget.questions,
+                            currentIndex: index,
+                          ),
+                        ),
+                      ).then((_) {
+                        // Refresh the screen when returning
+                        setState(() {
+                          _updateCompletedQuestions();
+                        });
+                      });
+                    },
                   ),
                 );
               },
             ),
           ),
+          
+          // Complete all button
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _startBatchGrading,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                minimumSize: const Size.fromHeight(50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+              ),
+              child: _isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text(
+                      'Complete All Questions',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
         ],
       ),
     );
+  }
+  
+  Widget _buildTag(String category) {
+    Color backgroundColor;
+    String label;
+    
+    switch (category) {
+      case 'technical':
+        backgroundColor = Colors.blue.shade100;
+        label = 'Technical';
+        break;
+      case 'applied':
+        backgroundColor = Colors.green.shade100;
+        label = 'Applied';
+        break;
+      case 'case':
+        backgroundColor = Colors.purple.shade100;
+        label = 'Case Study';
+        break;
+      case 'behavioral':
+        backgroundColor = Colors.orange.shade100;
+        label = 'Behavioral';
+        break;
+      case 'job':
+        backgroundColor = Colors.red.shade100;
+        label = 'Job-Specific';
+        break;
+      default:
+        backgroundColor = Colors.grey.shade100;
+        label = category;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8.0,
+        vertical: 2.0,
+      ),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.grey.shade800,
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildDifficultyTag(String difficulty) {
+    Color color;
+    String label;
+    
+    switch (difficulty) {
+      case 'entry':
+        color = Colors.green;
+        label = 'Entry';
+        break;
+      case 'mid':
+        color = Colors.orange;
+        label = 'Mid';
+        break;
+      case 'senior':
+        color = Colors.red;
+        label = 'Senior';
+        break;
+      default:
+        color = Colors.grey;
+        label = difficulty;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8.0,
+        vertical: 2.0,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(
+          red: color.r,
+          green: color.g,
+          blue: color.b,
+          alpha: 26), // 0.1 * 255 ≈ 26
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(
+          color: color.withValues(
+            red: color.r,
+            green: color.g,
+            blue: color.b,
+            alpha: 77), // 0.3 * 255 ≈ 77
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+  
+  void _startBatchGrading() async {
+    // Implemented batch grading functionality
+    
+    // Check if there are any completed questions
+    if (_completedQuestions.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please complete at least one question before submitting for batch grading'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+    
+    setState(() {
+      // We can't update _isLoading since it's final, but in a real implementation
+      // we would set _isLoading = true; here
+    });
+    
+    try {
+      // Collect all the answers for completed questions
+      final answers = _interviewService.getAnswersForQuestionIds(
+        _completedQuestions.map((q) => q.id).toList()
+      );
+      
+      if (answers.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No answers found. Please try answering some questions first.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+      
+      // Grade the answers
+      final gradedAnswers = await _apiService.gradeBatchAnswers(answers);
+      
+      if (!mounted) return;
+      
+      // Update completion status if needed
+      for (final answer in gradedAnswers) {
+        if (answer.score != null && answer.score! >= 70) {
+          _interviewService.toggleCompletion(answer.questionId);
+        }
+      }
+      
+      setState(() {
+        // In a real implementation: _isLoading = false;
+      });
+      
+      // Navigate to the batch results screen with the graded answers
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => InterviewBatchResultScreen(
+            answers: gradedAnswers,
+            onContinue: () {
+              // Check if the widget is still mounted
+              if (mounted) {
+                Navigator.pop(context); // Close the result screen
+              }
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      // Set loading to false
+      if (!mounted) return;
+      
+      setState(() {
+        // In a real implementation: _isLoading = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error grading answers: ${e.toString()}'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 }

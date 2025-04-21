@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/interview_question.dart';
+import '../models/interview_answer.dart'; // Added this import
 
 class InterviewService extends ChangeNotifier {
   List<InterviewQuestion> _questions = [];
+  
+  // Map to store user answers (questionId -> answer text)
+  final Map<String, String> _userAnswers = {};
   
   // Getter for questions
   List<InterviewQuestion> get questions => _questions.where((q) => !q.isDraft).toList();
@@ -251,6 +255,41 @@ class InterviewService extends ChangeNotifier {
   String? getQuestionAnswer(String id) {
     final question = getQuestionById(id);
     return question?.answer;
+  }
+  
+  // Save user answer for a question
+  void saveUserAnswer(String questionId, String answer) {
+    _userAnswers[questionId] = answer;
+    notifyListeners();
+  }
+  
+  // Get user answer for a question
+  String? getUserAnswer(String questionId) {
+    return _userAnswers[questionId];
+  }
+  
+  // Get answers for a list of question IDs
+  List<InterviewAnswer> getAnswersForQuestionIds(List<String> questionIds) {
+    List<InterviewAnswer> answers = [];
+    
+    for (final id in questionIds) {
+      final question = getQuestionById(id);
+      final userAnswer = getUserAnswer(id);
+      
+      if (question != null && userAnswer != null && userAnswer.trim().isNotEmpty) {
+        answers.add(
+          InterviewAnswer(
+            questionId: id,
+            questionText: question.text,
+            userAnswer: userAnswer,
+            category: question.category,
+            difficulty: question.difficulty,
+          )
+        );
+      }
+    }
+    
+    return answers;
   }
   
   // Track question view (for analytics)

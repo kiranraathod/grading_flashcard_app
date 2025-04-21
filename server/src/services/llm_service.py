@@ -209,6 +209,160 @@ class LLMService:
                     "Consider creating additional flashcards on this subject"
                 ]
     
+    async def grade_interview_answer(self, prompt: str) -> Dict[str, Any]:
+        """
+        Grade an interview answer using Gemini LLM.
+        
+        Args:
+            prompt: Complete prompt with question, answer, and evaluation criteria
+            
+        Returns:
+            Dict containing score, feedback, and suggestions
+            
+        Raises:
+            LLMConnectionError: If there's a problem connecting to the LLM service
+            LLMResponseParsingError: If there's a problem parsing the LLM response
+        """
+        logger.debug(f"grade_interview_answer called with prompt length: {len(prompt)}")
+        
+        # Check if LLM service is connected
+        if not self.is_connected:
+            logger.error("LLM service is not connected")
+            raise LLMConnectionError("LLM service is not connected", status_code=503)
+        
+        try:
+            # Setup the model with slightly higher temperature for more creative feedback
+            interview_temperature = max(self.temperature, 0.3)  # Minimum 0.3 temperature for interviews
+            
+            model = self.client.GenerativeModel(
+                self.model,
+                generation_config={
+                    "temperature": interview_temperature,
+                    "max_output_tokens": self.max_tokens,
+                }
+            )
+            logger.debug(f"Initialized model for interview grading: {self.model} with temperature {interview_temperature}")
+            
+            # Generate content with timeout protection
+            logger.debug("Sending interview grading request to Gemini API...")
+            
+            try:
+                # Use asyncio.to_thread to run the synchronous API call without blocking
+                content = await asyncio.wait_for(
+                    asyncio.to_thread(lambda: model.generate_content(prompt).text),
+                    timeout=self.timeout
+                )
+                logger.debug(f"Received raw content from API: {content[:100]}...")
+            except asyncio.TimeoutError:
+                logger.error(f"LLM request timed out after {self.timeout} seconds")
+                raise LLMConnectionError(f"LLM request timed out after {self.timeout} seconds", status_code=504)
+            except Exception as e:
+                logger.error(f"Error generating content: {str(e)}")
+                logger.error(traceback.format_exc())
+                raise LLMConnectionError(f"Error generating content: {str(e)}")
+            
+            # Parse the interview assessment response
+            return self._parse_interview_response(content)
+            
+        except LLMConnectionError:
+            # Re-raise LLMConnectionError without wrapping
+            raise
+        except LLMResponseParsingError:
+            # Re-raise LLMResponseParsingError without wrapping
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during interview assessment: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise LLMConnectionError(f"Unexpected error during interview assessment: {str(e)}", status_code=500)
+    
+    def _parse_interview_response(self, content: str) -> Dict[str, Any]:
+        """
+        Parse the interview assessment response from the LLM.
+        
+        Args:
+            content: The raw response from the LLM
+            
+        Returns:
+            Dict containing score, feedback, and suggestions
+            
+        Raises:
+            LLMResponseParsingError: If there's a problem parsing the response
+        """
+        try:
+            # Clean up the content - handle various response formats
+            # Remove markdown code blocks if present
+            if '```json' in content:
+                content = re.search(r'```json\s*(.*?)\s*```', content, re.DOTALL)
+                if content:
+                    content = content.group(1)
+            elif '```' in content:
+                content = re.search(r'```\s*(.*?)\s*```', content, re.DOTALL)
+                if content:
+                    content = content.group(1)
+            
+            # Try to find JSON-like structure if still not clean
+            if '{' in content and '}' in content:
+                content = content[content.find('{'):content.rfind('}')+1]
+                
+            # Clean up any trailing or leading non-JSON text
+            content = content.strip()
+            
+            # Parse JSON
+            try:
+                result = json.loads(content)
+                logger.debug(f"Successfully parsed JSON interview result: {result}")
+            except json.JSONDecodeError as json_error:
+                logger.error(f"JSON parsing error: {str(json_error)}")
+                logger.error(f"Raw content: {content}")
+                raise LLMResponseParsingError(f"Failed to parse JSON: {str(json_error)}")
+            
+            # Validate interview response
+            self._validate_interview_response(result)
+            
+            return result
+            
+        except LLMResponseParsingError:
+            # Re-raise without wrapping
+            raise
+        except Exception as e:
+            logger.error(f"Error processing LLM interview response: {str(e)}")
+            logger.error(f"Raw content: {content}")
+            raise LLMResponseParsingError(f"Failed to process LLM interview response: {str(e)}")
+    
+    def _validate_interview_response(self, response: Dict[str, Any]) -> None:
+        """
+        Validate that the interview response has the expected structure.
+        
+        Args:
+            response: The response dictionary to validate
+            
+        Raises:
+            LLMResponseParsingError: If the response is invalid
+        """
+        # Check required fields
+        required_fields = ['score', 'feedback', 'suggestions']
+        missing_fields = [field for field in required_fields if field not in response]
+        
+        if missing_fields:
+            raise LLMResponseParsingError(f"Missing required fields in interview response: {missing_fields}")
+        
+        # Validate score
+        if not isinstance(response['score'], (int, float)) or response['score'] < 0 or response['score'] > 100:
+            raise LLMResponseParsingError(f"Invalid score in interview response: {response['score']}")
+        
+        # Validate feedback
+        if not isinstance(response['feedback'], str) or not response['feedback'].strip():
+            raise LLMResponseParsingError("Missing or invalid feedback in interview response")
+        
+        # Validate suggestions
+        if not isinstance(response['suggestions'], list) or not response['suggestions']:
+            raise LLMResponseParsingError("Missing or invalid suggestions in interview response")
+        
+        # Ensure suggestions are strings
+        for i, suggestion in enumerate(response['suggestions']):
+            if not isinstance(suggestion, str) or not suggestion.strip():
+                raise LLMResponseParsingError(f"Invalid suggestion at index {i} in interview response")
+                
     async def _execute_grading_request(self, question: str, user_answer: str, correct_answer: str) -> Dict[str, Any]:
         """
         Execute the grading request to the LLM with improved error handling.

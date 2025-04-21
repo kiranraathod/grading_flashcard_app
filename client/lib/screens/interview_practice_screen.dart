@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/interview_question.dart';
+import '../models/interview_answer.dart';
 import '../services/interview_service.dart';
+import '../services/interview_api_service.dart';
 import '../utils/colors.dart';
 import '../utils/design_system.dart';
 import 'dart:async';
+import 'interview_result_screen.dart';
+import 'interview_batch_result_screen.dart';
 
 class InterviewPracticeScreen extends StatefulWidget {
   final InterviewQuestion question;
@@ -12,11 +16,11 @@ class InterviewPracticeScreen extends StatefulWidget {
   final int currentIndex;
 
   const InterviewPracticeScreen({
-    Key? key,
+    super.key,
     required this.question,
     required this.questionList,
     required this.currentIndex,
-  }) : super(key: key);
+  });
 
   @override
   State<InterviewPracticeScreen> createState() => _InterviewPracticeScreenState();
@@ -31,13 +35,46 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
   Timer? _timer;
   final TextEditingController _userAnswerController = TextEditingController();
   bool _isListening = false;
+  bool _isGrading = false;
+  bool _isSubmittingBatch = false;
+  
+  // Map to store answers for all questions
+  final Map<String, String> _userAnswers = {}; // Maps question ID to answer text
+  
+  // This field is set during grading and used for tracking the latest grade
+  InterviewAnswer? _gradedAnswer;
+  final InterviewApiService _interviewApiService = InterviewApiService();
 
   @override
   void initState() {
     super.initState();
     _isCompleted = widget.question.isCompleted;
+    
+    // Load any previously entered answer for this question
+    _loadCurrentAnswer();
+    
     // Start a timer to track how long the user spends on this question
     _startTimer();
+  }
+  
+  // Load any saved answer for the current question
+  void _loadCurrentAnswer() {
+    if (_userAnswers.containsKey(widget.question.id)) {
+      _userAnswerController.text = _userAnswers[widget.question.id]!;
+      debugPrint('Loaded saved answer for question ${widget.question.id}');
+    } else {
+      _userAnswerController.clear();
+    }
+  }
+  
+  // Save the current answer to our map
+  void _saveCurrentAnswer() {
+    final answerText = _userAnswerController.text.trim();
+    if (answerText.isNotEmpty) {
+      _userAnswers[widget.question.id] = answerText;
+      debugPrint('Saved answer for question ${widget.question.id}');
+      debugPrint('Total answers: ${_userAnswers.length}/${widget.questionList.length}');
+    }
   }
 
   @override
@@ -50,6 +87,10 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
   void dispose() {
     _timer?.cancel();
     _userAnswerController.dispose();
+    // Save gradedAnswer data to service if needed
+    if (_gradedAnswer != null) {
+      debugPrint('Saving graded answer data for ${_gradedAnswer!.questionId}');
+    }
     super.dispose();
   }
   
@@ -60,11 +101,195 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     });
   }
   
-  // Save the user's answer (could be extended to store in the service)
+  // Save the user's answer
   void _saveUserAnswer() {
-    // Currently just saving to memory, but could be extended to persist
-    // For example: _interviewService.saveUserAnswer(widget.question.id, _userAnswerController.text);
+    _saveCurrentAnswer();
     debugPrint('User answer saved: ${_userAnswerController.text}');
+  }
+  
+  // Submit a single answer
+  void _submitSingleAnswer() async {
+    if (_userAnswerController.text.trim().isEmpty) {
+      // Show a message if the answer is empty
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please provide an answer before submitting'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    
+    setState(() {
+      _isGrading = true;
+    });
+    
+    // Show a loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Grading your answer...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+    
+    try {
+      // Save current answer to our map
+      _saveCurrentAnswer();
+      
+      // Create an InterviewAnswer object to grade
+      final answer = InterviewAnswer(
+        questionId: widget.question.id,
+        questionText: widget.question.text,
+        userAnswer: _userAnswerController.text,
+        category: widget.question.category,
+        difficulty: widget.question.difficulty,
+      );
+      
+      // Grade the answer using the specialized interview API service
+      final gradedAnswer = await _interviewApiService.gradeInterviewAnswer(answer);
+      
+      // Fixed: Added mounted check before updating state after async operation
+      if (!mounted) return;
+      
+      // Update the state with the graded answer
+      setState(() {
+        _gradedAnswer = gradedAnswer;
+        _isGrading = false;
+      });
+      
+      // Mark the question as completed if the score is good (70 or above)
+      if ((gradedAnswer.score ?? 0) >= 70) {
+        _interviewService.toggleCompletion(widget.question.id);
+        setState(() {
+          _isCompleted = true;
+        });
+      }
+      
+      // Show the results screen - no need for mounted check here as we already checked above
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => InterviewResultScreen(
+            answer: gradedAnswer,
+            onContinue: () {
+              // Make sure to check if the widget is still mounted before using context
+              if (mounted) {
+                Navigator.pop(context); // Close the result screen
+                Navigator.pop(context); // Go back to the interview questions screen
+              }
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      // Fixed: Added mounted check before updating state after async operation
+      if (!mounted) return;
+      
+      // Handle errors
+      setState(() {
+        _isGrading = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error grading answer: ${e.toString()}'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+  
+  // Submit all answers for batch grading
+  void _submitAllAnswers() async {
+    // Save the current answer first
+    _saveCurrentAnswer();
+    
+    // Check if any questions have been answered
+    if (_userAnswers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please answer at least one question before submitting'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    
+    setState(() {
+      _isSubmittingBatch = true;
+    });
+    
+    try {
+      // Show a loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Grading all your answers...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+      // Create answer objects for all questions
+      final List<InterviewAnswer> answersList = widget.questionList.map((question) {
+        // Use the saved answer if available, otherwise empty string
+        final userAnswer = _userAnswers[question.id] ?? "";
+        
+        return InterviewAnswer(
+          questionId: question.id,
+          questionText: question.text,
+          userAnswer: userAnswer,
+          category: question.category,
+          difficulty: question.difficulty,
+        );
+      }).toList();
+      
+      // Grade all answers as a batch
+      final gradedAnswers = await _interviewApiService.gradeBatchAnswers(answersList);
+      
+      // Fixed: Added mounted check before using BuildContext after async operation
+      if (!mounted) return;
+      
+      // Mark questions as completed if they have a passing score
+      for (final answer in gradedAnswers) {
+        if (answer.score != null && answer.score! >= 70) {
+          _interviewService.toggleCompletion(answer.questionId);
+        }
+      }
+      
+      setState(() {
+        _isSubmittingBatch = false;
+      });
+      
+      // Navigate to the batch results screen - Fixed: Use as a class, not a method
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => InterviewBatchResultScreen(
+            answers: gradedAnswers,
+            onContinue: () {
+              // Make sure to check if the widget is still mounted before using context
+              if (mounted) {
+                Navigator.pop(context); // Close the result screen
+                Navigator.pop(context); // Go back to the interview questions screen
+              }
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      // Fixed: Added mounted check before updating state after async operation
+      if (!mounted) return;
+      
+      setState(() {
+        _isSubmittingBatch = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error grading answers: ${e.toString()}'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
   
   // Start voice recognition
@@ -97,9 +322,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       _isListening = false;
       
       // Add some simulated text for demo purposes
-      _userAnswerController.text = _userAnswerController.text + 
-          ((_userAnswerController.text.isEmpty) ? '' : ' ') +
-          'Voice input would appear here in a real implementation.';
+      _userAnswerController.text = '${_userAnswerController.text}${_userAnswerController.text.isEmpty ? '' : ' '}Voice input would appear here in a real implementation.';
     });
   }
 
@@ -121,6 +344,9 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
 
   // Navigate to the next question
   void _moveToNextQuestion() {
+    // Save the current answer before navigating
+    _saveCurrentAnswer();
+    
     if (widget.currentIndex < widget.questionList.length - 1) {
       Navigator.pushReplacement(
         context,
@@ -261,8 +487,10 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
           const SizedBox(width: DS.spacingM),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
+          Column(
+            children: [
           // Timer bar at the top
           Container(
             padding: const EdgeInsets.symmetric(horizontal: DS.spacingL, vertical: DS.spacingS),
@@ -318,7 +546,8 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                       border: Border.all(color: Colors.grey.shade200),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          // Fixed: Use .withValues() instead of .withOpacity()
+                          color: Colors.black.withValues(red: 0, green: 0, blue: 0, alpha: 13), // 0.05 * 255 = ~13
                           blurRadius: 5,
                           offset: const Offset(0, 2),
                         ),
@@ -690,7 +919,8 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  // Fixed: Use .withValues() instead of .withOpacity()
+                  color: Colors.black.withValues(red: 0, green: 0, blue: 0, alpha: 13), // 0.05 * 255 = ~13
                   blurRadius: 5,
                   offset: const Offset(0, -2),
                 ),
@@ -723,25 +953,87 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                   ),
                 ),
                 
-                // Next question button
-                ElevatedButton.icon(
-                  onPressed: _moveToNextQuestion,
-                  icon: const Icon(
-                    Icons.arrow_forward,
-                    size: 18,
+                // Show different buttons based on context
+                _isSubmittingBatch || _isGrading 
+                ? const CircularProgressIndicator()
+                : Row(
+                    children: [
+                      // Next/Submit single button
+                      ElevatedButton.icon(
+                        onPressed: widget.currentIndex < widget.questionList.length - 1 
+                            ? _moveToNextQuestion 
+                            : _submitSingleAnswer,
+                        icon: Icon(
+                          widget.currentIndex < widget.questionList.length - 1 
+                              ? Icons.arrow_forward
+                              : Icons.check,
+                          size: 18,
+                        ),
+                        label: Text(
+                          widget.currentIndex < widget.questionList.length - 1 
+                              ? 'Next Question' 
+                              : 'Submit This Answer'
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(width: DS.spacingM),
+                      
+                      // Submit all button
+                      ElevatedButton.icon(
+                        onPressed: _submitAllAnswers,
+                        icon: const Icon(
+                          Icons.check_circle,
+                          size: 18,
+                        ),
+                        label: Text(
+                          'Grade All (${_userAnswers.length}/${widget.questionList.length})'
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  label: const Text('Next Question'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                    ),
-                  ),
-                ),
               ],
             ),
+            ),
+          ],
           ),
+          
+          // Show loading overlay during grading or batch submission
+          if (_isGrading || _isSubmittingBatch)
+            Container(
+              // Fixed: Use .withValues() instead of .withOpacity()
+              color: Colors.black.withValues(red: 0, green: 0, blue: 0, alpha: 128), // 0.5 * 255 = 128
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    ),
+                    SizedBox(height: DS.spacingM),
+                    Text(
+                      _isSubmittingBatch 
+                          ? 'Grading all answers...' 
+                          : 'Grading your answer...',
+                      style: DS.bodyLarge.copyWith(color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
