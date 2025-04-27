@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../models/answer.dart' as answer_model;
+import '../models/flashcard.dart';
+import '../models/flashcard_set.dart';
 import '../widgets/suggestions_widget.dart';
 import '../utils/colors.dart';
 import '../utils/design_system.dart';
+import '../blocs/recent_view/recent_view_bloc.dart';
+import '../blocs/recent_view/recent_view_event.dart';
 
 class ResultScreen extends StatefulWidget {
   final answer_model.Answer answer;
@@ -43,6 +48,48 @@ class _ResultScreenState extends State<ResultScreen> {
     }
   }
 
+  @override
+  void initState() {
+    super.initState();
+    
+    // Add post-frame callback to record view as soon as result screen appears
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        // Don't try to access StudyBloc directly - it's causing errors
+        // Instead, use the information we already have in the widget
+                
+        // Check if the answer is correct (grade A, B, or C)
+        bool isCompleted = widget.answer.grade == 'A' || 
+                           widget.answer.grade == 'B' || 
+                           widget.answer.grade == 'C';
+        
+        // Record the view in the global RecentViewBloc with the info we have
+        context.read<RecentViewBloc>().add(
+          RecordFlashcardView(
+            // Create a minimal Flashcard with the information we have
+            flashcard: Flashcard(
+              id: 'flashcard-${DateTime.now().millisecondsSinceEpoch}',
+              question: widget.answer.question,
+              answer: widget.correctAnswer,
+              isCompleted: isCompleted,
+            ),
+            // Create a minimal FlashcardSet
+            set: FlashcardSet(
+              id: 'set-${DateTime.now().millisecondsSinceEpoch}',
+              title: 'Study Session',
+              description: '',
+              flashcards: [],
+            ),
+            isCompleted: isCompleted,
+          ),
+        );
+        debugPrint('Recorded flashcard view when ResultScreen appeared (using available info)');
+      } catch (e) {
+        debugPrint('Error recording flashcard view in ResultScreen initState: $e');
+      }
+    });
+  }
+  
   @override
   Widget build(BuildContext context) {
     final bool isSystemError = widget.answer.grade == 'X';
@@ -200,6 +247,40 @@ class _ResultScreenState extends State<ResultScreen> {
     setState(() {
       _continuePressed = true;
     });
+
+    // Record this flashcard view in the RecentViewBloc to ensure it appears in Recent tab
+    try {
+      // Don't try to access StudyBloc - use the information we have
+      
+      // Check if the answer is correct (grade A, B, or C)
+      bool isCompleted = widget.answer.grade == 'A' || 
+                         widget.answer.grade == 'B' || 
+                         widget.answer.grade == 'C';
+      
+      // Record the view in the global RecentViewBloc
+      context.read<RecentViewBloc>().add(
+        RecordFlashcardView(
+          // Create a minimal Flashcard with the information we have
+          flashcard: Flashcard(
+            id: 'flashcard-${DateTime.now().millisecondsSinceEpoch}',
+            question: widget.answer.question,
+            answer: widget.correctAnswer,
+            isCompleted: isCompleted,
+          ),
+          // Create a minimal FlashcardSet
+          set: FlashcardSet(
+            id: 'set-${DateTime.now().millisecondsSinceEpoch}',
+            title: 'Study Session',
+            description: '',
+            flashcards: [],
+          ),
+          isCompleted: isCompleted,
+        ),
+      );
+      debugPrint('Recorded flashcard view from ResultScreen (using available info)');
+    } catch (e) {
+      debugPrint('Error recording flashcard view from ResultScreen: $e');
+    }
 
     // Call the continue callback
     widget.onContinue();

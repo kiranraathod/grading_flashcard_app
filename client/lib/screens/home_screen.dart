@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../widgets/app_header.dart';
 import '../widgets/flashcard_deck_card.dart';
 import '../widgets/create_deck_card.dart';
+import '../widgets/recent/recent_tab_content.dart';
 import '../utils/colors.dart';
 import '../utils/design_system.dart';
+import '../blocs/recent_view/recent_view_bloc.dart';
+import '../blocs/recent_view/recent_view_event.dart';
 import 'create_flashcard_screen.dart';
 import 'study_screen.dart';
 import 'interview_questions_screen.dart';
 import '../models/flashcard_set.dart';
 import '../services/flashcard_service.dart';
+import '../services/recent_view_service.dart';
 import '../widgets/interview/arrow_painter.dart';
-import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -636,27 +640,41 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   Widget _buildRecentTab() {
-    // Matches the React code: "flex items-center justify-center h-40 bg-gray-50 rounded-lg border border-dashed"
-    return Container(
-      width: double.infinity,
-      height: 160, // h-40 in Tailwind is 10rem (160px)
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8), // rounded-lg
-        border: Border.all(
-          color: Colors.grey.shade300,
-          width: 1,
-        ),
-      ),
-      child: Center(
-        child: Text(
-          'Your recently viewed flashcards will appear here',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey.shade500,
-          ),
-        ),
-      ),
+    // No longer need to create a new BlocProvider here,
+    // since we're using the global one from main.dart
+    return Builder(
+      builder: (context) {
+        // Force a refresh of recent items when the tab is selected
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Get flashcard service to sync completion status
+          final flashcardService = Provider.of<FlashcardService>(context, listen: false);
+          final recentViewService = Provider.of<RecentViewService>(context, listen: false);
+          
+          // DEBUG: Create a test recent view item if none exist
+          if (flashcardService.sets.isNotEmpty && flashcardService.sets.first.flashcards.isNotEmpty) {
+            debugPrint('⭐ CREATING TEST RECENT ITEM FOR DEBUGGING ⭐');
+            final testSet = flashcardService.sets.first;
+            final testCard = testSet.flashcards.first;
+            
+            // Record this as a recent view
+            context.read<RecentViewBloc>().add(
+              RecordFlashcardView(
+                flashcard: testCard,
+                set: testSet,
+                isCompleted: true, // Mark it as completed for testing
+              ),
+            );
+          }
+          
+          // First load recent views
+          context.read<RecentViewBloc>().add(const LoadRecentViews());
+          
+          // Then sync flashcard progress to keep completion status updated
+          recentViewService.syncFlashcardProgress(flashcardService.sets);
+        });
+        
+        return const RecentTabContent();
+      },
     );
   }
   

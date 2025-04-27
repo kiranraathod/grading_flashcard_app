@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/interview_answer.dart';
 import '../widgets/suggestions_widget.dart';
 import '../utils/colors.dart';
 import '../utils/design_system.dart';
+import '../services/interview_service.dart';
+import '../blocs/recent_view/recent_view_bloc.dart';
+import '../blocs/recent_view/recent_view_event.dart';
 
 class InterviewResultScreen extends StatefulWidget {
   final InterviewAnswer answer;
@@ -318,6 +322,26 @@ class _InterviewResultScreenState extends State<InterviewResultScreen> {
     setState(() {
       _continuePressed = true;
     });
+
+    // Record this interview question view in the RecentViewBloc to ensure it appears in Recent tab
+    try {
+      // Find the original question from the answer
+      final interviewService = Provider.of<InterviewService>(context, listen: false);
+      final question = interviewService.getQuestionById(widget.answer.questionId);
+      
+      if (question != null) {
+        // Record the view in the global RecentViewBloc
+        context.read<RecentViewBloc>().add(
+          RecordInterviewQuestionView(
+            question: question,
+            category: widget.answer.category,
+          ),
+        );
+        debugPrint('Recorded interview question view from InterviewResultScreen');
+      }
+    } catch (e) {
+      debugPrint('Error recording interview question view from InterviewResultScreen: $e');
+    }
 
     // Call the continue callback
     widget.onContinue();

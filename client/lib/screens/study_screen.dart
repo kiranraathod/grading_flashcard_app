@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../blocs/study/study_bloc.dart';
 import '../blocs/study/study_event.dart';
 import '../blocs/study/study_state.dart';
+import '../blocs/recent_view/recent_view_bloc.dart';
+import '../blocs/recent_view/recent_view_event.dart';
 import '../models/flashcard_set.dart';
 import '../services/api_service.dart';
 import '../services/flashcard_service.dart';
@@ -25,16 +27,14 @@ class StudyScreen extends StatelessWidget {
     // Get a reference to the FlashcardService for updating progress
     final flashcardService = Provider.of<FlashcardService>(context, listen: false);
     
-    // Create the bloc outside the build method to ensure it persists
+    // Create the study bloc outside the build method to ensure it persists
     final studyBloc = StudyBloc(apiService: ApiService())
       ..add(StudyStarted(flashcardSet: set));
-      
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<StudyBloc>.value(
-          value: studyBloc,
-        ),
-      ],
+    
+    // No longer create a new RecentViewBloc here as we're using the global one
+    
+    return BlocProvider<StudyBloc>.value(
+      value: studyBloc,
       child: Builder(
         builder: (context) {
           return PopScope(
@@ -86,6 +86,22 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
     
     // Add lifecycle observer to catch app pauses/resumes
     WidgetsBinding.instance.addObserver(this);
+    
+    // Record flashcard view when first opening a flashcard
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Get the current state from the StudyBloc
+      final studyState = context.read<StudyBloc>().state;
+      
+      // If we have a valid flashcard set and current flashcard, record the view
+      if (studyState.flashcardSet != null && studyState.currentFlashcard != null) {
+        context.read<RecentViewBloc>().add(
+          RecordFlashcardView(
+            flashcard: studyState.currentFlashcard!,
+            set: studyState.flashcardSet!,
+          ),
+        );
+      }
+    });
   }
   
   @override
@@ -135,6 +151,16 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
             duration: DS.durationMedium,
             curve: Curves.easeInOut,
           );
+          
+          // Record flashcard view when changing to a new card
+          if (state.flashcardSet != null && state.currentFlashcard != null) {
+            context.read<RecentViewBloc>().add(
+              RecordFlashcardView(
+                flashcard: state.currentFlashcard!,
+                set: state.flashcardSet!,
+              ),
+            );
+          }
         }
         
         // Show result screen when a graded answer is available
@@ -154,6 +180,17 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
             // This is the critical part - save immediately after grading
             debugPrint('Saving progress after correct answer');
             widget.flashcardService.updateFlashcardSet(state.flashcardSet!);
+            
+            // FIXED: Record the view again to update timestamp in Recent tab
+            if (state.currentFlashcard != null) {
+              context.read<RecentViewBloc>().add(
+                RecordFlashcardView(
+                  flashcard: state.currentFlashcard!,
+                  set: state.flashcardSet!,
+                ),
+              );
+              debugPrint('Recorded flashcard view after grading');
+            }
           }
           
           // Use WidgetsBinding to avoid showing the dialog during build
