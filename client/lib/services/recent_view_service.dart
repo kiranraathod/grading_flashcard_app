@@ -223,7 +223,7 @@ class RecentViewService {
       // Save if changes were made
       if (needsSave) {
         await _saveRecentItemsWithRetry(recentItems);
-        debugPrint('  Saved synchronized completion status: Updated ${updatedCount}, Created ${createdCount}');
+        debugPrint('  Saved synchronized completion status: Updated $updatedCount, Created $createdCount');
       } else {
         debugPrint('  No changes needed');
       }

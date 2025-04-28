@@ -72,15 +72,31 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
   }
 
   void _saveFlashcardSet() async {
-    // Remove empty flashcards
+    // Check for flashcards with missing fields
+    final incompleteFlashcards = _flashcards
+        .where((card) => (card.question.isNotEmpty && card.answer.isEmpty) || 
+                       (card.question.isEmpty && card.answer.isNotEmpty))
+        .toList();
+    
+    if (incompleteFlashcards.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All flashcards must have both a term and a definition.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    // Only keep flashcards where both question and answer are filled
     final validFlashcards =
         _flashcards
-            .where((card) => card.question.isNotEmpty || card.answer.isNotEmpty)
+            .where((card) => card.question.isNotEmpty && card.answer.isNotEmpty)
             .toList();
 
     if (validFlashcards.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add at least one flashcard')),
+        const SnackBar(content: Text('Please add at least one complete flashcard')),
       );
       return;
     }
