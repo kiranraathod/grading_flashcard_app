@@ -19,7 +19,7 @@ class AppConfig:
     
     # LLM Service configuration
     LLM_MODEL: str = os.getenv('LLM_MODEL', 'gemini-2.0-flash')
-    LLM_TIMEOUT: int = int(os.getenv('LLM_TIMEOUT', 15))  # seconds
+    LLM_TIMEOUT: int = int(os.getenv('LLM_TIMEOUT', 60))  # seconds
     LLM_MAX_TOKENS: int = int(os.getenv('LLM_MAX_TOKENS', 500))
     LLM_TEMPERATURE: float = float(os.getenv('LLM_TEMPERATURE', 0.2))
     

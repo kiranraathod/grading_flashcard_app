@@ -3,7 +3,7 @@ class AppConfig {
   AppConfig._();
   
   // API configuration
-  static const Duration apiTimeout = Duration(seconds: 15);
+  static const Duration apiTimeout = Duration(seconds: 60);
   static const int maxRetryAttempts = 3;
   
   // Network configuration

@@ -12,6 +12,7 @@ import '../utils/colors.dart';
 import 'create_interview_question_screen.dart';
 import 'interview_practice_screen.dart';
 import 'interview_practice_batch_screen.dart';
+import 'job_description_question_generator_screen.dart';
 
 class InterviewQuestionsScreen extends StatefulWidget {
   final String category;
@@ -177,16 +178,67 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CreateInterviewQuestionScreen(),
+          // Show menu options when the FAB is pressed
+          showModalBottomSheet(
+            context: context,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             ),
-          ).then((_) {
-            // Refresh the questions list when returning
-            setState(() {});
-          });
+            builder: (context) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.add, color: AppColors.primary),
+                    title: const Text('Create New Question'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CreateInterviewQuestionScreen(),
+                        ),
+                      ).then((_) {
+                        setState(() {}); // Refresh list
+                      });
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.description, color: AppColors.primary),
+                    title: const Text('Generate from Job Description'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const JobDescriptionQuestionGeneratorScreen(),
+                        ),
+                      ).then((_) {
+                        setState(() {}); // Refresh list
+                      });
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.upload_file, color: AppColors.primary),
+                    title: const Text('Import Questions'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      // Handle import functionality
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Import functionality would be implemented here'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
         },
+        tooltip: 'Add new questions',
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add),
       ),

@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 # Import the routers
 from src.routes.grading_routes import router as grading_router
 from src.routes.interview_routes import router as interview_router
+from src.routes.job_description_routes import router as job_description_router
 from src.utils.exceptions import BaseFlashcardAPIError
 from src.config.config import config
 
@@ -89,6 +90,7 @@ def create_app():
     # Register routers
     app.include_router(grading_router, prefix="/api")
     app.include_router(interview_router, prefix="/api")
+    app.include_router(job_description_router, prefix="")
     
     @app.get("/")
     def health_check():
@@ -132,5 +134,12 @@ if __name__ == '__main__':
     
     logger.info(f"Starting server on port {port} with debug={debug}")
     
-    # Run with Uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=debug)
+    # Run with Uvicorn with increased timeout settings
+    uvicorn.run(
+        "main:app", 
+        host="0.0.0.0", 
+        port=port, 
+        reload=debug,
+        timeout_keep_alive=120,
+        timeout_graceful_shutdown=120
+    )

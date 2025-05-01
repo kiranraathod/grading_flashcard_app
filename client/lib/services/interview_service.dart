@@ -164,7 +164,8 @@ class InterviewService extends ChangeNotifier {
   }
   
   // Add a new question
-  void addQuestion(InterviewQuestion question) {
+  // Add a question and update the category counts
+void addQuestion(InterviewQuestion question) {
     _questions.add(question);
     notifyListeners();
     _saveQuestionsToStorage();
