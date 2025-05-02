@@ -4,6 +4,7 @@ import '../widgets/app_header.dart';
 import '../widgets/flashcard_deck_card.dart';
 import '../widgets/create_deck_card.dart';
 import '../widgets/recent/recent_tab_content.dart';
+import '../widgets/multi_action_fab.dart';
 import '../utils/colors.dart';
 import '../utils/design_system.dart';
 import '../blocs/recent_view/recent_view_bloc.dart';
@@ -11,6 +12,8 @@ import '../blocs/recent_view/recent_view_event.dart';
 import 'create_flashcard_screen.dart';
 import 'study_screen.dart';
 import 'interview_questions_screen.dart';
+import 'create_interview_question_screen.dart';
+import 'job_description_question_generator_screen.dart';
 import '../models/flashcard_set.dart';
 import '../services/flashcard_service.dart';
 import '../services/recent_view_service.dart';
@@ -348,18 +351,54 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       
-      // Floating action button (simplified like reference)
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const CreateFlashcardScreen(),
-            ),
-          );
-        },
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add),
+      // Multi-action Floating Action Button
+      floatingActionButton: MultiActionFab(
+        backgroundColor: Colors.green,
+        tooltip: 'Create new content',
+        options: [
+          MultiActionFabOption(
+            label: 'Create Flashcards',
+            icon: Icons.style,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateFlashcardScreen(),
+                ),
+              ).then((_) {
+                if (mounted) setState(() {});
+              });
+            },
+          ),
+          MultiActionFabOption(
+            label: 'Create New Question',
+            icon: Icons.add,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateInterviewQuestionScreen(),
+                ),
+              ).then((_) {
+                if (mounted) setState(() {});
+              });
+            },
+          ),
+          MultiActionFabOption(
+            label: 'Generate from Job Description',
+            icon: Icons.description,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const JobDescriptionQuestionGeneratorScreen(),
+                ),
+              ).then((_) {
+                if (mounted) setState(() {});
+              });
+            },
+          ),
+        ],
       ),
     );
   }

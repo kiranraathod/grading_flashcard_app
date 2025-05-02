@@ -4,6 +4,9 @@ import '../models/job_description_analysis.dart';
 import '../models/interview_question.dart';
 import '../services/job_description_service.dart';
 import '../services/interview_service.dart';
+import '../widgets/multi_action_fab.dart';
+import 'create_flashcard_screen.dart';
+import 'create_interview_question_screen.dart';
 
 class JobDescriptionQuestionGeneratorScreen extends StatefulWidget {
   const JobDescriptionQuestionGeneratorScreen({super.key});
@@ -370,6 +373,45 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
+      floatingActionButton: MultiActionFab(
+        backgroundColor: Colors.green,
+        tooltip: 'Create new content',
+        options: [
+          MultiActionFabOption(
+            label: 'Add Job Description',
+            icon: Icons.description,
+            onTap: _showDescriptionInput,
+          ),
+          MultiActionFabOption(
+            label: 'Create New Question',
+            icon: Icons.add,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateInterviewQuestionScreen(),
+                ),
+              ).then((_) {
+                if (mounted) setState(() {});
+              });
+            },
+          ),
+          MultiActionFabOption(
+            label: 'Create Flashcards',
+            icon: Icons.style,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateFlashcardScreen(),
+                ),
+              ).then((_) {
+                if (mounted) setState(() {});
+              });
+            },
+          ),
+        ],
+      ),
       body: Stack(
         children: [
           Column(
@@ -477,11 +519,8 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
             ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showDescriptionInput,
-        backgroundColor: Colors.green,
-        child: const Icon(Icons.add),
-      ),
+      // Use our custom JobDescriptionFAB widget
+      // The FloatingActionButton has been replaced with an action in the AppBar
     );
   }
   

@@ -4,6 +4,9 @@ import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
 import '../services/flashcard_service.dart';
 import '../widgets/flashcard_term_widget.dart';
+import '../widgets/multi_action_fab.dart';
+import 'create_interview_question_screen.dart';
+import 'job_description_question_generator_screen.dart';
 
 class CreateFlashcardScreen extends StatefulWidget {
   final FlashcardSet? editSet;
@@ -268,11 +271,40 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addNewCard,
-        backgroundColor: const Color(0xFF1A5E34),
-        tooltip: 'Add new flashcard',
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: MultiActionFab(
+        backgroundColor: Colors.green,
+        tooltip: 'Create new content',
+        options: [
+          MultiActionFabOption(
+            label: 'Add New Flashcard',
+            icon: Icons.add,
+            onTap: _addNewCard,
+          ),
+          MultiActionFabOption(
+            label: 'Create New Question',
+            icon: Icons.help_outline,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateInterviewQuestionScreen(),
+                ),
+              );
+            },
+          ),
+          MultiActionFabOption(
+            label: 'Generate from Job Description',
+            icon: Icons.description,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const JobDescriptionQuestionGeneratorScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
