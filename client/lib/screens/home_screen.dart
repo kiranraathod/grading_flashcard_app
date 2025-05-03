@@ -5,7 +5,7 @@ import '../widgets/flashcard_deck_card.dart';
 import '../widgets/create_deck_card.dart';
 import '../widgets/recent/recent_tab_content.dart';
 import '../widgets/multi_action_fab.dart';
-import '../utils/colors.dart';
+import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
 import '../blocs/recent_view/recent_view_bloc.dart';
 import '../blocs/recent_view/recent_view_event.dart';
@@ -49,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final flashcardService = Provider.of<FlashcardService>(context);
     
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.backgroundColor,
       body: Column(
         children: [
           // App header
@@ -76,20 +76,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             bool isToday = index == 1; // Mock: Monday is today
                             bool isPast = index < 1; // Days before today
                             
-                            Color bgColor = Colors.grey.shade100;
-                            Color textColor = Colors.grey.shade400;
+                            Color bgColor = context.surfaceVariantColor;
+                            Color textColor = context.onSurfaceVariantColor;
                             Border? border;
                             
                             if (isToday) {
-                              bgColor = Color.fromRGBO(16, 185, 129, 0.1);
-                              textColor = AppColors.primary;
+                              bgColor = context.primaryColor.withOpacityFix(0.1);
+                              textColor = context.primaryColor;
                               border = Border.all(
-                                color: AppColors.primary,
+                                color: context.primaryColor,
                                 width: 2,
                               );
                             } else if (isPast) {
-                              bgColor = AppColors.primary;
-                              textColor = Colors.white;
+                              bgColor = context.primaryColor;
+                              textColor = context.onPrimaryColor;
                             }
                             
                             return Column(
@@ -116,9 +116,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   isToday ? 'Today' : '',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade500,
+                                  style: context.bodySmall?.copyWith(
+                                    color: context.onSurfaceVariantColor,
                                   ),
                                 ),
                               ],
@@ -134,17 +133,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               'Weekly Goal: $_daysCompleted/$_weeklyGoal days',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
+                              style: context.bodyMedium?.copyWith(
+                                color: context.onSurfaceVariantColor,
                               ),
                             ),
                             Text(
                               '71%',
-                              style: TextStyle(
-                                fontSize: 14,
+                              style: context.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
+                                color: context.primaryColor,
                               ),
                             ),
                           ],
@@ -154,8 +151,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(2),
                           child: LinearProgressIndicator(
                             value: 0.71,
-                            backgroundColor: Colors.grey.shade200,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            backgroundColor: context.surfaceVariantColor,
+                            valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
                             minHeight: 8,
                           ),
                         ),
@@ -173,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         // Tabs in a container with gray background
                         Container(
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: context.surfaceVariantColor,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -188,11 +185,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Container(
                                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: _activeTab == 'Decks' ? Colors.white : Colors.transparent,
+                                    color: _activeTab == 'Decks' ? context.surfaceColor : Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
                                     boxShadow: _activeTab == 'Decks' ? [
                                       BoxShadow(
-                                        color: Color.fromRGBO(128, 128, 128, 0.1),
+                                        color: context.isDarkMode 
+                                            ? Colors.black26 
+                                            : Colors.grey.withOpacityFix(0.1),
                                         blurRadius: 4,
                                         offset: Offset(0, 2),
                                       )
@@ -200,12 +199,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   child: Text(
                                     'Decks',
-                                    style: TextStyle(
-                                      fontSize: 14,
+                                    style: context.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w500,
                                       color: _activeTab == 'Decks' 
-                                        ? AppColors.primary
-                                        : Colors.grey.shade600,
+                                        ? context.primaryColor
+                                        : context.onSurfaceVariantColor,
                                     ),
                                   ),
                                 ),
@@ -223,11 +221,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                       decoration: BoxDecoration(
-                                        color: _activeTab == 'Interview Questions' ? Colors.white : Colors.transparent,
+                                        color: _activeTab == 'Interview Questions' ? context.surfaceColor : Colors.transparent,
                                         borderRadius: BorderRadius.circular(8),
                                         boxShadow: _activeTab == 'Interview Questions' ? [
                                           BoxShadow(
-                                            color: const Color.fromRGBO(128, 128, 128, 0.1),
+                                            color: context.isDarkMode 
+                                                ? Colors.black26 
+                                                : Colors.grey.withOpacityFix(0.1),
                                             blurRadius: 4,
                                             offset: const Offset(0, 2),
                                           )
@@ -235,12 +235,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                       child: Text(
                                         'Interview Questions',
-                                        style: TextStyle(
-                                          fontSize: 14,
+                                        style: context.bodyMedium?.copyWith(
                                           fontWeight: FontWeight.w500,
                                           color: _activeTab == 'Interview Questions' 
-                                            ? AppColors.primary
-                                            : Colors.grey.shade600,
+                                            ? context.primaryColor
+                                            : context.onSurfaceVariantColor,
                                         ),
                                       ),
                                     ),
@@ -253,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       right: 20,
                                       child: CustomPaint(
                                         size: const Size(20, 15),
-                                        painter: ArrowPainter(color: Colors.red),
+                                        painter: ArrowPainter(color: context.errorColor),
                                       ),
                                     ),
                                 ],
@@ -269,11 +268,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Container(
                                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: _activeTab == 'Recent' ? Colors.white : Colors.transparent,
+                                    color: _activeTab == 'Recent' ? context.surfaceColor : Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
                                     boxShadow: _activeTab == 'Recent' ? [
                                       BoxShadow(
-                                        color: Color.fromRGBO(128, 128, 128, 0.1),
+                                        color: context.isDarkMode 
+                                            ? Colors.black26 
+                                            : Colors.grey.withOpacityFix(0.1),
                                         blurRadius: 4,
                                         offset: Offset(0, 2),
                                       )
@@ -281,12 +282,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   child: Text(
                                     'Recent',
-                                    style: TextStyle(
-                                      fontSize: 14,
+                                    style: context.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w500,
                                       color: _activeTab == 'Recent' 
-                                        ? AppColors.primary
-                                        : Colors.grey.shade600,
+                                        ? context.primaryColor
+                                        : context.onSurfaceVariantColor,
                                     ),
                                   ),
                                 ),
@@ -301,16 +301,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
+                                border: Border.all(color: context.colorScheme.outline),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.filter_list, size: 16, color: Colors.grey.shade600),
+                                  Icon(Icons.filter_list, size: 16, color: context.onSurfaceVariantColor),
                                   SizedBox(width: 4),
                                   Text(
                                     'Filter',
-                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                                    style: context.bodySmall,
                                   ),
                                 ],
                               ),
@@ -319,19 +319,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             Container(
                               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
+                                border: Border.all(color: context.colorScheme.outline),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.access_time, size: 16, color: Colors.grey.shade600),
+                                  Icon(Icons.access_time, size: 16, color: context.onSurfaceVariantColor),
                                   SizedBox(width: 4),
                                   Text(
                                     'Last Updated',
-                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                                    style: context.bodySmall,
                                   ),
                                   SizedBox(width: 4),
-                                  Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey.shade600),
+                                  Icon(Icons.keyboard_arrow_down, size: 16, color: context.onSurfaceVariantColor),
                                 ],
                               ),
                             ),
@@ -353,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
       
       // Multi-action Floating Action Button
       floatingActionButton: MultiActionFab(
-        backgroundColor: Colors.green,
+        backgroundColor: context.primaryColor,
         tooltip: 'Create new content',
         options: [
           MultiActionFabOption(
@@ -503,20 +503,16 @@ class _HomeScreenState extends State<HomeScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(DS.spacingM),
           decoration: BoxDecoration(
-            color: Colors.blue.shade50,
+            color: context.secondaryColor.withOpacityFix(0.1),
             borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-            border: Border.all(color: Colors.blue.shade100),
+            border: Border.all(color: context.secondaryColor.withOpacityFix(0.2)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Data Science Interview Questions',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
+                style: context.titleLarge,
               ),
               const SizedBox(height: DS.spacingS),
               
@@ -526,17 +522,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     '64 questions total',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: context.bodyMedium,
                   ),
                   Text(
                     'Updated 2d ago',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
-                    ),
+                    style: context.bodySmall,
                   ),
                 ],
               ),
@@ -548,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 6,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
+                  color: context.surfaceVariantColor,
                   borderRadius: BorderRadius.circular(3),
                 ),
                 // Progress bar would go here
@@ -559,10 +549,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // Status text
               Text(
                 'Not started',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade500,
-                ),
+                style: context.bodySmall,
               ),
               
               const SizedBox(height: DS.spacingM),
@@ -580,8 +567,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: context.primaryColor,
+                  foregroundColor: context.onPrimaryColor,
                   padding: const EdgeInsets.symmetric(
                     horizontal: DS.spacingM,
                     vertical: DS.spacingS,
@@ -601,11 +588,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // Other interview categories in a grid (simplified)
         Text(
           'Other Interview Categories',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
+          style: context.titleMedium,
         ),
         
         const SizedBox(height: DS.spacingM),
@@ -651,26 +634,22 @@ class _HomeScreenState extends State<HomeScreen> {
           vertical: DS.spacing2xs,
         ),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.surfaceColor,
           borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: context.colorScheme.outline),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 13,
+              style: context.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
               ),
             ),
             Text(
               '$count questions',
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey.shade500,
-              ),
+              style: context.bodySmall,
             ),
           ],
         ),
@@ -725,24 +704,17 @@ class _HomeScreenState extends State<HomeScreen> {
           Icon(
             Icons.library_books_outlined,
             size: 64,
-            color: Colors.grey.shade400,
+            color: context.onSurfaceVariantColor,
           ),
           const SizedBox(height: DS.spacingM),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade700,
-            ),
+            style: context.titleLarge,
           ),
           const SizedBox(height: DS.spacingS),
           Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade500,
-            ),
+            style: context.bodyMedium,
           ),
           const SizedBox(height: DS.spacingL),
           ElevatedButton(

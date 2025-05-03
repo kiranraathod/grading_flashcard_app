@@ -10,7 +10,7 @@ import '../models/flashcard_set.dart';
 import '../services/api_service.dart';
 import '../services/flashcard_service.dart';
 import '../services/speech_to_text_service.dart';
-import '../utils/colors.dart';
+import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/answer_input_widget.dart';
@@ -259,7 +259,7 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
               IconButton(
                 icon: Icon(
                   state.isMarkedForReview ? Icons.bookmark : Icons.bookmark_border,
-                  color: state.isMarkedForReview ? Colors.orange : null,
+                  color: state.isMarkedForReview ? context.warningColor : null,
                 ),
                 tooltip: 'Mark for review',
                 onPressed: () {
@@ -321,8 +321,8 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                           Navigator.of(context).pop();
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey.shade200,
-                          foregroundColor: Colors.black87,
+                          backgroundColor: context.surfaceColor,
+                          foregroundColor: context.onSurfaceColor,
                         ),
                         child: const Text('Back'),
                       ),
@@ -382,24 +382,22 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                               ? () => bloc.add(PreviousFlashcardRequested())
                               : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.textOnPrimary,
+                            backgroundColor: context.primaryColor,
+                            foregroundColor: context.onPrimaryColor,
                           ),
                           child: const Text('Previous'),
                         ),
                         Text(
                           '${state.currentIndex + 1}/${state.flashcardSet?.flashcards.length ?? 0}',
-                          style: DS.bodyLarge.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: context.titleMedium,
                         ),
                         ElevatedButton(
                           onPressed: state.canGoNext && state.status != StudyStatus.grading
                               ? () => bloc.add(NextFlashcardRequested())
                               : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.textOnPrimary,
+                            backgroundColor: context.primaryColor,
+                            foregroundColor: context.onPrimaryColor,
                           ),
                           child: const Text('Next'),
                         ),
@@ -411,18 +409,18 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
               // Show loading overlay during grading
               if (state.status == StudyStatus.grading)
                 Container(
-                  color: Color.fromRGBO(0, 0, 0, 0.5),
+                  color: context.surfaceColor.withOpacityFix(0.5),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
                         ),
                         SizedBox(height: DS.spacingM),
                         Text(
                           'Grading your answer...',
-                          style: DS.bodyLarge.copyWith(color: Colors.white),
+                          style: context.bodyLarge?.copyWith(color: context.onSurfaceColor),
                         ),
                       ],
                     ),

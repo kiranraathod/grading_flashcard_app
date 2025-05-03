@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../utils/theme_utils.dart';
+import 'themed_gradient_container.dart';
 
 class FlashcardDeckCard extends StatefulWidget {
   final String title;
@@ -32,94 +34,74 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
       onExit: (_) => setState(() => _isHovered = false),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.surfaceColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: _isHovered
-              ? [
-                  BoxShadow(
-                    color: Color.fromRGBO(0, 0, 0, 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  )
-                ]
-              : null,
+          border: Border.all(color: context.colorScheme.outline),
+          boxShadow: _isHovered ? context.cardShadow : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header section with gradient
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: widget.isStudyDeck
-                      ? [Color(0xFFECFDF5), Color(0xFFD1FAE5)]  // emerald-50 to teal-50
-                      : [Color(0xFFEEF2FF), Color(0xFFE0E7FF)], // purple-50 to indigo-50
-                ),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(8),
-                  topRight: Radius.circular(8),
-                ),
+            // Header section with themed gradient
+            ThemedGradientContainer(
+              isInterview: !widget.isStudyDeck,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Category badge
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Category badge
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: context.surfaceColor,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            widget.category,
+                            style: context.bodySmall,
+                          ),
+                        ),
+                        // Title
+                        Text(
+                          widget.title,
+                          style: context.titleMedium,
+                        ),
+                      ],
+                    ),
+                    // Play button (visible on hover)
+                    if (_isHovered)
                       Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
+                        height: 32,
+                        width: 32,
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(4),
+                          color: context.surfaceColor,
+                          shape: BoxShape.circle,
                         ),
-                        child: Text(
-                          widget.category,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade700,
+                        child: Center(
+                          child: Icon(
+                            Icons.play_arrow,
+                            size: 16,
+                            color: widget.isStudyDeck
+                                ? context.primaryColor
+                                : context.secondaryColor,
                           ),
                         ),
                       ),
-                      // Title
-                      Text(
-                        widget.title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Play button (visible on hover)
-                  if (_isHovered)
-                    Container(
-                      height: 32,
-                      width: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.play_arrow,
-                          size: 16,
-                          color: widget.isStudyDeck
-                              ? Color(0xFF10B981) // emerald-600
-                              : Color(0xFF8B5CF6), // purple-600
-                        ),
-                      ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
             
@@ -137,18 +119,12 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                         widget.isStudyDeck
                             ? '${widget.cardCount} cards'
                             : '${widget.cardCount} questions',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade500,
-                        ),
+                        style: context.bodySmall,
                       ),
                       if (!widget.isStudyDeck)
                         Text(
                           'Updated 2d ago',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade400,
-                          ),
+                          style: context.labelSmall,
                         ),
                     ],
                   ),
@@ -158,7 +134,7 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                   Container(
                     height: 6,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      color: context.surfaceVariantColor,
                       borderRadius: BorderRadius.circular(3),
                     ),
                     child: Row(
@@ -168,7 +144,7 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                           width: (MediaQuery.of(context).size.width / 4 - 32) * 
                               (widget.progressPercent > 0 ? widget.progressPercent / 100 : 0.001),
                           decoration: BoxDecoration(
-                            color: Color(0xFF10B981), // emerald-500
+                            color: context.primaryColor,
                             borderRadius: BorderRadius.circular(3),
                           ),
                         ),
@@ -182,11 +158,10 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                     widget.progressPercent > 0 
                         ? '${widget.progressPercent}% complete' 
                         : 'Not started',
-                    style: TextStyle(
-                      fontSize: 12,
+                    style: context.bodySmall?.copyWith(
                       color: widget.progressPercent > 0
-                          ? Color(0xFF10B981) // emerald-600 for completed
-                          : Colors.grey.shade400,
+                          ? context.primaryColor
+                          : context.onSurfaceVariantColor,
                       fontWeight: widget.progressPercent > 0
                           ? FontWeight.w500
                           : FontWeight.normal,
@@ -204,13 +179,13 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
               width: double.infinity,
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: Colors.grey.shade200),
+                  top: BorderSide(color: context.colorScheme.outline),
                 ),
               ),
               child: TextButton(
                 onPressed: widget.onTap,
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.grey.shade600,
+                  foregroundColor: context.onSurfaceVariantColor,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.only(
@@ -225,10 +200,7 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       widget.isStudyDeck ? 'Start Learning' : 'Practice Questions',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                      ),
+                      style: context.bodySmall,
                     ),
                   ),
                 ),

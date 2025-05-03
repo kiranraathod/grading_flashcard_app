@@ -9,6 +9,7 @@ import '../widgets/multi_action_fab.dart';
 import '../models/interview_question.dart';
 import '../services/interview_service.dart';
 import '../utils/design_system.dart';
+import '../utils/theme_utils.dart';
 import '../utils/colors.dart';
 import 'create_interview_question_screen.dart';
 import 'interview_practice_screen.dart';
@@ -127,19 +128,20 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
   
   // Helper method to get category color
   Color _getCategoryColor(String categoryId) {
+    final isDarkMode = context.isDarkMode;
     switch (categoryId) {
       case 'technical':
-        return Colors.blue.shade100;
+        return isDarkMode ? const Color(0xFF1E3A8A) : Colors.blue.shade100;
       case 'applied':
-        return Colors.green.shade100;
+        return isDarkMode ? const Color(0xFF064E3B) : Colors.green.shade100;
       case 'case':
-        return Colors.purple.shade100;
+        return isDarkMode ? const Color(0xFF4C1D95) : Colors.purple.shade100;
       case 'behavioral':
-        return Colors.yellow.shade100;
+        return isDarkMode ? const Color(0xFF854D0E) : Colors.yellow.shade100;
       case 'job':
-        return Colors.red.shade100;
+        return isDarkMode ? const Color(0xFF991B1B) : Colors.red.shade100;
       default:
-        return Colors.grey.shade100;
+        return isDarkMode ? const Color(0xFF374151) : Colors.grey.shade100;
     }
   }
   
@@ -171,7 +173,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: context.backgroundColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -226,47 +228,72 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search bar
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(
-              DS.spacingL,
-              0,
-              DS.spacingL,
-              DS.spacingM,
-            ),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search),
-                hintText: 'Search questions...',
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 16,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide(
-                    color: Colors.blue.shade300,
-                    width: 1,
+      body: Container(
+        color: context.backgroundColor,
+        child: Column(
+          children: [
+            // Search bar
+            Container(
+              color: context.backgroundColor,
+              padding: const EdgeInsets.fromLTRB(
+                DS.spacingL,
+                0,
+                DS.spacingL,
+                DS.spacingM,
+              ),
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(color: context.onSurfaceColor),
+                decoration: InputDecoration(
+                  prefixIcon: Icon(
+                    Icons.search, 
+                    color: context.isDarkMode 
+                        ? Colors.white.withOpacity(0.7)
+                        : context.onSurfaceVariantColor,
+                  ),
+                  hintText: 'Search questions...',
+                  hintStyle: TextStyle(
+                    color: context.isDarkMode 
+                        ? Colors.white.withOpacity(0.5)
+                        : context.onSurfaceVariantColor,
+                  ),
+                  filled: true,
+                  fillColor: context.isDarkMode 
+                      ? const Color(0xFF2C2C2E)
+                      : Colors.grey.shade100,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 10,
+                    horizontal: 16,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(
+                      color: context.isDarkMode 
+                          ? Colors.white.withOpacity(0.2)
+                          : Colors.transparent,
+                      width: 1,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(
+                      color: context.isDarkMode 
+                          ? Colors.white.withOpacity(0.2)
+                          : Colors.transparent,
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide(
+                      color: context.primaryColor,
+                      width: 2,
+                    ),
                   ),
                 ),
+                onChanged: (_) => setState(() {}),
               ),
-              onChanged: (_) => setState(() {}),
             ),
-          ),
           
           // Main content with filters and questions
           Expanded(
@@ -297,13 +324,13 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                 
                 const SizedBox(height: DS.spacingL),
                 
-                // Category accordion
-                const Text(
+                // Question Categories Header
+                Text(
                   'Question Categories',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: context.onSurfaceColor,
                   ),
                 ),
                 
@@ -527,18 +554,25 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                 Container(
                   padding: const EdgeInsets.all(DS.spacingM),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: context.isDarkMode 
+                        ? const Color(0xFF1E3A8A).withOpacity(0.2)
+                        : Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                    border: Border.all(
+                      color: context.isDarkMode 
+                          ? const Color(0xFF1E3A8A).withOpacity(0.3)
+                          : Colors.transparent,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Your Study Progress',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                          color: context.onSurfaceColor,
                         ),
                       ),
                       
@@ -549,9 +583,13 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
                           value: progressPercent / 100,
-                          backgroundColor: Colors.grey.shade200,
+                          backgroundColor: context.isDarkMode 
+                              ? Colors.white.withOpacity(0.1)
+                              : Colors.grey.shade200,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.blue.shade500,
+                            context.isDarkMode 
+                                ? const Color(0xFF93C5FD)
+                                : Colors.blue.shade500,
                           ),
                           minHeight: 8,
                         ),
@@ -568,7 +606,9 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade700,
+                              color: context.isDarkMode 
+                                  ? Colors.white.withOpacity(0.9)
+                                  : Colors.grey.shade700,
                             ),
                           ),
                           
@@ -576,7 +616,9 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                             '${total - completed} remaining',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.grey.shade600,
+                              color: context.isDarkMode 
+                                  ? Colors.white.withOpacity(0.7)
+                                  : Colors.grey.shade600,
                             ),
                           ),
                         ],
@@ -587,7 +629,8 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

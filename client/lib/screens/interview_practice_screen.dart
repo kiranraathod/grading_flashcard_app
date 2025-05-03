@@ -6,7 +6,7 @@ import '../services/interview_service.dart';
 import '../services/interview_api_service.dart';
 import '../blocs/recent_view/recent_view_bloc.dart';
 import '../blocs/recent_view/recent_view_event.dart';
-import '../utils/colors.dart';
+import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
 import 'dart:async';
 import 'interview_result_screen.dart';
@@ -402,30 +402,30 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
   }
 
   // Helper method to get difficulty color
-  Color _getDifficultyColor() {
+  Color _getDifficultyColor(BuildContext context) {
     switch (widget.question.difficulty) {
       case 'entry':
-        return Colors.green.shade100;
+        return context.successColor.withOpacityFix(0.1);
       case 'mid':
-        return Colors.yellow.shade100;
+        return context.warningColor.withOpacityFix(0.1);
       case 'senior':
-        return Colors.red.shade100;
+        return context.errorColor.withOpacityFix(0.1);
       default:
-        return Colors.grey.shade100;
+        return context.surfaceVariantColor;
     }
   }
 
   // Helper method to get difficulty text color
-  Color _getDifficultyTextColor() {
+  Color _getDifficultyTextColor(BuildContext context) {
     switch (widget.question.difficulty) {
       case 'entry':
-        return Colors.green.shade800;
+        return context.successColor;
       case 'mid':
-        return Colors.yellow.shade800;
+        return context.warningColor;
       case 'senior':
-        return Colors.red.shade800;
+        return context.errorColor;
       default:
-        return Colors.grey.shade800;
+        return context.onSurfaceVariantColor;
     }
   }
 
@@ -444,20 +444,20 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
   }
 
   // Helper method to get category color
-  Color _getCategoryColor() {
+  Color _getCategoryColor(BuildContext context) {
     switch (widget.question.category) {
       case 'technical':
-        return Colors.blue.shade100;
+        return context.secondaryColor.withOpacityFix(0.1);
       case 'applied':
-        return Colors.green.shade100;
+        return context.successColor.withOpacityFix(0.1);
       case 'case':
-        return Colors.purple.shade100;
+        return context.secondaryColor.withOpacityFix(0.15);
       case 'behavioral':
-        return Colors.yellow.shade100;
+        return context.warningColor.withOpacityFix(0.1);
       case 'job':
-        return Colors.red.shade100;
+        return context.errorColor.withOpacityFix(0.1);
       default:
-        return Colors.grey.shade100;
+        return context.surfaceVariantColor;
     }
   }
 
@@ -495,12 +495,9 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
         
         return Scaffold(
           appBar: AppBar(
-            title: const Text(
+            title: Text(
               'Practice Mode',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: context.titleLarge,
             ),
             leading: IconButton(
               icon: const Icon(Icons.close),
@@ -511,10 +508,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
               Center(
                 child: Text(
                   'Question ${widget.currentIndex + 1}/${widget.questionList.length}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade700,
-                  ),
+                  style: context.bodyMedium,
                 ),
               ),
               const SizedBox(width: DS.spacingM),
@@ -527,21 +521,20 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                   // Timer bar at the top
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: DS.spacingL, vertical: DS.spacingS),
-                    color: Colors.blue.shade50,
+                    color: context.primaryColor.withOpacityFix(0.1),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.timer,
                           size: 20,
-                          color: AppColors.primary,
+                          color: context.primaryColor,
                         ),
                         const SizedBox(width: DS.spacingS),
                         Text(
                           'Time: ${_formatTime(_timeTaken)}',
-                          style: const TextStyle(
-                            fontSize: 14,
+                          style: context.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
-                            color: AppColors.primary,
+                            color: context.primaryColor,
                           ),
                         ),
                         const Spacer(),
@@ -549,14 +542,11 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                         Checkbox(
                           value: _isCompleted,
                           onChanged: (value) => _toggleCompletion(),
-                          activeColor: AppColors.primary,
+                          activeColor: context.primaryColor,
                         ),
-                        const Text(
+                        Text(
                           'Mark as Complete',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.textPrimary,
-                          ),
+                          style: context.bodyMedium,
                         ),
                       ],
                     ),
@@ -574,12 +564,12 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(DS.spacingM),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: context.surfaceColor,
                               borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                              border: Border.all(color: Colors.grey.shade200),
+                              border: Border.all(color: context.colorScheme.outline),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withValues(red: 0, green: 0, blue: 0, alpha: 13), // 0.05 * 255 = ~13
+                                  color: context.shadowColor.withOpacityFix(0.05),
                                   blurRadius: 5,
                                   offset: const Offset(0, 2),
                                 ),
@@ -597,16 +587,12 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: _getCategoryColor(),
+                                        color: _getCategoryColor(context),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Text(
                                         _getCategoryName(),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.grey.shade800,
-                                        ),
+                                        style: context.labelMedium,
                                       ),
                                     ),
                                     
@@ -615,10 +601,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                     // Subtopic
                                     Text(
                                       '• ${widget.question.subtopic}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey.shade600,
-                                      ),
+                                      style: context.bodySmall,
                                     ),
                                     
                                     const Spacer(),
@@ -630,15 +613,13 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: _getDifficultyColor(),
+                                        color: _getDifficultyColor(context),
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Text(
                                         _getDifficultyText(),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                          color: _getDifficultyTextColor(),
+                                        style: context.labelMedium?.copyWith(
+                                          color: _getDifficultyTextColor(context),
                                         ),
                                       ),
                                     ),
@@ -650,11 +631,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                 // Question text
                                 Text(
                                   widget.question.text,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
-                                  ),
+                                  style: context.titleLarge,
                                 ),
                               ],
                             ),
@@ -668,19 +645,17 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(DS.spacingM),
                               decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
+                                color: context.primaryColor.withOpacityFix(0.05),
                                 borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                                border: Border.all(color: Colors.blue.shade200),
+                                border: Border.all(color: context.primaryColor.withOpacityFix(0.2)),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Preparation Guide',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.primary,
+                                    style: context.titleMedium?.copyWith(
+                                      color: context.primaryColor,
                                     ),
                                   ),
                                   
@@ -692,12 +667,10 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                   const SizedBox(height: DS.spacingM),
                                   
                                   // User answer input area
-                                  const Text(
+                                  Text(
                                     'Your Answer:',
-                                    style: TextStyle(
-                                      fontSize: 14,
+                                    style: context.bodyLarge?.copyWith(
                                       fontWeight: FontWeight.w500,
-                                      color: AppColors.textPrimary,
                                     ),
                                   ),
                                   
@@ -706,18 +679,22 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                   // Text field for user's answer
                                   Container(
                                     decoration: BoxDecoration(
-                                      color: Colors.white,
+                                      color: context.surfaceColor,
                                       borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                                      border: Border.all(color: Colors.grey.shade300),
+                                      border: Border.all(color: context.colorScheme.outline),
                                     ),
                                     child: Column(
                                       children: [
                                         TextField(
                                           controller: _userAnswerController,
                                           maxLines: 6,
-                                          decoration: const InputDecoration(
+                                          style: context.bodyLarge,
+                                          decoration: InputDecoration(
                                             hintText: 'Type your answer here...',
-                                            contentPadding: EdgeInsets.all(DS.spacingM),
+                                            hintStyle: context.bodyLarge?.copyWith(
+                                              color: context.onSurfaceVariantColor,
+                                            ),
+                                            contentPadding: const EdgeInsets.all(DS.spacingM),
                                             border: InputBorder.none,
                                           ),
                                         ),
@@ -729,9 +706,9 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                             vertical: DS.spacingXs,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.grey.shade50,
+                                            color: context.surfaceVariantColor,
                                             border: Border(
-                                              top: BorderSide(color: Colors.grey.shade200),
+                                              top: BorderSide(color: context.colorScheme.outline),
                                             ),
                                           ),
                                           child: Row(
@@ -741,7 +718,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                                 onPressed: _isListening ? _stopListening : _startListening,
                                                 icon: Icon(
                                                   _isListening ? Icons.mic : Icons.mic_none,
-                                                  color: _isListening ? Colors.red : Colors.grey.shade700,
+                                                  color: _isListening ? context.errorColor : context.onSurfaceVariantColor,
                                                 ),
                                                 tooltip: _isListening ? 'Stop recording' : 'Start voice input',
                                                 padding: EdgeInsets.zero,
@@ -752,9 +729,8 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                               
                                               Text(
                                                 _isListening ? 'Recording...' : 'Voice input',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: _isListening ? Colors.red : Colors.grey.shade700,
+                                                style: context.bodySmall?.copyWith(
+                                                  color: _isListening ? context.errorColor : context.onSurfaceVariantColor,
                                                 ),
                                               ),
                                               
@@ -763,10 +739,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                               // Character count
                                               Text(
                                                 '${_userAnswerController.text.length} chars',
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: Colors.grey.shade600,
-                                                ),
+                                                style: context.bodySmall,
                                               ),
                                             ],
                                           ),
@@ -784,7 +757,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                         child: OutlinedButton(
                                           onPressed: _clearUserAnswer,
                                           style: OutlinedButton.styleFrom(
-                                            side: BorderSide(color: Colors.grey.shade400),
+                                            side: BorderSide(color: context.colorScheme.outline),
                                             padding: const EdgeInsets.symmetric(
                                               vertical: DS.spacingM,
                                             ),
@@ -806,8 +779,8 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                             });
                                           },
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: AppColors.primary,
-                                            foregroundColor: Colors.white,
+                                            backgroundColor: context.primaryColor,
+                                            foregroundColor: context.onPrimaryColor,
                                             padding: const EdgeInsets.symmetric(
                                               vertical: DS.spacingM,
                                             ),
@@ -833,27 +806,25 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                     margin: const EdgeInsets.only(bottom: DS.spacingM),
                                     padding: const EdgeInsets.all(DS.spacingM),
                                     decoration: BoxDecoration(
-                                      color: Colors.green.shade50,
+                                      color: context.successColor.withOpacityFix(0.1),
                                       borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                                      border: Border.all(color: Colors.green.shade200),
+                                      border: Border.all(color: context.successColor.withOpacityFix(0.3)),
                                     ),
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
-                                            const Icon(
+                                            Icon(
                                               Icons.person,
-                                              color: Colors.green,
+                                              color: context.successColor,
                                               size: 20,
                                             ),
                                             const SizedBox(width: DS.spacingXs),
-                                            const Text(
+                                            Text(
                                               'Your Answer',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.green,
+                                              style: context.titleMedium?.copyWith(
+                                                color: context.successColor,
                                               ),
                                             ),
                                           ],
@@ -863,11 +834,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                         
                                         Text(
                                           _userAnswerController.text,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            height: 1.5,
-                                            color: AppColors.textPrimary,
-                                          ),
+                                          style: context.bodyLarge,
                                         ),
                                       ],
                                     ),
@@ -878,28 +845,24 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                   width: double.infinity,
                                   padding: const EdgeInsets.all(DS.spacingM),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: context.surfaceColor,
                                     borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                                    border: Border.all(color: Colors.grey.shade200),
+                                    border: Border.all(color: context.colorScheme.outline),
                                   ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
-                                          const Icon(
+                                          Icon(
                                             Icons.lightbulb,
-                                            color: AppColors.primary,
+                                            color: context.primaryColor,
                                             size: 20,
                                           ),
                                           const SizedBox(width: DS.spacingXs),
-                                          const Text(
+                                          Text(
                                             'Example Answer',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.textPrimary,
-                                            ),
+                                            style: context.titleMedium,
                                           ),
                                           const Spacer(),
                                           // Hide answer button
@@ -917,18 +880,14 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                       const SizedBox(height: DS.spacingM),
                                       
                                       // Divider
-                                      Divider(color: Colors.grey.shade200),
+                                      Divider(color: context.colorScheme.outline),
                                       
                                       const SizedBox(height: DS.spacingM),
                                       
                                       // Answer content
                                       Text(
                                         widget.question.answer ?? 'No answer available for this question.',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          height: 1.5,
-                                          color: AppColors.textPrimary,
-                                        ),
+                                        style: context.bodyLarge,
                                       ),
                                     ],
                                   ),
@@ -948,10 +907,10 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                       vertical: DS.spacingM,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.surfaceColor,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(red: 0, green: 0, blue: 0, alpha: 13), // 0.05 * 255 = ~13
+                          color: context.shadowColor.withOpacityFix(0.05),
                           blurRadius: 5,
                           offset: const Offset(0, -2),
                         ),
@@ -966,17 +925,17 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                           icon: Icon(
                             _isCompleted ? Icons.check_circle : Icons.check_circle_outline,
                             size: 18,
-                            color: _isCompleted ? AppColors.primary : Colors.grey.shade600,
+                            color: _isCompleted ? context.primaryColor : context.onSurfaceVariantColor,
                           ),
                           label: Text(
                             _isCompleted ? 'Completed' : 'Mark Complete',
                             style: TextStyle(
-                              color: _isCompleted ? AppColors.primary : Colors.grey.shade600,
+                              color: _isCompleted ? context.primaryColor : context.onSurfaceVariantColor,
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(
-                              color: _isCompleted ? AppColors.primary : Colors.grey.shade300,
+                              color: _isCompleted ? context.primaryColor : context.colorScheme.outline,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
@@ -1006,8 +965,8 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                       : 'Submit This Answer'
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: context.primaryColor,
+                                  foregroundColor: context.onPrimaryColor,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                                   ),
@@ -1027,8 +986,8 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                   'Grade All (${_userAnswers.length}/${widget.questionList.length})'
                                 ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: context.successColor,
+                                  foregroundColor: context.onPrimaryColor,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                                   ),
@@ -1045,20 +1004,20 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
               // Show loading overlay during grading or batch submission
               if (_isGrading || _isSubmittingBatch)
                 Container(
-                  color: Colors.black.withValues(red: 0, green: 0, blue: 0, alpha: 128), // 0.5 * 255 = 128
+                  color: context.surfaceColor.withOpacityFix(0.5),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
                         ),
                         const SizedBox(height: DS.spacingM),
                         Text(
                           _isSubmittingBatch 
                               ? 'Grading all answers...' 
                               : 'Grading your answer...',
-                          style: DS.bodyLarge.copyWith(color: Colors.white),
+                          style: context.bodyLarge?.copyWith(color: context.onSurfaceColor),
                         ),
                       ],
                     ),
@@ -1133,19 +1092,16 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
+              Icon(
                 Icons.check_circle,
                 size: 16,
-                color: AppColors.primary,
+                color: context.primaryColor,
               ),
               const SizedBox(width: DS.spacingXs),
               Expanded(
                 child: Text(
                   tip,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textPrimary,
-                  ),
+                  style: context.bodyMedium,
                 ),
               ),
             ],

@@ -1,31 +1,29 @@
 import 'package:flutter/material.dart';
-import '../utils/colors.dart';
+import '../utils/theme_utils.dart';
 
-/// A custom floating action button that shows multiple options when pressed.
-/// 
-/// This widget creates a green "+" button that shows a pop-up menu with multiple
-/// options when pressed. It's designed to replace individual create buttons
-/// across the app with a unified experience.
-class MultiActionFab extends StatelessWidget {
-  /// List of options to display in the menu
-  final List<MultiActionFabOption> options;
-  
-  /// The color of the FAB
-  final Color backgroundColor;
-  
-  /// Icon to display on the FAB
+class MultiActionFabOption {
+  final String label;
   final IconData icon;
-  
-  /// Size of the icon
+  final VoidCallback onTap;
+
+  MultiActionFabOption({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+}
+
+class MultiActionFab extends StatelessWidget {
+  final List<MultiActionFabOption> options;
+  final Color? backgroundColor;
+  final IconData icon;
   final double iconSize;
-  
-  /// Optional tooltip text
   final String? tooltip;
 
   const MultiActionFab({
     super.key,
     required this.options,
-    this.backgroundColor = AppColors.primary,
+    this.backgroundColor,
     this.icon = Icons.add,
     this.iconSize = 24.0,
     this.tooltip,
@@ -33,16 +31,19 @@ class MultiActionFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Use the appropriate color based on the theme
+    final buttonColor = backgroundColor ?? context.primaryColor;
+    
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: backgroundColor.withValues(
-              red: backgroundColor.r.toDouble(), 
-              green: backgroundColor.g.toDouble(), 
-              blue: backgroundColor.b.toDouble(), 
-              alpha: 76.0
+            color: Color.fromRGBO(
+              buttonColor.r.toInt(),
+              buttonColor.g.toInt(),
+              buttonColor.b.toInt(),
+              0.3,
             ),
             blurRadius: 8,
             offset: const Offset(0, 4),
@@ -53,8 +54,8 @@ class MultiActionFab extends StatelessWidget {
         onPressed: () {
           _showOptions(context);
         },
-        backgroundColor: backgroundColor,
-        foregroundColor: Colors.white,
+        backgroundColor: buttonColor,
+        foregroundColor: context.colorScheme.onPrimary,
         elevation: 0,
         tooltip: tooltip,
         child: Icon(icon, size: iconSize),
@@ -65,16 +66,25 @@ class MultiActionFab extends StatelessWidget {
   void _showOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16.0),
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: context.surfaceColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: options.map((option) => ListTile(
-            leading: Icon(option.icon, color: backgroundColor),
-            title: Text(option.label),
+            leading: Icon(option.icon, color: context.primaryColor),
+            title: Text(
+              option.label,
+              style: TextStyle(
+                color: context.onSurfaceColor,
+              ),
+            ),
             onTap: () {
               Navigator.pop(context);
               option.onTap();
@@ -84,22 +94,4 @@ class MultiActionFab extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Represents an option in the MultiActionFab menu
-class MultiActionFabOption {
-  /// The display label for this option
-  final String label;
-  
-  /// The icon to display for this option
-  final IconData icon;
-  
-  /// The callback to execute when this option is tapped
-  final VoidCallback onTap;
-
-  const MultiActionFabOption({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
 }

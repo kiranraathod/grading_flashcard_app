@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/design_system.dart';
+import '../../utils/theme_utils.dart';
 
 class DifficultyFilter extends StatelessWidget {
   final String activeDifficulty;
@@ -13,6 +14,8 @@ class DifficultyFilter extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = context.isDarkMode;
+    
     // Define difficulty levels
     final difficulties = [
       {'id': 'all', 'name': 'All'},
@@ -31,7 +34,7 @@ class DifficultyFilter extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Colors.grey.shade700,
+              color: isDarkMode ? Colors.white.withOpacity(0.7) : Colors.grey.shade700,
             ),
           ),
         ),
@@ -53,13 +56,13 @@ class DifficultyFilter extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: isActive 
-                          ? Colors.blue.shade100
-                          : Colors.white,
+                          ? (isDarkMode ? const Color(0xFF1E3A8A) : Colors.blue.shade100)
+                          : (isDarkMode ? const Color(0xFF2C2C2E) : Colors.white),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isActive 
-                            ? Colors.blue.shade200
-                            : Colors.grey.shade300,
+                            ? (isDarkMode ? const Color(0xFF93C5FD) : Colors.blue.shade200)
+                            : (isDarkMode ? Colors.white.withOpacity(0.1) : Colors.grey.shade300),
                       ),
                     ),
                     child: Text(
@@ -68,8 +71,8 @@ class DifficultyFilter extends StatelessWidget {
                         fontSize: 13,
                         fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
                         color: isActive 
-                            ? Colors.blue.shade800
-                            : Colors.grey.shade700,
+                            ? (isDarkMode ? Colors.white : Colors.blue.shade800)
+                            : (isDarkMode ? Colors.white.withOpacity(0.7) : Colors.grey.shade700),
                       ),
                     ),
                   ),

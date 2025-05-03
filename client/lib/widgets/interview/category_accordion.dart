@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/design_system.dart';
+import '../../utils/theme_utils.dart';
 
 class CategoryAccordion extends StatelessWidget {
   final String categoryId;
@@ -26,9 +27,13 @@ class CategoryAccordion extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: DS.spacingS),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: context.isDarkMode 
+              ? Colors.white.withValues(red: 255.0, green: 255.0, blue: 255.0, alpha: 25.0)
+              : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         children: [
@@ -50,7 +55,7 @@ class CategoryAccordion extends StatelessWidget {
                     child: Icon(
                       categoryIcon,
                       size: 16,
-                      color: Colors.grey.shade700,
+                      color: context.isDarkMode ? Colors.white : Colors.grey.shade700,
                     ),
                   ),
                   
@@ -59,9 +64,10 @@ class CategoryAccordion extends StatelessWidget {
                   // Category name
                   Text(
                     categoryName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
+                      color: context.onSurfaceColor,
                     ),
                   ),
                   
@@ -72,7 +78,7 @@ class CategoryAccordion extends StatelessWidget {
                     '${subtopics.length} topics',
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.grey.shade500,
+                      color: context.onSurfaceVariantColor,
                     ),
                   ),
                   
@@ -83,7 +89,7 @@ class CategoryAccordion extends StatelessWidget {
                     isExpanded
                         ? Icons.keyboard_arrow_up
                         : Icons.keyboard_arrow_down,
-                    color: Colors.grey.shade400,
+                    color: context.onSurfaceVariantColor,
                   ),
                 ],
               ),
@@ -109,7 +115,7 @@ class CategoryAccordion extends StatelessWidget {
                           width: 6,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade400,
+                            color: context.onSurfaceVariantColor,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -118,7 +124,7 @@ class CategoryAccordion extends StatelessWidget {
                           topic,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade700,
+                            color: context.onSurfaceVariantColor,
                           ),
                         ),
                       ],
