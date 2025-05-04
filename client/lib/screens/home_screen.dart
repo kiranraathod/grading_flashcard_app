@@ -187,13 +187,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                   decoration: BoxDecoration(
                                     color: _activeTab == 'Decks' ? context.surfaceColor : Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
+                                    border: _activeTab == 'Decks' && context.isDarkMode
+                                        ? Border.all(
+                                            color: context.primaryColor.withValues(alpha: 0.2),
+                                            width: 1,
+                                          )
+                                        : null,
                                     boxShadow: _activeTab == 'Decks' ? [
                                       BoxShadow(
                                         color: context.isDarkMode 
-                                            ? Colors.black26 
+                                            ? context.primaryColor.withValues(alpha: 0.1)
                                             : Colors.grey.withOpacityFix(0.1),
                                         blurRadius: 4,
-                                        offset: Offset(0, 2),
+                                        offset: const Offset(0, 2),
                                       )
                                     ] : null,
                                   ),
@@ -223,10 +229,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                       decoration: BoxDecoration(
                                         color: _activeTab == 'Interview Questions' ? context.surfaceColor : Colors.transparent,
                                         borderRadius: BorderRadius.circular(8),
+                                        border: _activeTab == 'Interview Questions' && context.isDarkMode
+                                            ? Border.all(
+                                                color: context.primaryColor.withValues(alpha: 0.2),
+                                                width: 1,
+                                              )
+                                            : null,
                                         boxShadow: _activeTab == 'Interview Questions' ? [
                                           BoxShadow(
                                             color: context.isDarkMode 
-                                                ? Colors.black26 
+                                                ? context.primaryColor.withValues(alpha: 0.1)
                                                 : Colors.grey.withOpacityFix(0.1),
                                             blurRadius: 4,
                                             offset: const Offset(0, 2),
@@ -270,13 +282,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                   decoration: BoxDecoration(
                                     color: _activeTab == 'Recent' ? context.surfaceColor : Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
+                                    border: _activeTab == 'Recent' && context.isDarkMode
+                                        ? Border.all(
+                                            color: context.primaryColor.withValues(alpha: 0.2),
+                                            width: 1,
+                                          )
+                                        : null,
                                     boxShadow: _activeTab == 'Recent' ? [
                                       BoxShadow(
                                         color: context.isDarkMode 
-                                            ? Colors.black26 
+                                            ? context.primaryColor.withValues(alpha: 0.1)
                                             : Colors.grey.withOpacityFix(0.1),
                                         blurRadius: 4,
-                                        offset: Offset(0, 2),
+                                        offset: const Offset(0, 2),
                                       )
                                     ] : null,
                                   ),
@@ -354,6 +372,9 @@ class _HomeScreenState extends State<HomeScreen> {
       // Multi-action Floating Action Button
       floatingActionButton: MultiActionFab(
         backgroundColor: context.primaryColor,
+        activeColor: context.isDarkMode 
+            ? context.appTheme.primaryDarkHover ?? context.primaryColor 
+            : context.primaryColor,
         tooltip: 'Create new content',
         options: [
           MultiActionFabOption(

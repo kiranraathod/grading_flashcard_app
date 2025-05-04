@@ -50,13 +50,11 @@ class AppHeader extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: context.isDarkMode 
-                    ? const Color(0xFF2C2C2E).withValues(red: 44.0, green: 44.0, blue: 46.0, alpha: 204.0)  // Semi-transparent for better depth
-                    : context.surfaceVariantColor,
-                borderRadius: BorderRadius.circular(8),
+                    ? const Color(0xFF2C2C2E)
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(30),
                 border: Border.all(
-                  color: context.isDarkMode 
-                      ? Colors.white.withValues(red: 255.0, green: 255.0, blue: 255.0, alpha: 25.0)
-                      : Colors.transparent,
+                  color: Colors.transparent,
                   width: 0.5,
                 ),
               ),
@@ -65,7 +63,7 @@ class AppHeader extends StatelessWidget {
                   Icon(
                     Icons.search,
                     color: context.isDarkMode 
-                        ? Colors.white.withValues(red: 255.0, green: 255.0, blue: 255.0, alpha: 178.0)
+                        ? Colors.white.withValues(alpha: 0.7)
                         : context.onSurfaceVariantColor,
                     size: 18
                   ),
@@ -74,14 +72,15 @@ class AppHeader extends StatelessWidget {
                     child: TextField(
                       style: TextStyle(
                         color: context.onSurfaceColor,
+                        fontSize: 16,
                       ),
                       decoration: InputDecoration(
                         hintText: 'Find flashcards on any topic',
                         hintStyle: TextStyle(
                           color: context.isDarkMode 
-                              ? Colors.white.withValues(red: 255.0, green: 255.0, blue: 255.0, alpha: 102.0)
+                              ? Colors.white.withValues(alpha: 0.5)
                               : context.onSurfaceVariantColor,
-                          fontSize: 14
+                          fontSize: 16,
                         ),
                         border: InputBorder.none,
                         isDense: true,

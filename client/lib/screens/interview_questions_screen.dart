@@ -243,51 +243,45 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
               ),
               child: TextField(
                 controller: _searchController,
-                style: TextStyle(color: context.onSurfaceColor),
+                style: TextStyle(
+                  color: context.onSurfaceColor,
+                  fontSize: 16,
+                ),
                 decoration: InputDecoration(
                   prefixIcon: Icon(
                     Icons.search, 
                     color: context.isDarkMode 
-                        ? Colors.white.withOpacity(0.7)
+                        ? Colors.white.withValues(alpha: 0.8)  // Increased opacity for better visibility
                         : context.onSurfaceVariantColor,
                   ),
                   hintText: 'Search questions...',
                   hintStyle: TextStyle(
                     color: context.isDarkMode 
-                        ? Colors.white.withOpacity(0.5)
+                        ? Colors.white.withValues(alpha: 0.6)  // Increased opacity for better readability
                         : context.onSurfaceVariantColor,
+                    fontSize: 16,
                   ),
                   filled: true,
                   fillColor: context.isDarkMode 
-                      ? const Color(0xFF2C2C2E)
+                      ? const Color(0xFF3A3A42)  // Improved contrast for dark mode
                       : Colors.grey.shade100,
                   contentPadding: const EdgeInsets.symmetric(
-                    vertical: 10,
+                    vertical: 12,
                     horizontal: 16,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide(
-                      color: context.isDarkMode 
-                          ? Colors.white.withOpacity(0.2)
-                          : Colors.transparent,
-                      width: 1,
-                    ),
+                    borderSide: BorderSide.none,
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide(
-                      color: context.isDarkMode 
-                          ? Colors.white.withOpacity(0.2)
-                          : Colors.transparent,
-                      width: 1,
-                    ),
+                    borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide(
-                      color: context.primaryColor,
-                      width: 2,
+                      color: context.primaryColor.withValues(alpha: 0.5),
+                      width: 1,
                     ),
                   ),
                 ),
@@ -360,10 +354,12 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                   children: [
                     Text(
                       'Questions (${filteredQuestions.length})',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        color: context.isDarkMode 
+                            ? AppColors.textPrimaryDark 
+                            : AppColors.textPrimary,
                       ),
                     ),
                     
@@ -497,6 +493,9 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                       showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,
+                        backgroundColor: context.isDarkMode 
+                            ? const Color(0xFF2A2A30) 
+                            : Colors.white,
                         shape: const RoundedRectangleBorder(
                           borderRadius: BorderRadius.vertical(
                             top: Radius.circular(DS.borderRadiusSmall),
@@ -555,12 +554,12 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                   padding: const EdgeInsets.all(DS.spacingM),
                   decoration: BoxDecoration(
                     color: context.isDarkMode 
-                        ? const Color(0xFF1E3A8A).withOpacity(0.2)
+                        ? const Color(0xFF1E3A8A).withValues(alpha: 0.2)
                         : Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                     border: Border.all(
                       color: context.isDarkMode 
-                          ? const Color(0xFF1E3A8A).withOpacity(0.3)
+                          ? const Color(0xFF1E3A8A).withValues(alpha: 0.3)
                           : Colors.transparent,
                     ),
                   ),
@@ -584,7 +583,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                         child: LinearProgressIndicator(
                           value: progressPercent / 100,
                           backgroundColor: context.isDarkMode 
-                              ? Colors.white.withOpacity(0.1)
+                              ? Colors.white.withValues(alpha: 0.1)
                               : Colors.grey.shade200,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             context.isDarkMode 
@@ -607,7 +606,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                               color: context.isDarkMode 
-                                  ? Colors.white.withOpacity(0.9)
+                                  ? Colors.white.withValues(alpha: 0.9)
                                   : Colors.grey.shade700,
                             ),
                           ),
@@ -617,7 +616,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                             style: TextStyle(
                               fontSize: 13,
                               color: context.isDarkMode 
-                                  ? Colors.white.withOpacity(0.7)
+                                  ? Colors.white.withValues(alpha: 0.7)
                                   : Colors.grey.shade600,
                             ),
                           ),

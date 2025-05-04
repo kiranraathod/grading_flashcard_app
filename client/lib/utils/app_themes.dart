@@ -57,7 +57,7 @@ class AppThemes {
       tertiary: AppColors.accentDark,
       error: AppColors.errorDark,
       surface: AppColors.surfaceDark,
-      surfaceContainerHighest: const Color(0xFF2C2C2E), // Replace surfaceVariant
+      surfaceContainerHighest: const Color(0xFF3A3A42), // Updated for better contrast
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: Colors.white,

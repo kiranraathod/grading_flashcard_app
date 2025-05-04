@@ -10,26 +10,28 @@ class AppColors {
   static const Color accent = Color(0xFF059669);    // Emerald-700
   
   // Dark mode versions of core colors
-  static const Color primaryDark = Color(0xFF34D399);  // Emerald-400
+  static const Color primaryDark = Color(0xFF4ADE80);  // Even brighter Emerald for better contrast
+  static const Color primaryDarkBright = Color(0xFF6EE7B7);  // Extra bright emerald for maximum contrast
+  static const Color primaryDarkHover = Color(0xFF5CE88D);  // Lighter emerald for hover
   static const Color secondaryDark = Color(0xFFA78BFA); // Purple-400
-  static const Color accentDark = Color(0xFF34D399);    // Emerald-400
+  static const Color accentDark = Color(0xFF4ADE80);    // Matches primaryDark
   
   // Background colors
   static const Color background = Color(0xFFF9FAFB); // Gray-50
-  static const Color backgroundDark = Color(0xFF121212); // Dark background
+  static const Color backgroundDark = Color(0xFF121216); // Lighter black for better layering
   static const Color surfaceLight = Colors.white;
-  static const Color surfaceDark = Color(0xFF1E1E1E);
+  static const Color surfaceDark = Color(0xFF2A2A30); // More elevated surface for better contrast
   
   // Card colors from React code
   static const Color cardGradientStart = Color(0xFFECFDF5); // Emerald-50
   static const Color cardGradientEnd = Color(0xFFD1FAE5);   // Teal-50
-  static const Color cardGradientStartDark = Color(0xFF064E3B); // Emerald-900
-  static const Color cardGradientEndDark = Color(0xFF065F46);   // Emerald-800
+  static const Color cardGradientStartDark = Color(0xFF0E362B); // Slightly greener emerald
+  static const Color cardGradientEndDark = Color(0xFF0F3D31);   // Deeper teal
   
   static const Color interviewGradientStart = Color(0xFFEEF2FF); // Purple-50
   static const Color interviewGradientEnd = Color(0xFFE0E7FF); // Indigo-50
-  static const Color interviewGradientStartDark = Color(0xFF312E81); // Indigo-900
-  static const Color interviewGradientEndDark = Color(0xFF4338CA); // Indigo-800
+  static const Color interviewGradientStartDark = Color(0xFF1F1D35); // Richer purple
+  static const Color interviewGradientEndDark = Color(0xFF292449); // Richer indigo
   
   // Feedback colors
   static const Color success = Color(0xFF10B981); // Emerald-600
@@ -65,8 +67,8 @@ class AppColors {
   
   // Dark mode text colors
   static const Color textPrimaryDark = Colors.white;
-  static const Color textSecondaryDark = Color(0xFFD1D5DB); // Gray-300
-  static const Color textTertiaryDark = Color(0xFF9CA3AF); // Gray-400
+  static const Color textSecondaryDark = Color(0xFFF0F0F0); // Even brighter for better readability
+  static const Color textTertiaryDark = Color(0xFFBFBFBF); // Lightened Gray for better contrast
   
   // Helper method to get grade color
   static Color getGradeColor(String grade, {bool isDarkMode = false}) {

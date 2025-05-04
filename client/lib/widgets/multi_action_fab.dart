@@ -13,9 +13,10 @@ class MultiActionFabOption {
   });
 }
 
-class MultiActionFab extends StatelessWidget {
+class MultiActionFab extends StatefulWidget {
   final List<MultiActionFabOption> options;
   final Color? backgroundColor;
+  final Color? activeColor;
   final IconData icon;
   final double iconSize;
   final String? tooltip;
@@ -24,41 +25,50 @@ class MultiActionFab extends StatelessWidget {
     super.key,
     required this.options,
     this.backgroundColor,
+    this.activeColor,
     this.icon = Icons.add,
     this.iconSize = 24.0,
     this.tooltip,
   });
 
   @override
+  State<MultiActionFab> createState() => _MultiActionFabState();
+}
+
+class _MultiActionFabState extends State<MultiActionFab> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
     // Use the appropriate color based on the theme
-    final buttonColor = backgroundColor ?? context.primaryColor;
+    final buttonColor = widget.backgroundColor ?? context.primaryColor;
     
-    return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Color.fromRGBO(
-              buttonColor.r.toInt(),
-              buttonColor.g.toInt(),
-              buttonColor.b.toInt(),
-              0.3,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: buttonColor.withValues(alpha: _isHovered ? 0.5 : 0.3),
+              blurRadius: _isHovered ? 12.0 : 8.0,
+              offset: const Offset(0, 4),
             ),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: FloatingActionButton(
-        onPressed: () {
-          _showOptions(context);
-        },
-        backgroundColor: buttonColor,
-        foregroundColor: context.colorScheme.onPrimary,
-        elevation: 0,
-        tooltip: tooltip,
-        child: Icon(icon, size: iconSize),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () {
+            _showOptions(context);
+          },
+          backgroundColor: _isHovered && widget.activeColor != null 
+              ? widget.activeColor 
+              : buttonColor,
+          foregroundColor: context.colorScheme.onPrimary,
+          elevation: 0,
+          tooltip: widget.tooltip,
+          child: Icon(widget.icon, size: widget.iconSize),
+        ),
       ),
     );
   }
@@ -77,7 +87,7 @@ class MultiActionFab extends StatelessWidget {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: options.map((option) => ListTile(
+          children: widget.options.map((option) => ListTile(
             leading: Icon(option.icon, color: context.primaryColor),
             title: Text(
               option.label,

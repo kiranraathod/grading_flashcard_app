@@ -88,7 +88,7 @@ class CategoryFilter extends StatelessWidget {
                     border: Border.all(
                       color: isActive 
                           ? (category['activeColor'] as Color)
-                          : (isDarkMode ? Colors.white.withOpacity(0.1) : Colors.grey.shade200),
+                          : (isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade200),
                       width: isActive ? 2 : 1,
                     ),
                   ),
@@ -99,7 +99,7 @@ class CategoryFilter extends StatelessWidget {
                         size: 16,
                         color: isActive 
                             ? (isDarkMode ? Colors.white : Colors.blue.shade700)
-                            : (isDarkMode ? Colors.white.withOpacity(0.7) : Colors.grey.shade700),
+                            : (isDarkMode ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade700),
                       ),
                       const SizedBox(width: DS.spacingXs),
                       Text(
@@ -109,7 +109,7 @@ class CategoryFilter extends StatelessWidget {
                           fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
                           color: isActive 
                               ? (isDarkMode ? Colors.white : Colors.blue.shade700)
-                              : (isDarkMode ? Colors.white.withOpacity(0.7) : Colors.grey.shade700),
+                              : (isDarkMode ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade700),
                         ),
                       ),
                     ],

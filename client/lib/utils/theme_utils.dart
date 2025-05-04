@@ -39,6 +39,9 @@ extension ThemeExtensions on BuildContext {
   // Shadow color getter
   Color get shadowColor => colorScheme.shadow;
   
+  // Primary hover color for dark mode
+  Color? get primaryDarkHover => appTheme.primaryDarkHover;
+  
   // Text style helpers
   TextStyle? get displayLarge => textTheme.displayLarge;
   TextStyle? get displayMedium => textTheme.displayMedium;

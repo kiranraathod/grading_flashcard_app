@@ -36,8 +36,29 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
         decoration: BoxDecoration(
           color: context.surfaceColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: context.colorScheme.outline),
-          boxShadow: _isHovered ? context.cardShadow : null,
+          border: Border.all(
+            color: context.isDarkMode 
+                ? context.colorScheme.outline.withValues(alpha: 0.2)
+                : context.colorScheme.outline,
+            width: context.isDarkMode ? 1.2 : 1.0,
+          ),
+          boxShadow: _isHovered ? (
+            context.isDarkMode ? [
+              BoxShadow(
+                color: const Color(0x99000000), // rgba(0, 0, 0, 0.6) for hover
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ] : context.cardShadow
+          ) : (
+            context.isDarkMode ? [
+              BoxShadow(
+                color: const Color(0x66000000), // rgba(0, 0, 0, 0.4) for normal state
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ] : null
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,8 +155,14 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                   Container(
                     height: 6,
                     decoration: BoxDecoration(
-                      color: context.surfaceVariantColor,
+                      color: context.isDarkMode
+                          ? context.surfaceVariantColor.withValues(alpha: 0.3)
+                          : context.surfaceVariantColor,
                       borderRadius: BorderRadius.circular(3),
+                      border: context.isDarkMode ? Border.all(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        width: 0.5,
+                      ) : null,
                     ),
                     child: Row(
                       children: [

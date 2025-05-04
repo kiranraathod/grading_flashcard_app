@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/interview_question.dart';
 import '../../utils/design_system.dart';
 import '../../utils/colors.dart';
+import '../../utils/theme_utils.dart';
 
 class AnswerView extends StatelessWidget {
   final InterviewQuestion question;
@@ -25,6 +26,12 @@ class AnswerView extends StatelessWidget {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.8,
       ),
+      decoration: BoxDecoration(
+        color: context.isDarkMode ? const Color(0xFF2A2A30) : Colors.white,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(DS.borderRadiusSmall),
+        ),
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -36,12 +43,9 @@ class AnswerView extends StatelessWidget {
               vertical: DS.spacingS,
             ),
             decoration: BoxDecoration(
-              color: Color.fromRGBO(
-                AppColors.primary.r.toInt(),
-                AppColors.primary.g.toInt(),
-                AppColors.primary.b.toInt(),
-                0.1,
-              ),
+              color: context.isDarkMode 
+                  ? context.primaryColor.withValues(alpha: 0.2)
+                  : AppColors.primary.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(DS.borderRadiusSmall),
                 topRight: Radius.circular(DS.borderRadiusSmall),
@@ -49,27 +53,27 @@ class AnswerView extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.question_answer,
                   size: 20,
-                  color: AppColors.primary,
+                  color: context.isDarkMode ? AppColors.primaryDark : AppColors.primary,
                 ),
                 const SizedBox(width: DS.spacingXs),
-                const Text(
+                Text(
                   'Answer',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+                    color: context.isDarkMode ? AppColors.primaryDark : AppColors.primary,
                   ),
                 ),
                 const Spacer(),
                 IconButton(
                   onPressed: onClose,
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.close,
                     size: 20,
-                    color: AppColors.textSecondary,
+                    color: context.isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
                   ),
                   constraints: const BoxConstraints(),
                   padding: EdgeInsets.zero,
@@ -82,19 +86,26 @@ class AnswerView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(DS.spacingM),
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: context.isDarkMode 
+                  ? Colors.grey.shade900.withValues(alpha: 0.7)
+                  : Colors.grey.shade50,
             ),
             child: Text(
               question.text,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
+                color: context.isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
               ),
             ),
           ),
           
-          const Divider(height: 1),
+          Divider(
+            height: 1,
+            color: context.isDarkMode 
+                ? Colors.white.withValues(alpha: 0.1)
+                : Colors.grey.shade300,
+          ),
           
           // Answer
           Flexible(
@@ -102,16 +113,21 @@ class AnswerView extends StatelessWidget {
               padding: const EdgeInsets.all(DS.spacingM),
               child: Text(
                 mockAnswer,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   height: 1.5,
-                  color: AppColors.textPrimary,
+                  color: context.isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
                 ),
               ),
             ),
           ),
           
-          const Divider(height: 1),
+          Divider(
+            height: 1,
+            color: context.isDarkMode 
+                ? Colors.white.withValues(alpha: 0.1)
+                : Colors.grey.shade300,
+          ),
           
           // Actions
           Padding(
@@ -122,8 +138,10 @@ class AnswerView extends StatelessWidget {
                 OutlinedButton(
                   onPressed: onClose,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.grey.shade700,
-                    side: BorderSide(color: Colors.grey.shade300),
+                    foregroundColor: context.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+                    side: BorderSide(
+                      color: context.isDarkMode ? Colors.grey.shade600 : Colors.grey.shade300,
+                    ),
                     padding: const EdgeInsets.symmetric(
                       horizontal: DS.spacingM,
                       vertical: DS.spacingS,
@@ -135,7 +153,7 @@ class AnswerView extends StatelessWidget {
                 ElevatedButton(
                   onPressed: onMarkComplete,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: context.isDarkMode ? AppColors.primaryDark : AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: DS.spacingM,

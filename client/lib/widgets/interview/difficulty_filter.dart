@@ -34,7 +34,7 @@ class DifficultyFilter extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: isDarkMode ? Colors.white.withOpacity(0.7) : Colors.grey.shade700,
+              color: isDarkMode ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade700,
             ),
           ),
         ),
@@ -62,7 +62,7 @@ class DifficultyFilter extends StatelessWidget {
                       border: Border.all(
                         color: isActive 
                             ? (isDarkMode ? const Color(0xFF93C5FD) : Colors.blue.shade200)
-                            : (isDarkMode ? Colors.white.withOpacity(0.1) : Colors.grey.shade300),
+                            : (isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade300),
                       ),
                     ),
                     child: Text(
@@ -72,7 +72,7 @@ class DifficultyFilter extends StatelessWidget {
                         fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
                         color: isActive 
                             ? (isDarkMode ? Colors.white : Colors.blue.shade800)
-                            : (isDarkMode ? Colors.white.withOpacity(0.7) : Colors.grey.shade700),
+                            : (isDarkMode ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade700),
                       ),
                     ),
                   ),
