@@ -171,7 +171,7 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                           width: (MediaQuery.of(context).size.width / 4 - 32) * 
                               (widget.progressPercent > 0 ? widget.progressPercent / 100 : 0.001),
                           decoration: BoxDecoration(
-                            color: context.primaryColor,
+                            color: context.primaryColor,  // This will now use grey
                             borderRadius: BorderRadius.circular(3),
                           ),
                         ),

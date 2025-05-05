@@ -4,17 +4,17 @@ class AppColors {
   // Private constructor to prevent instantiation
   AppColors._();
   
-  // Core brand colors from React code
-  static const Color primary = Color(0xFF10B981);  // Emerald-600
-  static const Color secondary = Color(0xFF8B5CF6); // Purple-600
-  static const Color accent = Color(0xFF059669);    // Emerald-700
+  // Core brand colors - Teal for decks, Purple for interview
+  static const Color primary = Color(0xFF009688);  // Teal-500 (Standard Material teal)
+  static const Color secondary = Color(0xFF8B5CF6); // Purple-600 (keep as is)
+  static const Color accent = Color(0xFF00796B);    // Teal-700
   
   // Dark mode versions of core colors
-  static const Color primaryDark = Color(0xFF4ADE80);  // Even brighter Emerald for better contrast
-  static const Color primaryDarkBright = Color(0xFF6EE7B7);  // Extra bright emerald for maximum contrast
-  static const Color primaryDarkHover = Color(0xFF5CE88D);  // Lighter emerald for hover
-  static const Color secondaryDark = Color(0xFFA78BFA); // Purple-400
-  static const Color accentDark = Color(0xFF4ADE80);    // Matches primaryDark
+  static const Color primaryDark = Color(0xFF4DB6AC);  // Teal-300 (lighter for dark mode)
+  static const Color primaryDarkBright = Color(0xFF80CBC4);  // Teal-200 for maximum contrast
+  static const Color primaryDarkHover = Color(0xFFB2DFDB);  // Teal-100 for hover states
+  static const Color secondaryDark = Color(0xFFA78BFA); // Purple-400 (keep as is)
+  static const Color accentDark = Color(0xFF4DB6AC);    // Matches primaryDark
   
   // Background colors
   static const Color background = Color(0xFFF9FAFB); // Gray-50
@@ -22,30 +22,31 @@ class AppColors {
   static const Color surfaceLight = Colors.white;
   static const Color surfaceDark = Color(0xFF2A2A30); // More elevated surface for better contrast
   
-  // Card colors from React code
-  static const Color cardGradientStart = Color(0xFFECFDF5); // Emerald-50
-  static const Color cardGradientEnd = Color(0xFFD1FAE5);   // Teal-50
-  static const Color cardGradientStartDark = Color(0xFF0E362B); // Slightly greener emerald
-  static const Color cardGradientEndDark = Color(0xFF0F3D31);   // Deeper teal
+  // Card colors - Teal for decks, Purple for interview
+  static const Color cardGradientStart = Color(0xFFE0F2F1); // Teal-50
+  static const Color cardGradientEnd = Color(0xFFB2DFDB);   // Teal-100
+  static const Color cardGradientStartDark = Color(0xFF00332C); // Darker teal for dark mode
+  static const Color cardGradientEndDark = Color(0xFF004D40);   // Teal-900
   
+  // Keep interview colors as purple/indigo
   static const Color interviewGradientStart = Color(0xFFEEF2FF); // Purple-50
   static const Color interviewGradientEnd = Color(0xFFE0E7FF); // Indigo-50
   static const Color interviewGradientStartDark = Color(0xFF1F1D35); // Richer purple
   static const Color interviewGradientEndDark = Color(0xFF292449); // Richer indigo
   
-  // Feedback colors
-  static const Color success = Color(0xFF10B981); // Emerald-600
+  // Feedback colors - Use teal for success in deck context
+  static const Color success = Color(0xFF009688); // Teal-500
   static const Color warning = Color(0xFFF59E0B); // Amber-500
   static const Color error = Color(0xFFEF4444);   // Red-500
   static const Color info = Color(0xFF3B82F6);    // Blue-500
   
   // Dark mode feedback colors
-  static const Color successDark = Color(0xFF34D399); // Emerald-400
+  static const Color successDark = Color(0xFF4DB6AC); // Teal-300
   static const Color warningDark = Color(0xFFFBBF24); // Amber-400
   static const Color errorDark = Color(0xFFF87171);   // Red-400
   static const Color infoDark = Color(0xFF60A5FA);    // Blue-400
   
-  // Grade colors
+  // Grade colors - Keep existing color scheme
   static const Color gradeA = Color(0xFF4CAF50);
   static const Color gradeB = Color(0xFF8BC34A);
   static const Color gradeC = Color(0xFFFF9800);
@@ -93,15 +94,15 @@ class AppColors {
     }
   }
   
-  // Helper method to get progress color
+  // Updated helper method to use teal for deck progress
   static Color getProgressColor(int progress, {bool isDarkMode = false}) {
     if (isDarkMode) {
-      if (progress >= 70) return successDark;
+      if (progress >= 70) return primaryDark; // Teal-300
       if (progress >= 40) return warningDark;
       if (progress > 0) return infoDark;
       return textTertiaryDark;
     } else {
-      if (progress >= 70) return success;
+      if (progress >= 70) return primary; // Teal-500
       if (progress >= 40) return warning;
       if (progress > 0) return info;
       return textTertiary;

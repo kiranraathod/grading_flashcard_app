@@ -1,48 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'colors.dart';
 import 'theme_extensions.dart';
+import 'theme_provider.dart';
 
-extension ThemeExtensions on BuildContext {
+// Extension methods for easy access to theme values
+extension ThemeGetter on BuildContext {
   ThemeData get theme => Theme.of(this);
-  TextTheme get textTheme => theme.textTheme;
   ColorScheme get colorScheme => theme.colorScheme;
-  AppThemeExtension get appTheme => theme.extension<AppThemeExtension>()!;
+  TextTheme get textTheme => theme.textTheme;
   
-  bool get isDarkMode => theme.brightness == Brightness.dark;
-  
-  // Semantic color getters
+  // Quick access to color values
   Color get primaryColor => colorScheme.primary;
   Color get secondaryColor => colorScheme.secondary;
-  Color get surfaceColor => colorScheme.surface;
-  Color get backgroundColor => colorScheme.surface; // Use surface instead of deprecated background
   Color get errorColor => colorScheme.error;
+  Color get surfaceColor => colorScheme.surface;
+  Color get backgroundColor => theme.scaffoldBackgroundColor;
   Color get onPrimaryColor => colorScheme.onPrimary;
-  Color get onSecondaryColor => colorScheme.onSecondary;
   Color get onSurfaceColor => colorScheme.onSurface;
-  Color get onBackgroundColor => colorScheme.onSurface; // Use onSurface instead of deprecated onBackground
   Color get onErrorColor => colorScheme.onError;
-  
-  // Surface variants
-  Color get surfaceVariantColor => colorScheme.surfaceContainerHighest; // Use surfaceContainerHighest instead of deprecated surfaceVariant
+  Color get onSecondaryColor => colorScheme.onSecondary;
+  Color get surfaceVariantColor => colorScheme.surfaceContainerHighest;
   Color get onSurfaceVariantColor => colorScheme.onSurfaceVariant;
+  Color get outlineColor => colorScheme.outline;
   
-  // Custom color getters from extension
-  Color get successColor => appTheme.successColor!;
-  Color get warningColor => appTheme.warningColor!;
-  Color get cardGradientStart => appTheme.cardGradientStart!;
-  Color get cardGradientEnd => appTheme.cardGradientEnd!;
-  Color get interviewGradientStart => appTheme.interviewGradientStart!;
-  Color get interviewGradientEnd => appTheme.interviewGradientEnd!;
+  // Additional color getters for feedback colors
+  Color get successColor => isDarkMode ? AppColors.successDark : AppColors.success;
+  Color get warningColor => isDarkMode ? AppColors.warningDark : AppColors.warning;
+  Color get infoColor => isDarkMode ? AppColors.infoDark : AppColors.info;
+  Color get shadowColor => isDarkMode ? Colors.black.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.1);
   
-  // Card shadow getter
-  List<BoxShadow> get cardShadow => appTheme.cardShadow!;
-  
-  // Shadow color getter
-  Color get shadowColor => colorScheme.shadow;
-  
-  // Primary hover color for dark mode
-  Color? get primaryDarkHover => appTheme.primaryDarkHover;
-  
-  // Text style helpers
+  // Text style access
   TextStyle? get displayLarge => textTheme.displayLarge;
   TextStyle? get displayMedium => textTheme.displayMedium;
   TextStyle? get displaySmall => textTheme.displaySmall;
@@ -58,39 +46,113 @@ extension ThemeExtensions on BuildContext {
   TextStyle? get labelLarge => textTheme.labelLarge;
   TextStyle? get labelMedium => textTheme.labelMedium;
   TextStyle? get labelSmall => textTheme.labelSmall;
-}
-
-// Helper extension for Color to easily apply opacity
-extension ColorExtension on Color {
-  Color withOpacityValue(double opacity) {
-    assert(opacity >= 0.0 && opacity <= 1.0);
-    return withAlpha((opacity * 255).round());
+  
+  // Check dark mode status
+  bool get isDarkMode {
+    final themeProvider = Provider.of<ThemeProvider>(this, listen: false);
+    return themeProvider.isDarkMode;
   }
   
-  // Replaces the deprecated withOpacity() method
-  Color withOpacityFix(double opacity) {
-    assert(opacity >= 0.0 && opacity <= 1.0);
-    return withAlpha((opacity * 255).round());
+  // Get theme extension
+  AppThemeExtension get appTheme => theme.extension<AppThemeExtension>()!;
+  
+  // Common UI properties
+  BorderRadiusGeometry get cardBorderRadius => BorderRadius.circular(16.0);
+  BorderRadiusGeometry get buttonBorderRadius => BorderRadius.circular(12.0);
+  BorderRadiusGeometry get smallBorderRadius => BorderRadius.circular(8.0);
+  EdgeInsets get screenPadding => const EdgeInsets.all(16.0);
+  EdgeInsets get cardPadding => const EdgeInsets.all(16.0);
+  double get cardElevation => isDarkMode ? 0.0 : 1.0;
+  List<BoxShadow>? get cardShadow => isDarkMode 
+    ? null 
+    : [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ];
+}
+
+// Provide custom themed colors for cards
+class ThemedColors {
+  static LinearGradient cardGradient(BuildContext context, {bool isInterview = false}) {
+    if (isInterview) {
+      return LinearGradient(
+        colors: context.isDarkMode
+            ? [AppColors.interviewGradientStartDark, AppColors.interviewGradientEndDark]
+            : [AppColors.interviewGradientStart, AppColors.interviewGradientEnd],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    } else {
+      return LinearGradient(
+        colors: context.isDarkMode
+            ? [AppColors.cardGradientStartDark, AppColors.cardGradientEndDark]
+            : [AppColors.cardGradientStart, AppColors.cardGradientEnd],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+    }
+  }
+  
+  static Color getTextPrimary(BuildContext context) => 
+    AppColors.getTextPrimary(context.isDarkMode);
+  
+  static Color getTextSecondary(BuildContext context) => 
+    AppColors.getTextSecondary(context.isDarkMode);
+  
+  static Color getSurfaceColor(BuildContext context) => 
+    AppColors.getSurfaceColor(context.isDarkMode);
+  
+  static Color getBackgroundColor(BuildContext context) => 
+    AppColors.getBackgroundColor(context.isDarkMode);
+}
+
+// Helper class for gradient styles
+class ThemedGradient {
+  static LinearGradient getCardGradient(BuildContext context, {bool isInterview = false}) {
+    return ThemedColors.cardGradient(context, isInterview: isInterview);
   }
 }
 
-// Common gradient helper
-class ThemedGradient {
-  static LinearGradient getCardGradient(BuildContext context, {bool isInterview = false}) {
-    final themeExtension = context.appTheme;
-    
-    return LinearGradient(
-      colors: isInterview
-          ? [
-              themeExtension.interviewGradientStart!,
-              themeExtension.interviewGradientEnd!,
-            ]
-          : [
-              themeExtension.cardGradientStart!,
-              themeExtension.cardGradientEnd!,
-            ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
+// UI Component helpers
+class ThemedComponents {
+  static BoxDecoration cardDecoration(BuildContext context, {
+    Color? color,
+    Gradient? gradient,
+    BorderRadiusGeometry? borderRadius,
+    List<BoxShadow>? boxShadow,
+    Border? border,
+  }) {
+    return BoxDecoration(
+      color: color ?? context.surfaceColor,
+      gradient: gradient,
+      borderRadius: borderRadius ?? context.cardBorderRadius,
+      boxShadow: boxShadow ?? context.cardShadow,
+      border: border,
     );
+  }
+  
+  static BoxDecoration cardDecorationWithGradient(BuildContext context, {
+    bool isInterview = false,
+    BorderRadiusGeometry? borderRadius,
+    List<BoxShadow>? boxShadow,
+    Border? border,
+  }) {
+    return BoxDecoration(
+      gradient: ThemedGradient.getCardGradient(context, isInterview: isInterview),
+      borderRadius: borderRadius ?? context.cardBorderRadius,
+      boxShadow: boxShadow ?? context.cardShadow,
+      border: border,
+    );
+  }
+}
+
+// Add convenient extension methods for colors with opacity
+extension ColorWithOpacityFix on Color {
+  // Fix withOpacity to use new withValues API
+  Color withOpacityFix(double opacity) {
+    return withValues(alpha: opacity);
   }
 }

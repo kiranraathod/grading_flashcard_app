@@ -9,15 +9,15 @@ class AppThemes {
     useMaterial3: true, // Explicitly set Material 3
     brightness: Brightness.light,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
+      seedColor: Colors.teal,  // Using Flutter's material teal as seed
       brightness: Brightness.light,
     ).copyWith(
-      primary: AppColors.primary,
-      secondary: AppColors.secondary,
-      tertiary: AppColors.accent,
+      primary: AppColors.primary,  // Teal-500
+      secondary: AppColors.secondary,  // Purple-600
+      tertiary: AppColors.accent,  // Teal-700
       error: AppColors.error,
       surface: AppColors.surfaceLight,
-      surfaceContainerHighest: const Color(0xFFF3F3F3), // Replace surfaceVariant
+      surfaceContainerHighest: const Color(0xFFF0F7F6), // Light teal tinted surface
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: AppColors.textPrimary,
@@ -49,16 +49,16 @@ class AppThemes {
     useMaterial3: true,
     brightness: Brightness.dark,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: AppColors.primaryDark,
+      seedColor: Colors.teal,  // Using Flutter's material teal as seed for dark mode too
       brightness: Brightness.dark,
     ).copyWith(
-      primary: AppColors.primaryDark,
-      secondary: AppColors.secondaryDark,
-      tertiary: AppColors.accentDark,
+      primary: AppColors.primaryDark,  // Teal-300
+      secondary: AppColors.secondaryDark,  // Purple-400
+      tertiary: AppColors.accentDark,  // Teal-300
       error: AppColors.errorDark,
       surface: AppColors.surfaceDark,
-      surfaceContainerHighest: const Color(0xFF3A3A42), // Updated for better contrast
-      onPrimary: Colors.white,
+      surfaceContainerHighest: const Color(0xFF2F3A3C), // Dark teal tinted surface
+      onPrimary: const Color(0xFF003731), // Dark text on light teal as per docs
       onSecondary: Colors.white,
       onSurface: Colors.white,
       onError: Colors.white,

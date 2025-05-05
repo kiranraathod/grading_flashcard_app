@@ -371,7 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
       
       // Multi-action Floating Action Button
       floatingActionButton: MultiActionFab(
-        backgroundColor: context.primaryColor,
+        backgroundColor: context.primaryColor,  // This will now use grey
         activeColor: context.isDarkMode 
             ? context.appTheme.primaryDarkHover ?? context.primaryColor 
             : context.primaryColor,
