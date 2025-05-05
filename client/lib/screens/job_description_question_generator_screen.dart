@@ -5,6 +5,7 @@ import '../models/interview_question.dart';
 import '../services/job_description_service.dart';
 import '../services/interview_service.dart';
 import '../widgets/multi_action_fab.dart';
+import '../utils/theme_utils.dart'; // Add this import for theme extensions
 import 'create_flashcard_screen.dart';
 import 'create_interview_question_screen.dart';
 
@@ -173,45 +174,109 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Question'),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          'Edit Question',
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Question Text', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'Question Text', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
               const SizedBox(height: 4),
               TextField(
                 controller: questionTextController,
                 maxLines: 3,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 decoration: InputDecoration(
                   hintText: 'Enter question text',
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
                   ),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
               ),
               const SizedBox(height: 16),
               
-              const Text('Category', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'Category', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
                 value: category,
+                dropdownColor: Theme.of(context).colorScheme.surface,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                   ),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'technical', child: Text('Technical Knowledge')),
-                  DropdownMenuItem(value: 'applied', child: Text('Applied Skills')),
-                  DropdownMenuItem(value: 'behavioral', child: Text('Behavioral Questions')),
-                  DropdownMenuItem(value: 'case', child: Text('Case Study')),
-                  DropdownMenuItem(value: 'job', child: Text('Job-Specific')),
+                items: [
+                  DropdownMenuItem(
+                    value: 'technical', 
+                    child: Text(
+                      'Technical Knowledge',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'applied', 
+                    child: Text(
+                      'Applied Skills',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'behavioral', 
+                    child: Text(
+                      'Behavioral Questions',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'case', 
+                    child: Text(
+                      'Case Study',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'job', 
+                    child: Text(
+                      'Job-Specific',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -221,36 +286,84 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
               ),
               const SizedBox(height: 16),
               
-              const Text('Subtopic', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'Subtopic', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
               const SizedBox(height: 4),
               TextField(
                 controller: subtopicController,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 decoration: InputDecoration(
                   hintText: 'Enter subtopic',
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
                   ),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
               ),
               const SizedBox(height: 16),
               
-              const Text('Difficulty', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'Difficulty', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
                 value: difficulty,
+                dropdownColor: Theme.of(context).colorScheme.surface,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
                   ),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'entry', child: Text('Entry Level')),
-                  DropdownMenuItem(value: 'mid', child: Text('Mid Level')),
-                  DropdownMenuItem(value: 'senior', child: Text('Senior Level')),
+                items: [
+                  DropdownMenuItem(
+                    value: 'entry', 
+                    child: Text(
+                      'Entry Level',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'mid', 
+                    child: Text(
+                      'Mid Level',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'senior', 
+                    child: Text(
+                      'Senior Level',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -260,18 +373,35 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
               ),
               const SizedBox(height: 16),
               
-              const Text('Example Answer', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'Example Answer', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
               const SizedBox(height: 4),
               TextField(
                 controller: answerController,
                 maxLines: 5,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 decoration: InputDecoration(
                   hintText: 'Enter example answer',
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
                   ),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 ),
               ),
             ],
@@ -280,6 +410,9 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.primary,
+            ),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -300,8 +433,8 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: const Text('Save'),
           ),
@@ -360,11 +493,13 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: context.backgroundColor,
       appBar: AppBar(
-        title: const Text(
+        backgroundColor: context.surfaceColor,
+        foregroundColor: context.onSurfaceColor,
+        title: Text(
           'Create Questions from Job Description',
-          style: TextStyle(
-            fontSize: 18,
+          style: context.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -374,7 +509,7 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
         ),
       ),
       floatingActionButton: MultiActionFab(
-        backgroundColor: Colors.green,
+        backgroundColor: context.primaryColor,
         tooltip: 'Create new content',
         options: [
           MultiActionFabOption(
@@ -423,12 +558,22 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search questions...',
-                    prefixIcon: const Icon(Icons.search),
+                    prefixIcon: Icon(Icons.search, color: context.onSurfaceVariantColor),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(color: context.colorScheme.outline),
                     ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                      borderSide: BorderSide(color: context.colorScheme.outline),
+                    ),
+                    filled: true,
+                    fillColor: context.surfaceColor,
+                    hintStyle: TextStyle(color: context.onSurfaceVariantColor),
                     contentPadding: const EdgeInsets.symmetric(vertical: 12.0),
                   ),
+                  style: TextStyle(color: context.onSurfaceColor),
+                  cursorColor: context.primaryColor,
                   onChanged: (value) {
                     setState(() {
                       _searchQuery = value;
@@ -444,9 +589,8 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                   children: [
                     Text(
                       'Questions (${_generatedQuestions.length})',
-                      style: const TextStyle(
+                      style: context.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
                       ),
                     ),
                     const Spacer(),
@@ -456,14 +600,17 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                         icon: const Icon(Icons.save),
                         label: const Text('Save All'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
+                          backgroundColor: context.primaryColor,
+                          foregroundColor: context.onPrimaryColor,
                         ),
                       ),
                     const SizedBox(width: 8),
                     IconButton(
                       onPressed: _showDescriptionInput,
-                      icon: const Icon(Icons.refresh),
+                      icon: Icon(
+                        Icons.refresh,
+                        color: context.onSurfaceVariantColor,
+                      ),
                       tooltip: 'Generate New Questions',
                     ),
                   ],
@@ -476,7 +623,11 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                     ? Center(
                         child: _showingDescription
                             ? const SizedBox() // Don't show message when description input is visible
-                            : const Text('No questions generated yet. Enter a job description to get started.'),
+                            : Text(
+                                'No questions generated yet. Enter a job description to get started.',
+                                style: TextStyle(color: context.onSurfaceVariantColor),
+                                textAlign: TextAlign.center,
+                              ),
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.all(8.0),
@@ -502,12 +653,12 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
           // Loading overlay
           if (_isLoading)
             Container(
-              color: Colors.black.withValues(red: 0, green: 0, blue: 0, alpha: 128),
+              color: Colors.black.withOpacityFix(0.5),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(color: Colors.white),
+                    CircularProgressIndicator(color: context.primaryColor),
                     const SizedBox(height: 16),
                     Text(
                       'Generating questions...',
@@ -526,15 +677,14 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
   
   Widget _buildDescriptionInputOverlay() {
     return Container(
-      color: Colors.white,
+      color: context.backgroundColor,
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Enter Job Description',
-            style: TextStyle(
-              fontSize: 18,
+            style: context.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -544,21 +694,32 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
               controller: _jobDescriptionController,
               maxLines: null,
               expands: true,
+              style: TextStyle(color: context.onSurfaceColor),
               decoration: InputDecoration(
                 hintText: 'Paste job description here...',
+                hintStyle: TextStyle(color: context.onSurfaceVariantColor),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8.0),
+                  borderSide: BorderSide(color: context.outlineColor),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                  borderSide: BorderSide(color: context.outlineColor),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                  borderSide: BorderSide(color: context.primaryColor, width: 2),
                 ),
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: context.surfaceColor,
               ),
+              cursorColor: context.primaryColor,
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Categories',
-            style: TextStyle(
-              fontSize: 16,
+            style: context.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -573,10 +734,9 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
             ],
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Difficulty Level',
-            style: TextStyle(
-              fontSize: 16,
+            style: context.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -595,14 +755,18 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
               if (_generatedQuestions.isNotEmpty)
                 OutlinedButton(
                   onPressed: _hideDescriptionInput,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: context.onSurfaceColor,
+                    side: BorderSide(color: context.outlineColor),
+                  ),
                   child: const Text('Cancel'),
                 ),
               const SizedBox(width: 8),
               ElevatedButton(
                 onPressed: _handleGenerateQuestions,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
+                  backgroundColor: context.primaryColor,
+                  foregroundColor: context.onPrimaryColor,
                 ),
                 child: const Text('Generate Questions'),
               ),
@@ -619,13 +783,19 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
       children: [
         Checkbox(
           value: _categories[key] ?? false,
+          activeColor: context.primaryColor,
+          checkColor: context.onPrimaryColor,
+          side: BorderSide(color: context.outlineColor),
           onChanged: (value) {
             setState(() {
               _categories[key] = value ?? false;
             });
           },
         ),
-        Text(label),
+        Text(
+          label,
+          style: TextStyle(color: context.onSurfaceColor),
+        ),
       ],
     );
   }
@@ -637,13 +807,23 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
         Radio<String>(
           value: key,
           groupValue: _selectedDifficulty,
+          activeColor: context.primaryColor,
+          fillColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.selected)) {
+              return context.primaryColor;
+            }
+            return context.outlineColor;
+          }),
           onChanged: (value) {
             setState(() {
               _selectedDifficulty = value ?? 'mid';
             });
           },
         ),
-        Text(label),
+        Text(
+          label,
+          style: TextStyle(color: context.onSurfaceColor),
+        ),
       ],
     );
   }
@@ -651,10 +831,11 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
   Widget _buildQuestionCard(InterviewQuestion question) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
-      elevation: 2,
-      shape: const Border(
+      elevation: context.cardElevation,
+      color: context.surfaceColor,
+      shape: Border(
         left: BorderSide(
-          color: Colors.green,
+          color: context.primaryColor,
           width: 4,
         ),
       ),
@@ -669,8 +850,7 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                 Expanded(
                   child: Text(
                     question.text,
-                    style: const TextStyle(
-                      fontSize: 16,
+                    style: context.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -679,7 +859,7 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                   onPressed: () => _toggleStar(question.id),
                   icon: Icon(
                     question.isStarred ? Icons.star : Icons.star_border,
-                    color: question.isStarred ? Colors.amber : Colors.grey,
+                    color: question.isStarred ? Colors.amber : context.onSurfaceVariantColor,
                   ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -706,8 +886,8 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                   icon: const Icon(Icons.play_arrow, size: 16),
                   label: const Text('Practice'),
                   style: TextButton.styleFrom(
-                    backgroundColor: Colors.green.withValues(red: 0, green: 128, blue: 0, alpha: 26),
-                    foregroundColor: Colors.green,
+                    backgroundColor: context.primaryColor.withOpacityFix(0.1),
+                    foregroundColor: context.primaryColor,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -717,19 +897,32 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('Example Answer'),
+                        backgroundColor: context.surfaceColor,
+                        title: Text(
+                          'Example Answer',
+                          style: TextStyle(color: context.onSurfaceColor),
+                        ),
                         content: SingleChildScrollView(
-                          child: Text(question.answer ?? 'No answer provided'),
+                          child: Text(
+                            question.answer ?? 'No answer provided',
+                            style: TextStyle(color: context.onSurfaceColor),
+                          ),
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Close'),
+                            child: Text(
+                              'Close',
+                              style: TextStyle(color: context.primaryColor),
+                            ),
                           ),
                         ],
                       ),
                     );
                   },
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.primaryColor,
+                  ),
                   child: const Text('View Answer'),
                 ),
                 const Spacer(),
@@ -737,7 +930,11 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                   onPressed: () {
                     // Share functionality
                   },
-                  icon: const Icon(Icons.share, size: 18),
+                  icon: Icon(
+                    Icons.share,
+                    size: 18,
+                    color: context.onSurfaceVariantColor,
+                  ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -746,7 +943,11 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                   onPressed: () {
                     _editQuestion(question);
                   },
-                  icon: const Icon(Icons.edit, size: 18),
+                  icon: Icon(
+                    Icons.edit,
+                    size: 18,
+                    color: context.onSurfaceVariantColor,
+                  ),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -761,31 +962,38 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
   Widget _buildCategoryTag(String category) {
     String label;
     Color backgroundColor;
+    Color textColor;
     
     switch (category) {
       case 'technical':
         label = 'Technical Knowledge';
-        backgroundColor = Colors.blue.shade100;
+        backgroundColor = context.isDarkMode ? Colors.blue.shade900 : Colors.blue.shade100;
+        textColor = context.isDarkMode ? Colors.blue.shade100 : Colors.blue.shade900;
         break;
       case 'applied':
         label = 'Applied Skills';
-        backgroundColor = Colors.green.shade100;
+        backgroundColor = context.isDarkMode ? Colors.green.shade900 : Colors.green.shade100;
+        textColor = context.isDarkMode ? Colors.green.shade100 : Colors.green.shade900;
         break;
       case 'behavioral':
         label = 'Behavioral Questions';
-        backgroundColor = Colors.yellow.shade100;
+        backgroundColor = context.isDarkMode ? Colors.yellow.shade900 : Colors.yellow.shade100;
+        textColor = context.isDarkMode ? Colors.yellow.shade100 : Colors.yellow.shade900;
         break;
       case 'case':
         label = 'Case Study';
-        backgroundColor = Colors.purple.shade100;
+        backgroundColor = context.isDarkMode ? Colors.purple.shade900 : Colors.purple.shade100;
+        textColor = context.isDarkMode ? Colors.purple.shade100 : Colors.purple.shade900;
         break;
       case 'job':
         label = 'Job-Specific';
-        backgroundColor = Colors.orange.shade100;
+        backgroundColor = context.isDarkMode ? Colors.orange.shade900 : Colors.orange.shade100;
+        textColor = context.isDarkMode ? Colors.orange.shade100 : Colors.orange.shade900;
         break;
       default:
         label = 'Other';
-        backgroundColor = Colors.grey.shade100;
+        backgroundColor = context.isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
+        textColor = context.isDarkMode ? Colors.grey.shade200 : Colors.grey.shade800;
     }
     
     return Container(
@@ -801,7 +1009,7 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
         label,
         style: TextStyle(
           fontSize: 12,
-          color: backgroundColor.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+          color: textColor,
         ),
       ),
     );
@@ -814,14 +1022,14 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: context.isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Text(
         subtopic,
         style: TextStyle(
           fontSize: 12,
-          color: Colors.grey.shade800,
+          color: context.isDarkMode ? Colors.grey.shade200 : Colors.grey.shade800,
         ),
       ),
     );
@@ -830,23 +1038,28 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
   Widget _buildDifficultyTag(String difficulty) {
     String label;
     Color backgroundColor;
+    Color textColor;
     
     switch (difficulty) {
       case 'entry':
         label = 'Entry Level';
-        backgroundColor = Colors.green.shade50;
+        backgroundColor = context.isDarkMode ? Color(0xFF1B3B29) : Colors.green.shade50;
+        textColor = context.isDarkMode ? Color(0xFFB8E5CA) : Colors.green.shade900;
         break;
       case 'mid':
         label = 'Mid Level';
-        backgroundColor = Colors.yellow.shade50;
+        backgroundColor = context.isDarkMode ? Color(0xFF3B3A1F) : Colors.yellow.shade50;
+        textColor = context.isDarkMode ? Color(0xFFF0E68C) : Colors.amber.shade900;
         break;
       case 'senior':
         label = 'Senior Level';
-        backgroundColor = Colors.red.shade50;
+        backgroundColor = context.isDarkMode ? Color(0xFF3B2929) : Colors.red.shade50;
+        textColor = context.isDarkMode ? Color(0xFFFFCCCB) : Colors.red.shade900;
         break;
       default:
         label = 'Unknown';
-        backgroundColor = Colors.grey.shade50;
+        backgroundColor = context.isDarkMode ? Colors.grey.shade800 : Colors.grey.shade100;
+        textColor = context.isDarkMode ? Colors.grey.shade100 : Colors.grey.shade800;
     }
     
     return Container(
@@ -857,19 +1070,16 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: backgroundColor.withValues(
-            red: backgroundColor.r.toDouble(), 
-            green: backgroundColor.g.toDouble(), 
-            blue: backgroundColor.b.toDouble(), 
-            alpha: 128
-          )),
+        border: Border.all(color: context.isDarkMode 
+            ? textColor.withOpacityFix(0.3) 
+            : backgroundColor.withOpacityFix(0.5)),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: backgroundColor.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+          color: textColor,
         ),
       ),
     );
