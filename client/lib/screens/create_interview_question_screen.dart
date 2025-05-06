@@ -384,8 +384,8 @@ class _CreateInterviewQuestionScreenState
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 3,
+            crossAxisCount: 3,
+            childAspectRatio: 2.5,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
           ),
@@ -405,8 +405,8 @@ class _CreateInterviewQuestionScreenState
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                  horizontal: 8,
+                  vertical: 6,
                 ),
                 decoration: BoxDecoration(
                   color: isSelected ? category['color'] : Colors.transparent,
@@ -430,10 +430,12 @@ class _CreateInterviewQuestionScreenState
                       child: Text(
                         category['name'],
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight:
                               isSelected ? FontWeight.w500 : FontWeight.normal,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],

@@ -14,8 +14,11 @@ import 'study_screen.dart';
 import 'interview_questions_screen.dart';
 import 'create_interview_question_screen.dart';
 import 'job_description_question_generator_screen.dart';
+import 'question_set_detail_screen.dart';
 import '../models/flashcard_set.dart';
+import '../models/question_set.dart';
 import '../services/flashcard_service.dart';
+import '../services/interview_service.dart';
 import '../services/recent_view_service.dart';
 import '../widgets/interview/arrow_painter.dart';
 
@@ -516,6 +519,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   Widget _buildInterviewTab() {
+    final interviewService = Provider.of<InterviewService>(context);
+    final questionSets = interviewService.questionSets;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -606,7 +612,7 @@ class _HomeScreenState extends State<HomeScreen> {
         
         const SizedBox(height: DS.spacingL),
         
-        // Other interview categories in a grid (simplified)
+        // Question Sets from Job Descriptions
         Text(
           'Other Interview Categories',
           style: context.titleMedium,
@@ -614,23 +620,135 @@ class _HomeScreenState extends State<HomeScreen> {
         
         const SizedBox(height: DS.spacingM),
         
-        // Simplified grid
-        GridView.count(
-          crossAxisCount: 3,
-          childAspectRatio: 2.5,
+        // Show question sets if available, otherwise show topic categories
+        questionSets.isEmpty
+            ? _buildTopicCategories()
+            : _buildQuestionSetGrid(questionSets),
+      ],
+    );
+  }
+  
+  // Method to build a grid of question sets
+  Widget _buildQuestionSetGrid(List<QuestionSet> questionSets) {
+    return Column(
+      children: [
+        // Question sets grid - Updated to match Browse by Topic grid layout
+        GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            childAspectRatio: 2.5,  // Match the topic cards aspect ratio
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: DS.spacingS,
-          mainAxisSpacing: DS.spacingS,
-          children: [
-            _buildCategoryChip('Data Analysis', 18),
-            _buildCategoryChip('Web Development', 15),
-            _buildCategoryChip('Machine Learning', 22),
-            _buildCategoryChip('SQL', 10),
-            _buildCategoryChip('Python', 14),
-            _buildCategoryChip('Data Visualization', 8),
-          ],
+          itemCount: questionSets.length,
+          itemBuilder: (context, index) {
+            final set = questionSets[index];
+            return Card(
+              color: context.surfaceColor,
+              elevation: context.cardElevation,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(
+                  color: context.colorScheme.outline.withOpacityFix(0.5),
+                  width: 1,
+                ),
+              ),
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => QuestionSetDetailScreen(setId: set.id),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Set title
+                      Text(
+                        set.title,
+                        style: context.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 4),
+                      // Question count
+                      Text(
+                        '${set.questionIds.length} questions',
+                        style: context.bodySmall?.copyWith(
+                          color: context.onSurfaceVariantColor,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
+        
+        // Add a button to create a new question set from a job description
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const JobDescriptionQuestionGeneratorScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Create Questions from Job Description'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: context.primaryColor,
+              side: BorderSide(color: context.primaryColor),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        ),
+        
+        // After question sets, show topic categories
+        const SizedBox(height: 32),
+        Text(
+          'Browse by Topic',
+          style: context.titleMedium,
+        ),
+        const SizedBox(height: 16),
+        _buildTopicCategories(),
+      ],
+    );
+  }
+  
+  // Method for displaying topic categories
+  Widget _buildTopicCategories() {
+    return GridView.count(
+      crossAxisCount: 3,
+      childAspectRatio: 2.5,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: DS.spacingS,
+      mainAxisSpacing: DS.spacingS,
+      children: [
+        _buildCategoryChip('Data Analysis', 18),
+        _buildCategoryChip('Web Development', 15),
+        _buildCategoryChip('Machine Learning', 22),
+        _buildCategoryChip('SQL', 10),
+        _buildCategoryChip('Python', 14),
+        _buildCategoryChip('Data Visualization', 8),
       ],
     );
   }

@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/job_description_analysis.dart';
 import '../models/interview_question.dart';
+import '../models/question_set.dart';
 import '../services/job_description_service.dart';
 import '../services/interview_service.dart';
-import '../widgets/multi_action_fab.dart';
-import '../utils/theme_utils.dart'; // Add this import for theme extensions
-import 'create_flashcard_screen.dart';
-import 'create_interview_question_screen.dart';
+import '../utils/theme_utils.dart';
 
 class JobDescriptionQuestionGeneratorScreen extends StatefulWidget {
   const JobDescriptionQuestionGeneratorScreen({super.key});
@@ -19,11 +17,15 @@ class JobDescriptionQuestionGeneratorScreen extends StatefulWidget {
 class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQuestionGeneratorScreen> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _jobDescriptionController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
   final JobDescriptionService _jobDescriptionService = JobDescriptionService();
   late InterviewService _interviewService;
   String _searchQuery = '';
   bool _isLoading = false;
   List<InterviewQuestion> _generatedQuestions = [];
+  String _title = '';
+  int _wordCount = 0;
+  final int _maxWordCount = 300;
   
   // Category checkboxes state
   final Map<String, bool> _categories = {
@@ -44,9 +46,28 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
   }
   
   @override
+  void initState() {
+    super.initState();
+    _jobDescriptionController.addListener(_updateWordCount);
+  }
+
+  void _updateWordCount() {
+    setState(() {
+      // Split by whitespace and filter out empty strings
+      final words = _jobDescriptionController.text
+          .split(RegExp(r'\s+'))
+          .where((word) => word.isNotEmpty)
+          .toList();
+      _wordCount = words.length;
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
+    _jobDescriptionController.removeListener(_updateWordCount);
     _jobDescriptionController.dispose();
+    _titleController.dispose();
     super.dispose();
   }
 
@@ -59,6 +80,18 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
         const SnackBar(
           content: Text('Please enter a job description'),
           duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    // Check word count limit
+    if (_wordCount > _maxWordCount) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Job description exceeds $_maxWordCount word limit. Please shorten it.'),
+          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.red,
         ),
       );
       return;
@@ -445,17 +478,47 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
   
   // Save all questions and navigate to categories page
   void _saveAllQuestions() {
+    // Validate input
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a title for this question set'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    
     setState(() {
       _isLoading = true;
+      _title = title;
     });
     
     try {
+      // Generate a unique ID for the question set
+      final setId = DateTime.now().millisecondsSinceEpoch.toString();
+      final questionIds = <String>[];
+      
       // Mark questions as published (not drafts) before saving
       for (final question in _generatedQuestions) {
         // Create a published version (not a draft)
         final publishedQuestion = question.copyWith(isDraft: false);
         _interviewService.addQuestion(publishedQuestion);
+        questionIds.add(publishedQuestion.id);
       }
+      
+      // Create and save the question set
+      final questionSet = QuestionSet(
+        id: setId,
+        title: _title,
+        description: "", // Empty description
+        jobDescription: _jobDescriptionController.text,
+        questionIds: questionIds,
+        createdAt: DateTime.now(),
+      );
+      
+      _interviewService.saveQuestionSet(questionSet);
       
       if (!mounted) return;
       
@@ -466,7 +529,7 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('All questions saved successfully!'),
+          content: Text('Question set saved successfully!'),
           duration: Duration(seconds: 2),
           backgroundColor: Colors.green,
         ),
@@ -508,45 +571,7 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      floatingActionButton: MultiActionFab(
-        backgroundColor: context.primaryColor,
-        tooltip: 'Create new content',
-        options: [
-          MultiActionFabOption(
-            label: 'Add Job Description',
-            icon: Icons.description,
-            onTap: _showDescriptionInput,
-          ),
-          MultiActionFabOption(
-            label: 'Create New Question',
-            icon: Icons.add,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CreateInterviewQuestionScreen(),
-                ),
-              ).then((_) {
-                if (mounted) setState(() {});
-              });
-            },
-          ),
-          MultiActionFabOption(
-            label: 'Create Flashcards',
-            icon: Icons.style,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CreateFlashcardScreen(),
-                ),
-              ).then((_) {
-                if (mounted) setState(() {});
-              });
-            },
-          ),
-        ],
-      ),
+      // Remove the MultiActionFab/Create button
       body: Stack(
         children: [
           Column(
@@ -582,36 +607,49 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                 ),
               ),
               
-              // Questions count and action buttons
+              // Title and question count
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Questions (${_generatedQuestions.length})',
-                      style: context.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (_generatedQuestions.isNotEmpty)
-                      ElevatedButton.icon(
-                        onPressed: _saveAllQuestions,
-                        icon: const Icon(Icons.save),
-                        label: const Text('Save All'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: context.primaryColor,
-                          foregroundColor: context.onPrimaryColor,
+                    if (_title.isNotEmpty)
+                      Text(
+                        _title,
+                        style: context.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: _showDescriptionInput,
-                      icon: Icon(
-                        Icons.refresh,
-                        color: context.onSurfaceVariantColor,
-                      ),
-                      tooltip: 'Generate New Questions',
+                    SizedBox(height: _title.isNotEmpty ? 16 : 0),
+                    Row(
+                      children: [
+                        Text(
+                          'Questions (${_generatedQuestions.length})',
+                          style: context.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        if (_generatedQuestions.isNotEmpty)
+                          ElevatedButton.icon(
+                            onPressed: _saveAllQuestions,
+                            icon: const Icon(Icons.save),
+                            label: const Text('Save All'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: context.primaryColor,
+                              foregroundColor: context.onPrimaryColor,
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: _showDescriptionInput,
+                          icon: Icon(
+                            Icons.refresh,
+                            color: context.onSurfaceVariantColor,
+                          ),
+                          tooltip: 'Generate New Questions',
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -682,13 +720,72 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Title Field
           Text(
-            'Enter Job Description',
-            style: context.headlineSmall?.copyWith(
+            'Title',
+            style: context.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _titleController,
+            style: TextStyle(color: context.onSurfaceColor),
+            decoration: InputDecoration(
+              hintText: 'Enter a title for this question set...',
+              hintStyle: TextStyle(color: context.onSurfaceVariantColor),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: context.outlineColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: context.outlineColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: context.primaryColor, width: 2),
+              ),
+              filled: true,
+              fillColor: context.surfaceColor,
+            ),
+            cursorColor: context.primaryColor,
+          ),
           const SizedBox(height: 16),
+          
+          // Job Description Field
+          Text(
+            'Job Description',
+            style: context.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Word count indicator
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Word count: $_wordCount / $_maxWordCount',
+                style: TextStyle(
+                  color: _wordCount > _maxWordCount 
+                      ? Colors.red 
+                      : context.onSurfaceVariantColor,
+                  fontSize: 12,
+                ),
+              ),
+              if (_wordCount > _maxWordCount)
+                Text(
+                  'Exceeds limit',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
           Expanded(
             child: TextField(
               controller: _jobDescriptionController,
@@ -700,15 +797,28 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                 hintStyle: TextStyle(color: context.onSurfaceVariantColor),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide(color: context.outlineColor),
+                  borderSide: BorderSide(
+                    color: _wordCount > _maxWordCount 
+                        ? Colors.red 
+                        : context.outlineColor,
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide(color: context.outlineColor),
+                  borderSide: BorderSide(
+                    color: _wordCount > _maxWordCount 
+                        ? Colors.red 
+                        : context.outlineColor,
+                  ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8.0),
-                  borderSide: BorderSide(color: context.primaryColor, width: 2),
+                  borderSide: BorderSide(
+                    color: _wordCount > _maxWordCount 
+                        ? Colors.red 
+                        : context.primaryColor,
+                    width: 2,
+                  ),
                 ),
                 filled: true,
                 fillColor: context.surfaceColor,

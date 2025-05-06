@@ -240,44 +240,61 @@ class _RecentTabContentState extends State<RecentTabContent> with AutomaticKeepA
     }
     
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade200,
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade100),
       ),
       child: Row(
         children: [
           _buildStatItem('Total Items', items.length.toString()),
           const SizedBox(width: 16),
-          _buildStatItem('Flashcards', flashcardCount.toString()),
+          _buildStatItem('Flashcards', flashcardCount.toString(), icon: Icons.style, color: AppColors.primary),
           const SizedBox(width: 16),
-          _buildStatItem('Interview Questions', interviewCount.toString()),
+          _buildStatItem('Interview Questions', interviewCount.toString(), icon: Icons.question_answer, color: Colors.purple),
           const SizedBox(width: 16),
-          _buildStatItem('Last Studied', lastStudiedText),
+          _buildStatItem('Last Studied', lastStudiedText, icon: Icons.access_time, color: Colors.grey.shade600),
         ],
       ),
     );
   }
   
-  Widget _buildStatItem(String label, String value) {
+  Widget _buildStatItem(String label, String value, {IconData? icon, Color? color}) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 14, color: color ?? Colors.grey.shade600),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 16,
+            style: TextStyle(
+              fontSize: 18,
               fontWeight: FontWeight.bold,
+              color: color ?? AppColors.textPrimary,
             ),
           ),
         ],
@@ -299,8 +316,9 @@ class _RecentTabContentState extends State<RecentTabContent> with AutomaticKeepA
                   SetRecentViewFilter(filterType: null),
                 );
           },
+          icon: Icons.all_inclusive,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 12),
         _buildFilterButton(
           label: 'Flashcards',
           isActive: state.activeFilter != null && 
@@ -314,8 +332,9 @@ class _RecentTabContentState extends State<RecentTabContent> with AutomaticKeepA
                 );
           },
           icon: Icons.style,
+          color: AppColors.primary,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 12),
         _buildFilterButton(
           label: 'Interview Questions',
           isActive: state.activeFilter != null && 
@@ -329,6 +348,7 @@ class _RecentTabContentState extends State<RecentTabContent> with AutomaticKeepA
                 );
           },
           icon: Icons.question_answer,
+          color: Colors.purple,
         ),
       ],
     );
@@ -339,27 +359,40 @@ class _RecentTabContentState extends State<RecentTabContent> with AutomaticKeepA
     required bool isActive,
     required VoidCallback onPressed,
     IconData? icon,
+    Color? color,
   }) {
+    final buttonColor = color ?? AppColors.primary;
+    
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: isActive ? AppColors.primary : Colors.grey.shade200,
+        backgroundColor: isActive ? buttonColor : Colors.white,
         foregroundColor: isActive ? Colors.white : Colors.grey.shade700,
+        elevation: isActive ? 2 : 0,
         padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 8,
+          horizontal: 16,
+          vertical: 10,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(
+            color: isActive ? buttonColor : Colors.grey.shade300,
+            width: 1,
+          ),
         ),
       ),
       child: Row(
         children: [
           if (icon != null) ...[
             Icon(icon, size: 16),
-            const SizedBox(width: 4),
+            const SizedBox(width: 8),
           ],
-          Text(label),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
         ],
       ),
     );
@@ -387,7 +420,15 @@ class _RecentTabContentState extends State<RecentTabContent> with AutomaticKeepA
     final typeColor = item.isCompleted ? Colors.green : (isFlashcard ? AppColors.primary : Colors.purple);
     
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -400,12 +441,21 @@ class _RecentTabContentState extends State<RecentTabContent> with AutomaticKeepA
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Color.fromRGBO(
-                      typeColor.r.toInt(),
-                      typeColor.g.toInt(),
-                      typeColor.b.toInt(),
-                      0.1,
+                      typeColor.red,
+                      typeColor.green,
+                      typeColor.blue,
+                      0.15,
                     ),
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Color.fromRGBO(
+                        typeColor.red,
+                        typeColor.green,
+                        typeColor.blue,
+                        0.3,
+                      ),
+                      width: 1,
+                    ),
                   ),
                   child: Icon(
                     item.isCompleted ? Icons.check_circle : icon,
@@ -413,64 +463,79 @@ class _RecentTabContentState extends State<RecentTabContent> with AutomaticKeepA
                     size: 16,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          isFlashcard ? 'Flashcard' : 'Interview Question',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: typeColor,
-                          ),
-                        ),
-                        // Add completed badge if item is completed
-                        if (item.isCompleted) ...[
-                          const SizedBox(width: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade100,
-                              borderRadius: BorderRadius.circular(4),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            isFlashcard ? 'Flashcard' : 'Interview Question',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: typeColor,
                             ),
-                            child: Text(
-                              'Completed',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green.shade800,
+                          ),
+                          // Add completed badge if item is completed
+                          if (item.isCompleted) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.green.shade200,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                'Completed',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green.shade700,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
-                    ),
-                    Text(
-                      item.parentTitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
                       ),
-                    ),
-                  ],
+                      Text(
+                        item.parentTitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const Spacer(),
                 Text(
                   timeAgo,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade500,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ],
             ),
             
-            // Question text
+            // Divider
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Divider(
+                color: Colors.grey.shade200,
+                height: 1,
+              ),
+            ),
+            
+            // Question text
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
               child: Text(
                 item.question,
                 style: const TextStyle(
@@ -489,28 +554,29 @@ class _RecentTabContentState extends State<RecentTabContent> with AutomaticKeepA
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.grey.shade700,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
+                      horizontal: 16,
                       vertical: 8,
                     ),
                     side: BorderSide(color: Colors.grey.shade300),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                   child: const Text('View'),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 ElevatedButton(
                   onPressed: () => _navigateToItem(item),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: isFlashcard ? AppColors.primary : Colors.purple,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
+                      horizontal: 16,
                       vertical: 8,
                     ),
+                    elevation: 2,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                   child: Text(

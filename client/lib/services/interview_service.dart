@@ -3,9 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/interview_question.dart';
 import '../models/interview_answer.dart'; // Added this import
+import '../models/question_set.dart';
 
 class InterviewService extends ChangeNotifier {
   List<InterviewQuestion> _questions = [];
+  List<QuestionSet> _questionSets = [];
   
   // Map to store user answers (questionId -> answer text)
   final Map<String, String> _userAnswers = {};
@@ -16,9 +18,13 @@ class InterviewService extends ChangeNotifier {
   // Getter for drafts
   List<InterviewQuestion> get drafts => _questions.where((q) => q.isDraft).toList();
   
+  // Getter for question sets
+  List<QuestionSet> get questionSets => _questionSets;
+  
   // Constructor
   InterviewService() {
     _loadQuestions();
+    _loadQuestionSetsFromStorage();
   }
   
   // Load questions (using mock data for now)
@@ -297,5 +303,73 @@ void addQuestion(InterviewQuestion question) {
   void trackQuestionView(String id) {
     // In a real implementation, this would log the view for analytics
     debugPrint('Question viewed: $id');
+  }
+  
+  // Save question set
+  Future<void> saveQuestionSet(QuestionSet set) async {
+    final existingIndex = _questionSets.indexWhere((s) => s.id == set.id);
+    
+    if (existingIndex != -1) {
+      _questionSets[existingIndex] = set;
+    } else {
+      _questionSets.add(set);
+    }
+    
+    notifyListeners();
+    await _saveQuestionSetsToStorage();
+  }
+  
+  // Save question sets to storage
+  Future<void> _saveQuestionSetsToStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final serialized = _questionSets.map((set) => set.toJson()).toList();
+      await prefs.setString('question_sets', jsonEncode(serialized));
+    } catch (e) {
+      debugPrint('Error saving question sets: $e');
+    }
+  }
+  
+  // Load question sets from storage
+  Future<void> _loadQuestionSetsFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final setsJson = prefs.getString('question_sets');
+      
+      if (setsJson != null) {
+        final List<dynamic> decoded = jsonDecode(setsJson);
+        _questionSets = decoded.map((item) => QuestionSet.fromJson(item)).toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading question sets: $e');
+    }
+  }
+  
+  // Get question set by ID
+  QuestionSet? getQuestionSetById(String id) {
+    try {
+      return _questionSets.firstWhere((set) => set.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+  
+  // Delete question set
+  Future<void> deleteQuestionSet(String id) async {
+    _questionSets.removeWhere((set) => set.id == id);
+    notifyListeners();
+    await _saveQuestionSetsToStorage();
+  }
+  
+  // Get all questions for a set
+  List<InterviewQuestion> getQuestionsForSet(String setId) {
+    final set = getQuestionSetById(setId);
+    if (set == null) return [];
+    
+    return set.questionIds
+        .map((id) => getQuestionById(id))
+        .whereType<InterviewQuestion>()
+        .toList();
   }
 }
