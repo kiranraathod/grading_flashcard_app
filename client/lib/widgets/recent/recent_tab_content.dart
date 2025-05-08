@@ -441,17 +441,17 @@ class _RecentTabContentState extends State<RecentTabContent> with AutomaticKeepA
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: Color.fromRGBO(
-                      typeColor.red,
-                      typeColor.green,
-                      typeColor.blue,
+                      typeColor.r.toInt(),
+                      typeColor.g.toInt(),
+                      typeColor.b.toInt(),
                       0.15,
                     ),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: Color.fromRGBO(
-                        typeColor.red,
-                        typeColor.green,
-                        typeColor.blue,
+                        typeColor.r.toInt(),
+                        typeColor.g.toInt(),
+                        typeColor.b.toInt(),
                         0.3,
                       ),
                       width: 1,

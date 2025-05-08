@@ -4,15 +4,313 @@ import '../models/interview_question.dart';
 import '../services/interview_service.dart';
 import '../utils/theme_utils.dart';
 
-class QuestionSetDetailScreen extends StatelessWidget {
+class QuestionSetDetailScreen extends StatefulWidget {
   final String setId;
 
   const QuestionSetDetailScreen({super.key, required this.setId});
 
   @override
+  State<QuestionSetDetailScreen> createState() => _QuestionSetDetailScreenState();
+}
+
+class _QuestionSetDetailScreenState extends State<QuestionSetDetailScreen> {
+  late InterviewService _interviewService;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _interviewService = Provider.of<InterviewService>(context);
+  }
+
+  // Edit question in a modal dialog
+  void _editQuestion(InterviewQuestion question) {
+    // Show a dialog to edit the question
+    TextEditingController questionTextController = TextEditingController(text: question.text);
+    TextEditingController subtopicController = TextEditingController(text: question.subtopic);
+    TextEditingController answerController = TextEditingController(text: question.answer ?? '');
+    
+    // Keep track of the original category and difficulty
+    String category = question.category;
+    String difficulty = question.difficulty;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          'Edit Question',
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Question Text', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextField(
+                controller: questionTextController,
+                maxLines: 3,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
+                  hintText: 'Enter question text',
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              Text(
+                'Category', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              DropdownButtonFormField<String>(
+                value: category,
+                dropdownColor: Theme.of(context).colorScheme.surface,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
+                items: [
+                  DropdownMenuItem(
+                    value: 'technical', 
+                    child: Text(
+                      'Technical Knowledge',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'applied', 
+                    child: Text(
+                      'Applied Skills',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'behavioral', 
+                    child: Text(
+                      'Behavioral Questions',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'case', 
+                    child: Text(
+                      'Case Study',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'job', 
+                    child: Text(
+                      'Job-Specific',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    category = value;
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              Text(
+                'Subtopic', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextField(
+                controller: subtopicController,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
+                  hintText: 'Enter subtopic',
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              Text(
+                'Difficulty', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              DropdownButtonFormField<String>(
+                value: difficulty,
+                dropdownColor: Theme.of(context).colorScheme.surface,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
+                items: [
+                  DropdownMenuItem(
+                    value: 'entry', 
+                    child: Text(
+                      'Entry Level',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'mid', 
+                    child: Text(
+                      'Mid Level',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'senior', 
+                    child: Text(
+                      'Senior Level',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    ),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    difficulty = value;
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              Text(
+                'Example Answer', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextField(
+                controller: answerController,
+                maxLines: 5,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                decoration: InputDecoration(
+                  hintText: 'Enter example answer',
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.primary,
+            ),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Update the question
+              final updatedQuestion = question.copyWith(
+                text: questionTextController.text,
+                category: category,
+                subtopic: subtopicController.text,
+                difficulty: difficulty,
+                answer: answerController.text,
+              );
+              
+              // Save the updated question
+              _interviewService.updateQuestion(updatedQuestion);
+              
+              // Close the dialog
+              Navigator.pop(context);
+              
+              // Refresh the state to show updated question
+              setState(() {});
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final interviewService = Provider.of<InterviewService>(context);
-    final questionSet = interviewService.getQuestionSetById(setId);
+    final questionSet = _interviewService.getQuestionSetById(widget.setId);
     
     if (questionSet == null) {
       return Scaffold(
@@ -25,7 +323,7 @@ class QuestionSetDetailScreen extends StatelessWidget {
       );
     }
     
-    final questions = interviewService.getQuestionsForSet(setId);
+    final questions = _interviewService.getQuestionsForSet(widget.setId);
     
     return Scaffold(
       backgroundColor: context.backgroundColor,
@@ -60,7 +358,7 @@ class QuestionSetDetailScreen extends StatelessWidget {
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        interviewService.deleteQuestionSet(setId);
+                        _interviewService.deleteQuestionSet(widget.setId);
                         Navigator.pop(context); // Close dialog
                         Navigator.pop(context); // Go back to previous screen
                       },
@@ -181,7 +479,9 @@ class QuestionSetDetailScreen extends StatelessWidget {
                                     ),
                                     IconButton(
                                       onPressed: () {
-                                        interviewService.toggleStar(question.id);
+                                        setState(() {
+                                          _interviewService.toggleStar(question.id);
+                                        });
                                       },
                                       icon: Icon(
                                         question.isStarred ? Icons.star : Icons.star_border,
@@ -198,6 +498,7 @@ class QuestionSetDetailScreen extends StatelessWidget {
                                   runSpacing: 8,
                                   children: [
                                     _buildCategoryTag(context, question.category),
+                                    _buildSubtopicTag(context, question.subtopic),
                                     _buildDifficultyTag(context, question.difficulty),
                                   ],
                                 ),
@@ -249,6 +550,33 @@ class QuestionSetDetailScreen extends StatelessWidget {
                                         foregroundColor: context.primaryColor,
                                       ),
                                       child: const Text('View Answer'),
+                                    ),
+                                    const Spacer(),
+                                    IconButton(
+                                      onPressed: () {
+                                        // Share functionality
+                                      },
+                                      icon: Icon(
+                                        Icons.share,
+                                        size: 18,
+                                        color: context.onSurfaceVariantColor,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      onPressed: () {
+                                        // Edit functionality using our new method
+                                        _editQuestion(question);
+                                      },
+                                      icon: Icon(
+                                        Icons.edit,
+                                        size: 18,
+                                        color: context.onSurfaceVariantColor,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
                                     ),
                                   ],
                                 ),
@@ -369,8 +697,9 @@ class QuestionSetDetailScreen extends StatelessWidget {
                     ),
                     TextButton.icon(
                       onPressed: () {
-                        // Edit functionality
+                        // Edit functionality using our new method
                         Navigator.pop(context);
+                        _editQuestion(question);
                       },
                       icon: const Icon(Icons.edit),
                       label: const Text('Edit'),
@@ -441,6 +770,26 @@ class QuestionSetDetailScreen extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           color: textColor,
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildSubtopicTag(BuildContext context, String subtopic) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: context.isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        subtopic,
+        style: TextStyle(
+          fontSize: 12,
+          color: context.isDarkMode ? Colors.grey.shade200 : Colors.grey.shade800,
         ),
       ),
     );

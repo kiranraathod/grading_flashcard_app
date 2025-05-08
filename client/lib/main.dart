@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
   static void _logThemeChange(ThemeMode oldMode, ThemeMode newMode) {
     // Implement your analytics here
     debugPrint('Theme changed from $oldMode to $newMode');
-    
+
     // Example with Firebase Analytics:
     // FirebaseAnalytics.instance.logEvent(
     //   name: 'theme_changed',
@@ -91,47 +91,60 @@ class MyApp extends StatelessWidget {
               ChangeNotifierProvider(create: (_) => userService),
               ChangeNotifierProvider(create: (_) => networkService),
               ChangeNotifierProvider(create: (_) => interviewService),
-              
+
               // Theme provider with callback support
-              ChangeNotifierProvider(create: (_) {
-                final themeProvider = ThemeProvider();
-                
-                // Add theme change callback for analytics
-                themeProvider.addThemeChangeCallback((oldMode, newMode) {
-                  _logThemeChange(oldMode, newMode);
-                });
-                
-                return themeProvider;
-              }),
+              ChangeNotifierProvider(
+                create: (_) {
+                  final themeProvider = ThemeProvider();
+
+                  // Add theme change callback for analytics
+                  themeProvider.addThemeChangeCallback((oldMode, newMode) {
+                    _logThemeChange(oldMode, newMode);
+                  });
+
+                  return themeProvider;
+                },
+              ),
 
               // Services as Repositories for BLoCs
               Provider<ApiService>.value(value: apiService),
               Provider<SpeechToTextService>.value(value: speechToTextService),
               Provider<RecentViewService>.value(value: recentViewService),
-              Provider<JobDescriptionService>.value(value: jobDescriptionService),
+              Provider<JobDescriptionService>.value(
+                value: jobDescriptionService,
+              ),
             ],
             child: ErrorHandler(
               child: Consumer<ThemeProvider>(
-                builder: (context, themeProvider, _) => TweenAnimationBuilder<double>(
-                  duration: const Duration(milliseconds: 200),
-                  tween: Tween<double>(
-                    begin: themeProvider.isDarkMode ? 1.0 : 0.0,
-                    end: themeProvider.isDarkMode ? 1.0 : 0.0,
-                  ),
-                  builder: (context, value, child) => MaterialApp(
-                    title: 'FlashMaster',
-                    theme: lightTheme,
-                    darkTheme: darkTheme,
-                    themeMode: themeProvider.themeMode,
-                    themeAnimationDuration: Duration.zero, // Disable theme animation to prevent lag
-                    home: const HomeScreen(),
-                    routes: {
-                      '/job-description-generator':
-                          (context) => const JobDescriptionQuestionGeneratorScreen(),
-                    },
-                    debugShowCheckedModeBanner: false,
-                  ),
-                ),
+                builder:
+                    (
+                      context,
+                      themeProvider,
+                      _,
+                    ) => TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 200),
+                      tween: Tween<double>(
+                        begin: themeProvider.isDarkMode ? 1.0 : 0.0,
+                        end: themeProvider.isDarkMode ? 1.0 : 0.0,
+                      ),
+                      builder:
+                          (context, value, child) => MaterialApp(
+                            title: 'FlashMaster',
+                            theme: lightTheme,
+                            darkTheme: darkTheme,
+                            themeMode: themeProvider.themeMode,
+                            themeAnimationDuration:
+                                Duration
+                                    .zero, // Disable theme animation to prevent lag
+                            home: const HomeScreen(),
+                            routes: {
+                              '/job-description-generator':
+                                  (context) =>
+                                      const JobDescriptionQuestionGeneratorScreen(),
+                            },
+                            debugShowCheckedModeBanner: false,
+                          ),
+                    ),
               ),
             ),
           ),
