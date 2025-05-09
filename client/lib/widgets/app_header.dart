@@ -114,24 +114,6 @@ class AppHeader extends StatelessWidget {
               // Dark mode toggle - This is the fix for the missing dark icon
               const ThemeToggleButton(),
               
-              const SizedBox(width: 8),
-              
-              // Settings
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
-                },
-                icon: Icon(
-                  Icons.settings_outlined,
-                  color: context.onSurfaceVariantColor,
-                  size: 20
-                ),
-                tooltip: 'Settings',
-              ),
-              
               const SizedBox(width: 16),
               
               // Profile dropdown
