@@ -75,9 +75,44 @@ class _HomeScreenState extends State<HomeScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: List.generate(7, (index) {
-                            // Determine the day style
-                            bool isToday = index == 1; // Mock: Monday is today
-                            bool isPast = index < 1; // Days before today
+                            // Get the current day of the week
+                            final now = DateTime.now();
+                            
+                            // Convert between different day-of-week systems:
+                            // - Our display array: ['S', 'M', 'T', 'W', 'T', 'F', 'S'] (0=Sun, 1=Mon, ..., 6=Sat)
+                            // - DateTime.weekday: (1=Mon, 2=Tue, ..., 7=Sun)
+                            int currentWeekdayIndex;
+                            
+                            // Map DateTime.weekday to our array index
+                            switch (now.weekday) {
+                              case 1: // Monday maps to index 1
+                                currentWeekdayIndex = 1;
+                                break;
+                              case 2: // Tuesday maps to index 2
+                                currentWeekdayIndex = 2;
+                                break;
+                              case 3: // Wednesday maps to index 3
+                                currentWeekdayIndex = 3;
+                                break;
+                              case 4: // Thursday maps to index 4
+                                currentWeekdayIndex = 4;
+                                break;
+                              case 5: // Friday maps to index 5
+                                currentWeekdayIndex = 5;
+                                break;
+                              case 6: // Saturday maps to index 6
+                                currentWeekdayIndex = 6;
+                                break;
+                              case 7: // Sunday maps to index 0
+                                currentWeekdayIndex = 0;
+                                break;
+                              default:
+                                currentWeekdayIndex = 0;
+                            }
+                            
+                            // Determine the day style dynamically based on the current day
+                            bool isToday = index == currentWeekdayIndex;
+                            bool isPast = index < currentWeekdayIndex; // Days before today
                             
                             Color bgColor = context.surfaceVariantColor;
                             Color textColor = context.onSurfaceVariantColor;
@@ -130,34 +165,46 @@ class _HomeScreenState extends State<HomeScreen> {
                         
                         const SizedBox(height: 24),
                         
-                        // Progress bar
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Weekly Goal: $_daysCompleted/$_weeklyGoal days',
-                              style: context.bodyMedium?.copyWith(
-                                color: context.onSurfaceVariantColor,
-                              ),
-                            ),
-                            Text(
-                              '71%',
-                              style: context.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: context.primaryColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(2),
-                          child: LinearProgressIndicator(
-                            value: 0.71,
-                            backgroundColor: context.surfaceVariantColor,
-                            valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
-                            minHeight: 8,
-                          ),
+                        // Progress bar with dynamic calculation
+                        Builder(
+                          builder: (context) {
+                            // Calculate percentage dynamically
+                            final double progressPercentage = _daysCompleted / _weeklyGoal;
+                            final int progressPercent = (progressPercentage * 100).round();
+                            
+                            return Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Weekly Goal: $_daysCompleted/$_weeklyGoal days',
+                                      style: context.bodyMedium?.copyWith(
+                                        color: context.onSurfaceVariantColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      '$progressPercent%',
+                                      style: context.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: context.primaryColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(2),
+                                  child: LinearProgressIndicator(
+                                    value: progressPercentage,
+                                    backgroundColor: context.surfaceVariantColor,
+                                    valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
+                                    minHeight: 8,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
                     ),
