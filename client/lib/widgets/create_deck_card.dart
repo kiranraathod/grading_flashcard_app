@@ -14,10 +14,7 @@ class CreateDeckCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: DS.borderLarge,
-          border: Border.all(
-            color: Colors.grey.shade300,
-            width: 2,
-          ),
+          border: Border.all(color: Colors.grey.shade300, width: 2),
         ),
         child: Center(
           child: Column(

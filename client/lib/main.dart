@@ -15,6 +15,7 @@ import 'services/interview_service.dart';
 import 'services/recent_view_service.dart';
 import 'services/job_description_service.dart';
 import 'blocs/recent_view/recent_view_bloc.dart';
+import 'blocs/search/search_bloc.dart';
 import 'widgets/error_handler.dart';
 
 void main() {
@@ -52,12 +53,16 @@ class MyApp extends StatelessWidget {
     final recentViewService = RecentViewService();
     final jobDescriptionService = JobDescriptionService();
 
-    // Create a global instance of RecentViewBloc to be shared across all screens
+    // Create global instances of BLoCs to be shared across all screens
     final recentViewBloc = RecentViewBloc(recentViewService: recentViewService);
+    final searchBloc = SearchBloc(
+      flashcardService: flashcardService,
+      interviewService: interviewService,
+    );
 
     // Debug Print
     debugPrint('⭐⭐⭐ INITIALIZING APPLICATION ⭐⭐⭐');
-    debugPrint('Created RecentViewService and RecentViewBloc');
+    debugPrint('Created RecentViewService and BLoCs');
 
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
@@ -83,6 +88,7 @@ class MyApp extends StatelessWidget {
           providers: [
             // Global BLoC providers
             BlocProvider<RecentViewBloc>.value(value: recentViewBloc),
+            BlocProvider<SearchBloc>.value(value: searchBloc),
           ],
           child: MultiProvider(
             providers: [

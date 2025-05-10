@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
+import 'dart:async';
 
 class FlashcardService extends ChangeNotifier {
   final List<FlashcardSet> _sets = [];
@@ -442,5 +443,56 @@ class FlashcardService extends ChangeNotifier {
   Future<void> reloadSets() async {
     debugPrint('Explicitly reloading flashcard sets from storage');
     await _loadSets();
+  }
+  
+  // Search methods for the search feature
+  Future<List<FlashcardSet>> searchDecks(String query) async {
+    final normalizedQuery = query.toLowerCase().trim();
+    
+    // Return an empty list if the query is too short
+    if (normalizedQuery.length < 3) {
+      return [];
+    }
+    
+    return _sets.where((set) {
+      // Search in title, description, and flashcard content
+      final titleMatch = set.title.toLowerCase().contains(normalizedQuery);
+      final descriptionMatch = set.description.toLowerCase().contains(normalizedQuery);
+      
+      // Check if any flashcards match the query
+      final hasMatchingFlashcards = set.flashcards.any((card) {
+        return card.question.toLowerCase().contains(normalizedQuery) ||
+               card.answer.toLowerCase().contains(normalizedQuery);
+      });
+      
+      return titleMatch || descriptionMatch || hasMatchingFlashcards;
+    }).toList();
+  }
+
+  Future<List<Flashcard>> searchCards(String query) async {
+    final normalizedQuery = query.toLowerCase().trim();
+    final results = <Flashcard>[];
+    
+    // Return an empty list if the query is too short
+    if (normalizedQuery.length < 3) {
+      return results;
+    }
+    
+    for (final set in _sets) {
+      final matchingCards = set.flashcards.where((card) {
+        return card.question.toLowerCase().contains(normalizedQuery) ||
+               card.answer.toLowerCase().contains(normalizedQuery);
+      }).toList();
+      
+      // Add extra information to each card for display in search results
+      for (final card in matchingCards) {
+        // We can't modify the cards directly, so we're collecting them for now
+        // In a real implementation, we'd want to wrap this in a SearchResultItem class 
+        // that contains both the card and its parent set information
+        results.add(card);
+      }
+    }
+    
+    return results;
   }
 }

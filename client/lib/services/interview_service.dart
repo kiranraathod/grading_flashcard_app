@@ -372,4 +372,24 @@ void addQuestion(InterviewQuestion question) {
         .whereType<InterviewQuestion>()
         .toList();
   }
+  
+  // Search for interview questions containing the query
+  Future<List<InterviewQuestion>> searchQuestions(String query) async {
+    final normalizedQuery = query.toLowerCase().trim();
+    
+    // Return an empty list if the query is too short
+    if (normalizedQuery.length < 3) {
+      return [];
+    }
+    
+    return _questions.where((question) {
+      // Properly handle nullable and non-nullable fields
+      final textMatch = question.text.toLowerCase().contains(normalizedQuery);
+      final categoryMatch = question.category.toLowerCase().contains(normalizedQuery);
+      final subtopicMatch = question.subtopic.toLowerCase().contains(normalizedQuery);
+      final answerMatch = question.answer?.toLowerCase().contains(normalizedQuery) ?? false;
+      
+      return textMatch || categoryMatch || subtopicMatch || answerMatch;
+    }).toList();
+  }
 }

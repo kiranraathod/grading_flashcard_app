@@ -7,8 +7,10 @@ import '../widgets/recent/recent_tab_content.dart';
 import '../widgets/multi_action_fab.dart';
 import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
+import '../utils/keyboard_shortcuts.dart';
 import '../blocs/recent_view/recent_view_bloc.dart';
 import '../blocs/recent_view/recent_view_event.dart';
+import '../screens/search/search_results_screen.dart';
 import 'create_flashcard_screen.dart';
 import 'study_screen.dart';
 import 'interview_questions_screen.dart';
@@ -36,6 +38,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final int _weeklyGoal = 7;
   final int _daysCompleted = 5;
   
+  // Focus node for search functionality
+  final FocusNode _searchFocusNode = FocusNode();
+  
   // Calculate the progress percentage based on completed flashcards
   int _calculateProgress(FlashcardSet set) {
     if (set.flashcards.isEmpty) return 0;
@@ -48,15 +53,34 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   @override
+  void dispose() {
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+  
+  // Navigate to the search screen
+  void _navigateToSearch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SearchResultsScreen(initialQuery: ''),
+      ),
+    );
+  }
+  
+  @override
   Widget build(BuildContext context) {
     final flashcardService = Provider.of<FlashcardService>(context);
     
-    return Scaffold(
+    return KeyboardShortcuts(
+      searchFocusNode: _searchFocusNode,
+      onSearchShortcut: _navigateToSearch,
+      child: Scaffold(
       backgroundColor: context.backgroundColor,
       body: Column(
         children: [
           // App header
-          const AppHeader(),
+          AppHeader(key: GlobalKey()),
           
           // Main content with scrolling
           Expanded(
@@ -471,7 +495,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
+    ));
   }
   
   Widget _buildTabContent(FlashcardService flashcardService) {

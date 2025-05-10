@@ -2,10 +2,44 @@ import 'package:flutter/material.dart';
 import '../utils/theme_utils.dart';
 import '../screens/settings_screen.dart';
 import '../widgets/theme_toggle.dart';
+import '../screens/search/search_results_screen.dart';
 
-class AppHeader extends StatelessWidget {
+class AppHeader extends StatefulWidget {
   const AppHeader({super.key});
+  
+  // Public method to focus the search field
+  void focusSearch(BuildContext context) {
+    final state = context.findAncestorStateOfType<_AppHeaderState>();
+    state?._searchFocusNode.requestFocus();
+  }
 
+  @override
+  State<AppHeader> createState() => _AppHeaderState();
+}
+
+class _AppHeaderState extends State<AppHeader> {
+  // Helper method to navigate to search results
+  void _navigateToSearchResults(BuildContext context, String query) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchResultsScreen(
+          initialQuery: query,
+        ),
+      ),
+    );
+  }
+  
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -27,7 +61,7 @@ class AppHeader extends StatelessWidget {
               Icon(
                 Icons.book_outlined,
                 color: context.primaryColor,
-                size: 20
+                size: 20,
               ),
               const SizedBox(width: 8),
               Text(
@@ -58,37 +92,66 @@ class AppHeader extends StatelessWidget {
                   width: 0.5,
                 ),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.search,
-                    color: context.isDarkMode 
-                        ? Colors.white.withValues(alpha: 0.7)
-                        : context.onSurfaceVariantColor,
-                    size: 18
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      style: TextStyle(
-                        color: context.onSurfaceColor,
-                        fontSize: 16,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Find flashcards on any topic',
-                        hintStyle: TextStyle(
-                          color: context.isDarkMode 
-                              ? Colors.white.withValues(alpha: 0.5)
-                              : context.onSurfaceVariantColor,
+              child: InkWell(
+                onTap: () {
+                  _searchFocusNode.requestFocus();
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.search,
+                      color: context.isDarkMode 
+                          ? Colors.white.withValues(alpha: 0.7)
+                          : context.onSurfaceVariantColor,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        style: TextStyle(
+                          color: context.onSurfaceColor,
                           fontSize: 16,
                         ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
+                        decoration: InputDecoration(
+                          hintText: 'Find flashcards on any topic',
+                          hintStyle: TextStyle(
+                            color: context.isDarkMode 
+                                ? Colors.white.withValues(alpha: 0.5)
+                                : context.onSurfaceVariantColor,
+                            fontSize: 16,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                          suffixIcon: _searchController.text.isNotEmpty 
+                            ? IconButton(
+                                icon: Icon(
+                                  Icons.clear,
+                                  color: context.onSurfaceVariantColor,
+                                  size: 16,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _searchFocusNode.unfocus();
+                                },
+                              )
+                            : null,
+                        ),
+                        onChanged: (value) {
+                          // Force update to show/hide clear button
+                          setState(() {});
+                        },
+                        onSubmitted: (value) {
+                          if (value.trim().isNotEmpty) {
+                            _navigateToSearchResults(context, value);
+                          }
+                        },
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -104,7 +167,7 @@ class AppHeader extends StatelessWidget {
                 icon: Icon(
                   Icons.emoji_events_outlined,
                   color: context.onSurfaceVariantColor,
-                  size: 20
+                  size: 20,
                 ),
                 tooltip: 'Achievements',
               ),
@@ -130,13 +193,13 @@ class AppHeader extends StatelessWidget {
                       child: Icon(
                         Icons.person,
                         color: context.onPrimaryColor,
-                        size: 16
+                        size: 16,
                       ),
                     ),
                     Icon(
                       Icons.keyboard_arrow_down,
                       color: context.onSurfaceVariantColor,
-                      size: 14
+                      size: 14,
                     ),
                   ],
                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/flashcard.dart';
 import '../models/answer.dart';
+import '../models/flashcard_set.dart';
 import '../services/api_service.dart';
 import '../services/speech_to_text_service.dart';
 import '../services/network_service.dart';
@@ -11,8 +12,26 @@ import 'result_screen.dart';
 
 class FlashcardScreen extends StatefulWidget {
   final List<Flashcard> flashcards;
+  final int initialCardIndex;
 
-  const FlashcardScreen({super.key, required this.flashcards});
+  const FlashcardScreen({
+    super.key, 
+    required this.flashcards,
+    this.initialCardIndex = 0,
+  });
+  
+  // Constructor that accepts a FlashcardSet
+  factory FlashcardScreen.fromSet({
+    Key? key,
+    required FlashcardSet flashcardSet,
+    int initialCardIndex = 0,
+  }) {
+    return FlashcardScreen(
+      key: key,
+      flashcards: flashcardSet.flashcards,
+      initialCardIndex: initialCardIndex,
+    );
+  }
 
   @override
   State<FlashcardScreen> createState() => _FlashcardScreenState();
@@ -29,7 +48,8 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+    _currentIndex = widget.initialCardIndex;
+    _pageController = PageController(initialPage: widget.initialCardIndex);
     _speechService.initialize();
 
     // Check network status
