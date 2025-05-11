@@ -21,7 +21,7 @@ class SearchBarWidget extends StatelessWidget {
       ),
       child: TextField(
         decoration: InputDecoration(
-          hintText: 'Find flashcards on any topic',
+          hintText: 'Search',
           hintStyle: TextStyle(
             color: Colors.grey.shade400,
             fontSize: 16,

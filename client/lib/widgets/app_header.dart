@@ -115,7 +115,7 @@ class _AppHeaderState extends State<AppHeader> {
                           fontSize: 16,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Find flashcards on any topic',
+                          hintText: 'Search',
                           hintStyle: TextStyle(
                             color: context.isDarkMode 
                                 ? Colors.white.withValues(alpha: 0.5)
