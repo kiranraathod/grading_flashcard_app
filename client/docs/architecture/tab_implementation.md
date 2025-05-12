@@ -2,12 +2,12 @@
 
 ## Table of Contents
 
-- [Introduction](https://claude.ai/chat/2fa732f2-611e-4669-89bc-8c1a8a3a5f35#introduction)
-- [Features Implemented](https://claude.ai/chat/2fa732f2-611e-4669-89bc-8c1a8a3a5f35#features-implemented)
-- [Technical Implementation](https://claude.ai/chat/2fa732f2-611e-4669-89bc-8c1a8a3a5f35#technical-implementation)
-- [Changes Made](https://claude.ai/chat/2fa732f2-611e-4669-89bc-8c1a8a3a5f35#changes-made)
-- [Development Process](https://claude.ai/chat/2fa732f2-611e-4669-89bc-8c1a8a3a5f35#development-process)
-- [Future Considerations](https://claude.ai/chat/2fa732f2-611e-4669-89bc-8c1a8a3a5f35#future-considerations)
+- [Introduction](#introduction)
+- [Features Implemented](#features-implemented)
+- [Technical Implementation](#technical-implementation)
+- [Changes Made](#changes-made)
+- [Development Process](#development-process)
+- [Future Considerations](#future-considerations)
 
 ## Introduction
 

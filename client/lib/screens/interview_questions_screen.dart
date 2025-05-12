@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/interview/category_filter.dart';
 import '../widgets/interview/difficulty_filter.dart';
-import '../widgets/interview/interview_question_card.dart';
+import '../widgets/interview/interview_question_card_improved.dart';
 import '../widgets/interview/category_accordion.dart';
 import '../widgets/interview/answer_view.dart';
 import '../widgets/multi_action_fab.dart';
@@ -470,7 +470,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                 
                 // Question cards with answer modal functionality
                 ...filteredQuestions.map((question) {
-                  return InterviewQuestionCard(
+                  return InterviewQuestionCardImproved(
                     question: question,
                     onPractice: () {
                       // Navigate to practice screen

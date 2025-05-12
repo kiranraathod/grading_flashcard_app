@@ -40,3 +40,4 @@ This project provides a Flutter flashcard application with a custom Python REST 
 │       └── helpers.dart          // Utility functions
 └── pubspec.yaml                  // Flutter dependencies
 ```
+
