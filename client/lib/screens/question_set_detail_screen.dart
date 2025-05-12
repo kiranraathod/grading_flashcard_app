@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../models/interview_question.dart';
 import '../services/interview_service.dart';
 import '../utils/theme_utils.dart';
+import 'interview_practice_screen.dart';
+import 'interview_practice_batch_screen.dart';
 
 class QuestionSetDetailScreen extends StatefulWidget {
   final String setId;
@@ -412,7 +414,19 @@ class _QuestionSetDetailScreenState extends State<QuestionSetDetailScreen> {
                     const Spacer(),
                     TextButton.icon(
                       onPressed: () {
-                        // Practice all questions
+                        // Navigate to batch practice screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => InterviewPracticeBatchScreen(
+                              questions: questions,
+                              categoryName: questionSet.title,
+                            ),
+                          ),
+                        ).then((_) {
+                          // Refresh the state when returning from practice
+                          setState(() {});
+                        });
                       },
                       icon: const Icon(Icons.play_arrow, size: 18),
                       label: const Text('Practice All'),
@@ -507,7 +521,20 @@ class _QuestionSetDetailScreenState extends State<QuestionSetDetailScreen> {
                                   children: [
                                     TextButton.icon(
                                       onPressed: () {
-                                        // Practice functionality
+                                        // Navigate to practice screen for a single question
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => InterviewPracticeScreen(
+                                              question: question,
+                                              questionList: questions,
+                                              currentIndex: questions.indexOf(question),
+                                            ),
+                                          ),
+                                        ).then((_) {
+                                          // Refresh the state when returning from practice
+                                          setState(() {});
+                                        });
                                       },
                                       icon: const Icon(Icons.play_arrow, size: 16),
                                       label: const Text('Practice'),
@@ -684,8 +711,25 @@ class _QuestionSetDetailScreenState extends State<QuestionSetDetailScreen> {
                   children: [
                     TextButton.icon(
                       onPressed: () {
-                        // Practice functionality
-                        Navigator.pop(context);
+                        // Navigate to practice screen for this question
+                        Navigator.pop(context); // Close the detail view
+                        
+                        // Get the questions list
+                        final questionsList = _interviewService.getQuestionsForSet(widget.setId);
+                        
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => InterviewPracticeScreen(
+                              question: question,
+                              questionList: questionsList,
+                              currentIndex: questionsList.indexOf(question),
+                            ),
+                          ),
+                        ).then((_) {
+                          // Refresh the state when returning from practice
+                          setState(() {});
+                        });
                       },
                       icon: const Icon(Icons.play_arrow),
                       label: const Text('Practice'),

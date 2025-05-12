@@ -6,6 +6,7 @@ import '../models/question_set.dart';
 import '../services/job_description_service.dart';
 import '../services/interview_service.dart';
 import '../utils/theme_utils.dart';
+import 'interview_practice_screen.dart';
 
 class JobDescriptionQuestionGeneratorScreen extends StatefulWidget {
   const JobDescriptionQuestionGeneratorScreen({super.key});
@@ -991,7 +992,20 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
               children: [
                 TextButton.icon(
                   onPressed: () {
-                    // Practice functionality would be implemented in a real app
+                    // Practice this question
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => InterviewPracticeScreen(
+                          question: question,
+                          questionList: _generatedQuestions,
+                          currentIndex: _generatedQuestions.indexOf(question),
+                        ),
+                      ),
+                    ).then((_) {
+                      // Refresh the state when returning from practice
+                      setState(() {});
+                    });
                   },
                   icon: const Icon(Icons.play_arrow, size: 16),
                   label: const Text('Practice'),

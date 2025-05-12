@@ -501,7 +501,14 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
             ),
             leading: IconButton(
               icon: const Icon(Icons.close),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                // Check if any answer has been entered
+                if (_userAnswerController.text.trim().isNotEmpty) {
+                  // Save the answer before leaving
+                  _saveCurrentAnswer();
+                }
+                Navigator.of(context).pop();
+              },
             ),
             actions: [
               // Progress indicator
