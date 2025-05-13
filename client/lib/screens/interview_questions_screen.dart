@@ -473,14 +473,14 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                   return InterviewQuestionCardImproved(
                     question: question,
                     onPractice: () {
-                      // Navigate to practice screen
+                      // Navigate to practice screen with ONLY the selected question
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => InterviewPracticeScreen(
                             question: question,
-                            questionList: filteredQuestions,
-                            currentIndex: filteredQuestions.indexOf(question),
+                            questionList: [question],  // Create a list with only this question
+                            currentIndex: 0,  // Set index to 0 since it's the only question
                           ),
                         ),
                       ).then((_) {
