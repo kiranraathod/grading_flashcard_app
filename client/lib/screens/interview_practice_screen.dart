@@ -514,7 +514,9 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
               // Progress indicator
               Center(
                 child: Text(
-                  'Question ${widget.currentIndex + 1}/${widget.questionList.length}',
+                  widget.questionList.length > 1
+                      ? 'Question ${widget.currentIndex + 1}/${widget.questionList.length}'
+                      : 'Question 1/1',
                   style: context.bodyMedium,
                 ),
               ),
@@ -957,17 +959,17 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                             children: [
                               // Next/Submit single button
                               ElevatedButton.icon(
-                                onPressed: widget.currentIndex < widget.questionList.length - 1 
+                                onPressed: widget.questionList.length > 1 && widget.currentIndex < widget.questionList.length - 1 
                                     ? _moveToNextQuestion 
                                     : _submitSingleAnswer,
                                 icon: Icon(
-                                  widget.currentIndex < widget.questionList.length - 1 
+                                  widget.questionList.length > 1 && widget.currentIndex < widget.questionList.length - 1 
                                       ? Icons.arrow_forward
                                       : Icons.check,
                                   size: 18,
                                 ),
                                 label: Text(
-                                  widget.currentIndex < widget.questionList.length - 1 
+                                  widget.questionList.length > 1 && widget.currentIndex < widget.questionList.length - 1 
                                       ? 'Next Question' 
                                       : 'Submit This Answer'
                                 ),
@@ -980,26 +982,29 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                 ),
                               ),
                               
-                              const SizedBox(width: DS.spacingM),
+                              // Only add space if the Grade All button will be shown
+                              if (widget.questionList.length > 1)
+                                const SizedBox(width: DS.spacingM),
                               
-                              // Submit all button
-                              ElevatedButton.icon(
-                                onPressed: _submitAllAnswers,
-                                icon: const Icon(
-                                  Icons.check_circle,
-                                  size: 18,
-                                ),
-                                label: Text(
-                                  'Grade All (${_userAnswers.length}/${widget.questionList.length})'
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: context.successColor,
-                                  foregroundColor: context.onPrimaryColor,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                              // Submit all button - only show when there are multiple questions
+                              if (widget.questionList.length > 1)
+                                ElevatedButton.icon(
+                                  onPressed: _submitAllAnswers,
+                                  icon: const Icon(
+                                    Icons.check_circle,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    'Grade All (${_userAnswers.length}/${widget.questionList.length})'
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: context.successColor,
+                                    foregroundColor: context.onPrimaryColor,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                    ),
                                   ),
                                 ),
-                              ),
                             ],
                           ),
                       ],

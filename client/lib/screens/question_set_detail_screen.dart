@@ -527,8 +527,8 @@ class _QuestionSetDetailScreenState extends State<QuestionSetDetailScreen> {
                                           MaterialPageRoute(
                                             builder: (context) => InterviewPracticeScreen(
                                               question: question,
-                                              questionList: questions,
-                                              currentIndex: questions.indexOf(question),
+                                              questionList: [question], // Pass only the selected question
+                                              currentIndex: 0, // Since there's only one question, index is 0
                                             ),
                                           ),
                                         ).then((_) {
@@ -714,16 +714,13 @@ class _QuestionSetDetailScreenState extends State<QuestionSetDetailScreen> {
                         // Navigate to practice screen for this question
                         Navigator.pop(context); // Close the detail view
                         
-                        // Get the questions list
-                        final questionsList = _interviewService.getQuestionsForSet(widget.setId);
-                        
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => InterviewPracticeScreen(
                               question: question,
-                              questionList: questionsList,
-                              currentIndex: questionsList.indexOf(question),
+                              questionList: [question], // Pass only the selected question
+                              currentIndex: 0, // Since there's only one question, index is 0
                             ),
                           ),
                         ).then((_) {
