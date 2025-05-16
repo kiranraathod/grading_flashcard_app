@@ -150,7 +150,21 @@ class _CreateInterviewQuestionScreenState
       orElse: () => {'subtopics': <String>[]},
     );
 
-    return [...category['subtopics'], 'Add new subtopic...'];
+    // Start with standard subtopics
+    List<String> subtopics = List<String>.from(category['subtopics'] ?? []);
+    
+    // Include the current selected subtopic if it's not already in the list
+    // This prevents the dropdown assertion error by ensuring the value always has a matching item
+    if (_selectedSubtopic.isNotEmpty && 
+        !subtopics.contains(_selectedSubtopic) && 
+        _selectedSubtopic != 'Add new subtopic...') {
+      subtopics.add(_selectedSubtopic);
+    }
+    
+    // Add the "Add new subtopic..." option
+    subtopics.add('Add new subtopic...');
+    
+    return subtopics;
   }
 
   // Navigate to next step
@@ -514,7 +528,20 @@ class _CreateInterviewQuestionScreenState
                       _customSubtopic.isNotEmpty
                           ? () {
                             setState(() {
+                              // Set the selected subtopic to the custom value
                               _selectedSubtopic = _customSubtopic;
+                              
+                              // Add to the category's subtopics list for persistence
+                              for (var category in _categories) {
+                                if (category['id'] == _selectedCategory) {
+                                  if (!category['subtopics'].contains(_customSubtopic)) {
+                                    category['subtopics'].add(_customSubtopic);
+                                  }
+                                  break;
+                                }
+                              }
+                              
+                              // Switch back to dropdown view
                               _isAddingCustomSubtopic = false;
                             });
                           }
