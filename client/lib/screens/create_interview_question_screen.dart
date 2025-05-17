@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/interview_question.dart';
 import '../services/interview_service.dart';
 import '../utils/colors.dart';
+import '../utils/category_mapper.dart';
 import '../widgets/multi_action_fab.dart';
 import 'create_flashcard_screen.dart';
 import 'job_description_question_generator_screen.dart';
@@ -186,33 +187,64 @@ class _CreateInterviewQuestionScreenState
   }
 
   // Save the question
-  void _saveQuestion({bool asDraft = false}) {
+  Future<void> _saveQuestion({bool asDraft = false}) async {
+    // Get the interview service
     final interviewService = Provider.of<InterviewService>(
-      context,
+      context, 
       listen: false,
     );
 
     // Create new question or update existing one
     final question = InterviewQuestion(
-      id:
-          widget.questionToEdit?.id ??
+      id: widget.questionToEdit?.id ??
           DateTime.now().millisecondsSinceEpoch.toString(),
       text: _questionTextController.text,
-      category: _selectedCategory,
+      category: _selectedCategory,  // This is already the internal category ID
       subtopic: _selectedSubtopic,
       difficulty: _selectedDifficulty,
       answer: _answerTextController.text,
       isDraft: asDraft,
     );
 
-    if (widget.questionToEdit != null) {
-      interviewService.updateQuestion(question);
-    } else {
-      interviewService.addQuestion(question);
-    }
+    try {
+      // Show debug info
+      debugPrint('Saving question: ${question.text}');
+      debugPrint('Category: ${question.category} (Maps to ${CategoryMapper.getDefaultCategory(question.category)})');
+      debugPrint('isDraft: $asDraft');
+      
+      if (widget.questionToEdit != null) {
+        await interviewService.updateQuestion(question);
+        debugPrint('Updated existing question');
+      } else {
+        await interviewService.addQuestion(question);
+        debugPrint('Added new question');
+      }
 
-    // Navigate back to questions screen
-    Navigator.of(context).pop();
+      // Display success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(asDraft ? 'Question saved as draft' : 'Question published successfully'),
+            backgroundColor: asDraft ? Colors.blue : Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        
+        // Navigate back to the questions screen
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      // Display error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving question: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   @override

@@ -806,21 +806,77 @@ class _HomeScreenState extends State<HomeScreen> {
   
   // Method for displaying topic categories
   Widget _buildTopicCategories() {
-    return GridView.count(
-      crossAxisCount: 3,
-      childAspectRatio: 2.5,
+    final interviewService = Provider.of<InterviewService>(context);
+    
+    // Get predefined categories
+    List<Map<String, dynamic>> defaultCategories = [
+      {'title': 'Data Analysis', 'count': 18},
+      {'title': 'Web Development', 'count': 15},
+      {'title': 'Machine Learning', 'count': 22},
+      {'title': 'SQL', 'count': 10},
+      {'title': 'Python', 'count': 14},
+      {'title': 'Data Visualization', 'count': 8},
+    ];
+    
+    // Get all unique subtopics
+    List<String> allSubtopics = interviewService.getAllUniqueSubtopics();
+    debugPrint('All unique subtopics: ${allSubtopics.join(", ")}');
+    
+    // Filter out subtopics that are already represented by default categories
+    List<String> standardSubtopics = [
+      'Data Cleaning & Preprocessing',
+      'Front-end Development',
+      'Machine Learning Algorithms',
+      'SQL & Database',
+      'Python Fundamentals',
+      'Data Visualization'
+    ];
+    
+    // Find custom subtopics (those not in standardSubtopics)
+    List<String> customSubtopics = allSubtopics
+        .where((subtopic) => !standardSubtopics.contains(subtopic))
+        .toList();
+    
+    debugPrint('Found ${customSubtopics.length} custom subtopics: ${customSubtopics.join(", ")}');
+
+    // Create category items for custom subtopics
+    List<Map<String, dynamic>> customCategories = customSubtopics
+        .map((subtopic) => {
+          'title': subtopic,
+          'count': interviewService.getQuestionCountForSubtopic(subtopic)
+        })
+        .toList();
+    
+    debugPrint('Created ${customCategories.length} custom category cards to display');
+    
+    // Combine default and custom categories
+    List<Map<String, dynamic>> allCategories = [
+      ...defaultCategories,
+      ...customCategories,
+    ];
+    
+    // Filter out categories with zero questions
+    allCategories = allCategories.where((category) => category['count'] > 0).toList();
+    
+    debugPrint('Found ${allCategories.length} categories to display after filtering');
+    
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 2.5,
+        crossAxisSpacing: DS.spacingS,
+        mainAxisSpacing: DS.spacingS,
+      ),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: DS.spacingS,
-      mainAxisSpacing: DS.spacingS,
-      children: [
-        _buildCategoryChip('Data Analysis', 18),
-        _buildCategoryChip('Web Development', 15),
-        _buildCategoryChip('Machine Learning', 22),
-        _buildCategoryChip('SQL', 10),
-        _buildCategoryChip('Python', 14),
-        _buildCategoryChip('Data Visualization', 8),
-      ],
+      itemCount: allCategories.length,
+      itemBuilder: (context, index) {
+        final category = allCategories[index];
+        return _buildCategoryChip(
+          category['title'], 
+          category['count'],
+        );
+      },
     );
   }
 

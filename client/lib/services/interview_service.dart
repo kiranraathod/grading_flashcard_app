@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/interview_question.dart';
-import '../models/interview_answer.dart'; // Added this import
+import '../models/interview_answer.dart';
 import '../models/question_set.dart';
+import '../utils/category_mapper.dart';
 
 class InterviewService extends ChangeNotifier {
   List<InterviewQuestion> _questions = [];
@@ -21,31 +22,74 @@ class InterviewService extends ChangeNotifier {
   // Getter for question sets
   List<QuestionSet> get questionSets => _questionSets;
   
+  // Method to get all unique subtopics from questions
+  List<String> getAllUniqueSubtopics() {
+    Set<String> uniqueSubtopics = {};
+    
+    for (var question in _questions) {
+      if (!question.isDraft && question.subtopic.isNotEmpty) {
+        uniqueSubtopics.add(question.subtopic);
+      }
+    }
+    
+    debugPrint('Found ${uniqueSubtopics.length} unique subtopics');
+    return uniqueSubtopics.toList();
+  }
+  
+  // Method to count questions for a specific subtopic
+  int getQuestionCountForSubtopic(String subtopic) {
+    if (subtopic.isEmpty) return 0;
+    
+    final count = _questions.where(
+      (q) => !q.isDraft && q.subtopic.toLowerCase() == subtopic.toLowerCase()
+    ).length;
+    
+    debugPrint('Found $count questions for subtopic: $subtopic');
+    return count;
+  }
+  
+  // Method to get all subtopics for a specific category
+  List<String> getSubtopicsForCategory(String category) {
+    if (category.isEmpty) return [];
+    
+    final subtopics = _questions
+        .where((q) => !q.isDraft && q.category == category)
+        .map((q) => q.subtopic)
+        .toSet()
+        .toList();
+    
+    debugPrint('Found ${subtopics.length} subtopics for category $category: ${subtopics.join(", ")}');
+    return subtopics;
+  }
+  
   // Constructor
   InterviewService() {
     _loadQuestions();
     _loadQuestionSetsFromStorage();
   }
   
-  // Load questions (using mock data for now)
+  // Load questions from storage first, then fallback to mock data if needed
   void _loadQuestions() {
-    _questions = InterviewQuestion.getMockQuestions();
-    notifyListeners();
-    // In a real implementation, this would load from persistent storage
-    // For future implementation: _loadQuestionsFromStorage();
+    _loadQuestionsFromStorage();
   }
   
-  // Commented out for future implementation
-  /*
   // Load questions from shared preferences
   Future<void> _loadQuestionsFromStorage() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final questionsJson = prefs.getString('interview_questions');
       
-      if (questionsJson != null) {
+      if (questionsJson != null && questionsJson.isNotEmpty) {
+        debugPrint('Found saved questions in SharedPreferences');
         final List<dynamic> decoded = jsonDecode(questionsJson);
-        _questions = decoded.map((item) {
+        
+        List<InterviewQuestion> loadedQuestions = decoded.map<InterviewQuestion>((item) {
+          // Default isDraft to false if it's missing in the stored data
+          final bool isDraft = item['isDraft'] ?? false;
+          
+          // Debug log for loading
+          debugPrint('Loading question ${item['id']}: ${item['text']} with isDraft=$isDraft');
+          
           // Convert JSON to InterviewQuestion objects
           return InterviewQuestion(
             id: item['id'],
@@ -56,23 +100,38 @@ class InterviewService extends ChangeNotifier {
             answer: item['answer'],
             isStarred: item['isStarred'] ?? false,
             isCompleted: item['isCompleted'] ?? false,
-            isDraft: item['isDraft'] ?? false,
+            isDraft: isDraft,
           );
         }).toList();
+        
+        // Only update if we actually loaded questions
+        if (loadedQuestions.isNotEmpty) {
+          _questions = loadedQuestions;
+          debugPrint('Loaded ${_questions.length} questions from storage');
+          
+          // Count published vs draft questions
+          final publishedCount = _questions.where((q) => !q.isDraft).length;
+          final draftCount = _questions.where((q) => q.isDraft).length;
+          debugPrint('Published questions: $publishedCount, Drafts: $draftCount');
+        } else {
+          // Fallback to mock data if no questions were loaded
+          _questions = InterviewQuestion.getMockQuestions();
+          debugPrint('No questions found in storage, using mock data');
+        }
       } else {
         // If no saved questions, initialize with mock data
         _questions = InterviewQuestion.getMockQuestions();
+        debugPrint('No questions found in storage, using mock data');
       }
       
       notifyListeners();
     } catch (e) {
-      debugPrint('Error loading questions: $e');
+      debugPrint('Error loading questions from storage: $e');
       // Fallback to mock data if there's an error
       _questions = InterviewQuestion.getMockQuestions();
       notifyListeners();
     }
   }
-  */
   
   // Save questions to shared preferences
   Future<void> _saveQuestionsToStorage() async {
@@ -80,7 +139,7 @@ class InterviewService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final List<Map<String, dynamic>> serialized = _questions.map((q) {
         // Convert InterviewQuestion objects to JSON
-        return {
+        final Map<String, dynamic> json = {
           'id': q.id,
           'text': q.text,
           'category': q.category,
@@ -91,20 +150,92 @@ class InterviewService extends ChangeNotifier {
           'isCompleted': q.isCompleted,
           'isDraft': q.isDraft,
         };
+        
+        // Debug log for isDraft value
+        debugPrint('Serializing question ${q.id}: ${q.text} with isDraft=${q.isDraft}');
+        
+        return json;
       }).toList();
       
-      await prefs.setString('interview_questions', jsonEncode(serialized));
+      final jsonStr = jsonEncode(serialized);
+      await prefs.setString('interview_questions', jsonStr);
+      
+      // Verify the data was saved correctly
+      debugPrint('Successfully saved ${serialized.length} questions to storage');
     } catch (e) {
       debugPrint('Error saving questions: $e');
     }
   }
   
   // Get questions by category
-  List<InterviewQuestion> getQuestionsByCategory(String category) {
-    if (category == 'all') {
+  List<InterviewQuestion> getQuestionsByCategory(String uiCategory) {
+    if (uiCategory == 'all') {
       return questions;
     }
-    return questions.where((q) => q.category == category).toList();
+    
+    // Get all non-draft questions
+    final allQuestions = questions;
+    debugPrint('Getting questions for UI category: $uiCategory');
+    debugPrint('Total published questions: ${allQuestions.length}');
+    
+    // Filter questions based on the UI category
+    final filteredQuestions = allQuestions.where((q) {
+      // For SQL category, check if subtopic contains SQL
+      if (uiCategory == 'SQL') {
+        final matches = q.subtopic.toLowerCase().contains('sql');
+        if (matches) debugPrint('SQL match found: ${q.text}');
+        return matches;
+      }
+      
+      // For Data Visualization, check if subtopic contains visualization
+      if (uiCategory == 'Data Visualization') {
+        final matches = q.subtopic.toLowerCase().contains('visualization');
+        if (matches) debugPrint('Visualization match found: ${q.text}');
+        return matches;
+      }
+      
+      // Get the internal category corresponding to the UI category
+      final String internalCategory = CategoryMapper.mapUIToInternalCategory(uiCategory);
+      
+      // BUGFIX: Check if either:
+      // 1. The question's internal category matches our expected internal category OR
+      // 2. The question's UI category (based on its internal category) matches our target UI category
+      final bool directMatch = q.category == internalCategory;
+      final bool reverseMappedMatch = CategoryMapper.getDefaultCategory(q.category) == uiCategory;
+      
+      final matches = directMatch || reverseMappedMatch;
+      
+      if (matches) {
+        debugPrint('Category match found: ${q.text} (${q.category} mapped to ${CategoryMapper.getDefaultCategory(q.category)})');
+      }
+      
+      return matches;
+    }).toList();
+    
+    debugPrint('Found ${filteredQuestions.length} questions for category $uiCategory');
+    return filteredQuestions;
+  }
+  
+  // Get questions by subtopic
+  List<InterviewQuestion> getQuestionsBySubtopic(String subtopic) {
+    if (subtopic.isEmpty) {
+      return questions;
+    }
+    
+    // Get all non-draft questions
+    final allQuestions = questions;
+    debugPrint('Getting questions for subtopic: $subtopic');
+    debugPrint('Total published questions: ${allQuestions.length}');
+    
+    // Filter questions based on the subtopic (case-insensitive match)
+    final filteredQuestions = allQuestions.where((q) {
+      final matches = q.subtopic.toLowerCase() == subtopic.toLowerCase();
+      if (matches) debugPrint('Subtopic match found: ${q.text}');
+      return matches;
+    }).toList();
+    
+    debugPrint('Found ${filteredQuestions.length} questions for subtopic $subtopic');
+    return filteredQuestions;
   }
   
   // Get questions by difficulty
@@ -127,8 +258,25 @@ class InterviewService extends ChangeNotifier {
     
     return baseList.where((q) {
       // Filter by category
-      if (category != 'all' && q.category != category) {
-        return false;
+      if (category != 'all') {
+        bool matchesCategory = false;
+        
+        // Special case for SQL and Data Visualization
+        if (category == 'SQL' && q.subtopic.toLowerCase().contains('sql')) {
+          matchesCategory = true;
+        } else if (category == 'Data Visualization' && q.subtopic.toLowerCase().contains('visualization')) {
+          matchesCategory = true;
+        } else {
+          // For other categories, map UI category to internal category
+          final String internalCategory = CategoryMapper.mapUIToInternalCategory(category);
+          
+          // BUGFIX: Check both direct match and reverse-mapped match
+          bool directMatch = (q.category == internalCategory);
+          bool reverseMappedMatch = (CategoryMapper.getDefaultCategory(q.category) == category);
+          matchesCategory = directMatch || reverseMappedMatch;
+        }
+        
+        if (!matchesCategory) return false;
       }
       
       // Filter by difficulty
@@ -171,19 +319,44 @@ class InterviewService extends ChangeNotifier {
   
   // Add a new question
   // Add a question and update the category counts
-void addQuestion(InterviewQuestion question) {
+  Future<void> addQuestion(InterviewQuestion question) async {
+    // Debug log to track the question being added
+    debugPrint('Adding new question: ${question.text} with isDraft=${question.isDraft}');
+    debugPrint('Question details - Category: ${question.category}, UI Category: ${CategoryMapper.getDefaultCategory(question.category)}, Subtopic: ${question.subtopic}');
+    
+    // Add to the in-memory list
     _questions.add(question);
+    
+    // Notify listeners to update UI
     notifyListeners();
-    _saveQuestionsToStorage();
+    
+    // Save to persistent storage
+    await _saveQuestionsToStorage();
+    
+    // Debug log to confirm question count
+    debugPrint('Questions count after adding: ${_questions.length}');
+    debugPrint('Published questions: ${questions.length}, Drafts: ${drafts.length}');
   }
   
   // Update a question
-  void updateQuestion(InterviewQuestion question) {
+  Future<void> updateQuestion(InterviewQuestion question) async {
+    // Debug log to track the question being updated
+    debugPrint('Updating question: ${question.id} - ${question.text} with isDraft=${question.isDraft}');
+    
     final index = _questions.indexWhere((q) => q.id == question.id);
     if (index != -1) {
       _questions[index] = question;
+      
+      // Notify listeners to update UI
       notifyListeners();
-      _saveQuestionsToStorage();
+      
+      // Save to persistent storage
+      await _saveQuestionsToStorage();
+      
+      // Debug log to confirm question count
+      debugPrint('Questions updated. Published questions: ${questions.length}, Drafts: ${drafts.length}');
+    } else {
+      debugPrint('Warning: Could not find question to update with ID ${question.id}');
     }
   }
   
@@ -192,16 +365,6 @@ void addQuestion(InterviewQuestion question) {
     _questions.removeWhere((q) => q.id == id);
     notifyListeners();
     _saveQuestionsToStorage();
-  }
-  
-  // Get all unique subtopics for a category
-  List<String> getSubtopicsForCategory(String category) {
-    final subtopics = _questions
-        .where((q) => q.category == category)
-        .map((q) => q.subtopic)
-        .toSet()
-        .toList();
-    return subtopics;
   }
   
   // Calculate progress statistics
@@ -303,6 +466,20 @@ void addQuestion(InterviewQuestion question) {
   void trackQuestionView(String id) {
     // In a real implementation, this would log the view for analytics
     debugPrint('Question viewed: $id');
+  }
+  
+  // Track which subtopics have questions
+  Map<String, int> getSubtopicCounts() {
+    Map<String, int> counts = {};
+    for (var question in _questions.where((q) => !q.isDraft)) {
+      if (!counts.containsKey(question.subtopic)) {
+        counts[question.subtopic] = 0;
+      }
+      counts[question.subtopic] = (counts[question.subtopic] ?? 0) + 1;
+    }
+    
+    debugPrint('Subtopic counts: ${counts.toString()}');
+    return counts;
   }
   
   // Save question set

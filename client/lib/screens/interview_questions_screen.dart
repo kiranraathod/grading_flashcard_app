@@ -11,6 +11,7 @@ import '../services/interview_service.dart';
 import '../utils/design_system.dart';
 import '../utils/theme_utils.dart';
 import '../utils/colors.dart';
+import '../utils/category_mapper.dart';
 import 'create_interview_question_screen.dart';
 import 'interview_practice_screen.dart';
 import 'interview_practice_batch_screen.dart';
@@ -46,6 +47,8 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize active category from widget parameter if provided
+    _activeCategory = widget.category;
     // InterviewService will be provided in didChangeDependencies
   }
 
@@ -87,25 +90,31 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
       return [];
     }
     
-    return _interviewService!.getSubtopicsForCategory(category);
+    // Get all subtopics for this category
+    List<String> subtopics = _interviewService!.getSubtopicsForCategory(category);
+    
+    // Get all unique subtopics across all categories
+    List<String> allSubtopics = _interviewService!.getAllUniqueSubtopics();
+    
+    // Find any custom subtopics that might belong to this category based on questions
+    for (var subtopic in allSubtopics) {
+      // Get questions for this subtopic
+      final questions = _interviewService!.getQuestionsBySubtopic(subtopic);
+      
+      // If any question with this subtopic belongs to the current category, add it
+      if (questions.any((q) => q.category == category) && !subtopics.contains(subtopic)) {
+        subtopics.add(subtopic);
+      }
+    }
+    
+    debugPrint('Category $category has subtopics: ${subtopics.join(", ")}');
+    return subtopics;
   }
   
   // Helper method to get category name
   String _getCategoryName(String categoryId) {
-    switch (categoryId) {
-      case 'technical':
-        return 'Technical Knowledge';
-      case 'applied':
-        return 'Applied Skills';
-      case 'case':
-        return 'Case Studies';
-      case 'behavioral':
-        return 'Behavioral Questions';
-      case 'job':
-        return 'Job-Specific';
-      default:
-        return 'Other';
-    }
+    // Use CategoryMapper to get UI category name from internal category ID
+    return CategoryMapper.mapInternalToUICategory(categoryId, '');
   }
   
   // Helper method to get category icon
