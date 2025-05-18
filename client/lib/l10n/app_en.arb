@@ -1,0 +1,131 @@
+{
+  "@@locale": "en",
+  "appTitle": "FlashMaster",
+  "@appTitle": {
+    "description": "The title of the application"
+  },
+  "decksTab": "Decks",
+  "@decksTab": {
+    "description": "Label for the Decks tab in the main navigation"
+  },
+  "interviewQuestionsTab": "Interview Questions",
+  "@interviewQuestionsTab": {
+    "description": "Label for the Interview Questions tab in the main navigation"
+  },
+  "recentTab": "Recent",
+  "@recentTab": {
+    "description": "Label for the Recent tab in the main navigation"
+  },
+  "createDeck": "Create Deck",
+  "@createDeck": {
+    "description": "Button text to create a new flashcard deck"
+  },
+  "practiceQuestions": "Practice Questions",
+  "@practiceQuestions": {
+    "description": "Button text to practice interview questions"
+  },
+  "weeklyGoalFormat": "{completed}/{goal} days",
+  "@weeklyGoalFormat": {
+    "description": "Weekly goal progress format",
+    "placeholders": {
+      "completed": {
+        "type": "int",
+        "example": "3"
+      },
+      "goal": {
+        "type": "int",
+        "example": "7"
+      }
+    }
+  },
+  "weeklyGoal": "Weekly Goal: {weeklyGoal}",
+  "@weeklyGoal": {
+    "description": "Weekly goal display",
+    "placeholders": {
+      "weeklyGoal": {
+        "type": "String",
+        "example": "5/7 days"
+      }
+    }
+  },
+  "questionCount": "{count} questions",
+  "@questionCount": {
+    "description": "Number of questions in a category",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "updatedAgo": "Updated {time} ago",
+  "@updatedAgo": {
+    "description": "Time since last update",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "2d"
+      }
+    }
+  },
+  "notStarted": "Not started",
+  "@notStarted": {
+    "description": "Status for tasks that haven't been started"
+  },
+  "filter": "Filter",
+  "@filter": {
+    "description": "Filter button label"
+  },
+  "lastUpdated": "Last Updated",
+  "@lastUpdated": {
+    "description": "Sort option for last updated time"
+  },
+  "dataScience": "Data Science",
+  "@dataScience": {
+    "description": "Category name for Data Science"
+  },
+  "interviewQuestions": "Interview Questions",
+  "@interviewQuestions": {
+    "description": "Title for interview questions section"
+  },
+  "otherCategories": "Other Interview Categories",
+  "@otherCategories": {
+    "description": "Header for other interview categories section"
+  },
+  "browseByTopic": "Browse by Topic",
+  "@browseByTopic": {
+    "description": "Header for browsing questions by topic"
+  },
+  "sunday": "S",
+  "@sunday": {
+    "description": "Short form of Sunday for weekly calendar"
+  },
+  "monday": "M",
+  "@monday": {
+    "description": "Short form of Monday for weekly calendar"
+  },
+  "tuesday": "T",
+  "@tuesday": {
+    "description": "Short form of Tuesday for weekly calendar"
+  },
+  "wednesday": "W",
+  "@wednesday": {
+    "description": "Short form of Wednesday for weekly calendar"
+  },
+  "thursday": "T",
+  "@thursday": {
+    "description": "Short form of Thursday for weekly calendar"
+  },
+  "friday": "F",
+  "@friday": {
+    "description": "Short form of Friday for weekly calendar"
+  },
+  "saturday": "S",
+  "@saturday": {
+    "description": "Short form of Saturday for weekly calendar"
+  },
+  "today": "Today",
+  "@today": {
+    "description": "Label for current day in calendar"
+  }
+}

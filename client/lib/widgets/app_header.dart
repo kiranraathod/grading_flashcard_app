@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/theme_utils.dart';
 import '../screens/settings_screen.dart';
 import '../widgets/theme_toggle.dart';
+import '../widgets/locale_switcher.dart';
 import '../screens/search/search_results_screen.dart';
 
 class AppHeader extends StatefulWidget {
@@ -65,7 +67,7 @@ class _AppHeaderState extends State<AppHeader> {
               ),
               const SizedBox(width: 8),
               Text(
-                'FlashMaster',
+                AppLocalizations.of(context).appTitle,
                 style: context.titleLarge?.copyWith(
                   fontSize: 18,
                   fontWeight: FontWeight.w500,
@@ -176,6 +178,11 @@ class _AppHeaderState extends State<AppHeader> {
               
               // Dark mode toggle - This is the fix for the missing dark icon
               const ThemeToggleButton(),
+              
+              const SizedBox(width: 8),
+              
+              // Language switcher
+              const LocaleSwitcher(),
               
               const SizedBox(width: 16),
               
