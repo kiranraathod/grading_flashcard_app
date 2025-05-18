@@ -127,5 +127,292 @@
   "today": "Today",
   "@today": {
     "description": "Label for current day in calendar"
+  },
+  
+  "categoryInterviewQuestions": "{category} Interview Questions",
+  "@categoryInterviewQuestions": {
+    "description": "Title for category-specific interview questions screen",
+    "placeholders": {
+      "category": {
+        "type": "String",
+        "example": "Data Science"
+      }
+    }
+  },
+  "questionCategories": "Question Categories",
+  "@questionCategories": {
+    "description": "Header for question categories section"
+  },
+  "questionsWithCount": "Questions ({count})",
+  "@questionsWithCount": {
+    "description": "Questions header with count",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "practiceAll": "Practice All",
+  "@practiceAll": {
+    "description": "Button to practice all questions"
+  },
+  "refresh": "Refresh",
+  "@refresh": {
+    "description": "Button to refresh content"
+  },
+  "addQuestion": "Add Question",
+  "@addQuestion": {
+    "description": "Button to add a new question"
+  },
+  "searchQuestionsPlaceholder": "Search questions...",
+  "@searchQuestionsPlaceholder": {
+    "description": "Placeholder text for question search field"
+  },
+  "yourStudyProgress": "Your Study Progress",
+  "@yourStudyProgress": {
+    "description": "Title for progress tracking section"
+  },
+  "completedCount": "{count} completed",
+  "@completedCount": {
+    "description": "Number of completed items",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "remainingCount": "{count} remaining",
+  "@remainingCount": {
+    "description": "Number of remaining items",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "10"
+      }
+    }
+  },
+  
+  "createQuestion": "Create Question",
+  "@createQuestion": {
+    "description": "Title for creating a new question"
+  },
+  "editQuestion": "Edit Question",
+  "@editQuestion": {
+    "description": "Title for editing an existing question"
+  },
+  "questionText": "Question Text",
+  "@questionText": {
+    "description": "Label for question text field"
+  },
+  "enterQuestionPlaceholder": "Enter your interview question here",
+  "@enterQuestionPlaceholder": {
+    "description": "Placeholder for question input field"
+  },
+  "category": "Category",
+  "@category": {
+    "description": "Label for category selection"
+  },
+  "subtopic": "Subtopic",
+  "@subtopic": {
+    "description": "Label for subtopic selection"
+  },
+  "selectSubtopic": "Select a subtopic",
+  "@selectSubtopic": {
+    "description": "Placeholder for subtopic dropdown"
+  },
+  "enterNewSubtopic": "Enter new subtopic",
+  "@enterNewSubtopic": {
+    "description": "Placeholder for new subtopic input"
+  },
+  "addNewSubtopic": "Add new subtopic...",
+  "@addNewSubtopic": {
+    "description": "Option to add a new subtopic"
+  },
+  "add": "Add",
+  "@add": {
+    "description": "Button to add item"
+  },
+  "difficultyLevel": "Difficulty Level",
+  "@difficultyLevel": {
+    "description": "Label for difficulty level selection"
+  },
+  "entryLevel": "Entry Level",
+  "@entryLevel": {
+    "description": "Entry difficulty level"
+  },
+  "midLevel": "Mid Level",
+  "@midLevel": {
+    "description": "Mid difficulty level"
+  },
+  "seniorLevel": "Senior Level",
+  "@seniorLevel": {
+    "description": "Senior difficulty level"
+  },
+  "next": "Next",
+  "@next": {
+    "description": "Button to proceed to next step"
+  },
+  "back": "Back",
+  "@back": {
+    "description": "Button to go back to previous step"
+  },
+  "answer": "Answer",
+  "@answer": {
+    "description": "Label for answer section"
+  },
+  "useTemplate": "Use Template",
+  "@useTemplate": {
+    "description": "Button to use answer template"
+  },
+  "answerPlaceholder": "Provide a detailed answer for this interview question",
+  "@answerPlaceholder": {
+    "description": "Placeholder for answer input field"
+  },
+  "answerGuidelines": "Answer Guidelines:",
+  "@answerGuidelines": {
+    "description": "Header for answer guidelines section"
+  },
+  "reviewYourQuestion": "Review Your Question",
+  "@reviewYourQuestion": {
+    "description": "Title for review step"
+  },
+  "answerPreview": "Answer Preview",
+  "@answerPreview": {
+    "description": "Title for answer preview"
+  },
+  "beforeSubmitting": "Before submitting, please check:",
+  "@beforeSubmitting": {
+    "description": "Header for submission checklist"
+  },
+  "saveAsDraft": "Save as Draft",
+  "@saveAsDraft": {
+    "description": "Button to save question as draft"
+  },
+  "publishQuestion": "Publish Question",
+  "@publishQuestion": {
+    "description": "Button to publish question"
+  },
+  "questionStepIndicator": "Question",
+  "@questionStepIndicator": {
+    "description": "Step indicator for question step"
+  },
+  "answerStepIndicator": "Answer",
+  "@answerStepIndicator": {
+    "description": "Step indicator for answer step"
+  },
+  "reviewStepIndicator": "Review",
+  "@reviewStepIndicator": {
+    "description": "Step indicator for review step"
+  },
+  
+  "practiceMode": "Practice Mode",
+  "@practiceMode": {
+    "description": "Title for practice mode screen"
+  },
+  "questionNumberFormat": "Question {current}/{total}",
+  "@questionNumberFormat": {
+    "description": "Format for question number indicator",
+    "placeholders": {
+      "current": {
+        "type": "int",
+        "example": "1"
+      },
+      "total": {
+        "type": "int",
+        "example": "10"
+      }
+    }
+  },
+  "timeLabel": "Time: {time}",
+  "@timeLabel": {
+    "description": "Label for timer",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "00:30"
+      }
+    }
+  },
+  "markAsComplete": "Mark as Complete",
+  "@markAsComplete": {
+    "description": "Checkbox label to mark question as complete"
+  },
+  "preparationGuide": "Preparation Guide",
+  "@preparationGuide": {
+    "description": "Title for preparation guide section"
+  },
+  "yourAnswer": "Your Answer:",
+  "@yourAnswer": {
+    "description": "Label for user's answer input"
+  },
+  "typeAnswerHere": "Type your answer here...",
+  "@typeAnswerHere": {
+    "description": "Placeholder for answer input"
+  },
+  "voiceInput": "Voice input",
+  "@voiceInput": {
+    "description": "Label for voice input button"
+  },
+  "recording": "Recording...",
+  "@recording": {
+    "description": "Label shown during voice recording"
+  },
+  "characterCount": "{count} chars",
+  "@characterCount": {
+    "description": "Character count display",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "150"
+      }
+    }
+  },
+  "clear": "Clear",
+  "@clear": {
+    "description": "Button to clear input"
+  },
+  "showAnswer": "Show Answer",
+  "@showAnswer": {
+    "description": "Button to show answer"
+  },
+  "yourAnswerLabel": "Your Answer",
+  "@yourAnswerLabel": {
+    "description": "Label for user's answer display"
+  },
+  "exampleAnswer": "Example Answer",
+  "@exampleAnswer": {
+    "description": "Label for example answer"
+  },
+  "backToPractice": "Back to Practice",
+  "@backToPractice": {
+    "description": "Button to return to practice"
+  },
+  "completedStatus": "Completed",
+  "@completedStatus": {
+    "description": "Status label for completed items"
+  },
+  "nextQuestion": "Next Question",
+  "@nextQuestion": {
+    "description": "Button to move to next question"
+  },
+  "submitThisAnswer": "Submit This Answer",
+  "@submitThisAnswer": {
+    "description": "Button to submit current answer"
+  },
+  "gradeAllFormat": "Grade All ({completed}/{total})",
+  "@gradeAllFormat": {
+    "description": "Button to grade all questions with completion count",
+    "placeholders": {
+      "completed": {
+        "type": "int",
+        "example": "3"
+      },
+      "total": {
+        "type": "int",
+        "example": "10"
+      }
+    }
   }
 }

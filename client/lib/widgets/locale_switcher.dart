@@ -8,7 +8,6 @@ class LocaleSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localeProvider = Provider.of<LocaleProvider>(context);
-    final currentLocale = localeProvider.locale;
     
     return PopupMenuButton<Locale>(
       tooltip: 'Change language',
@@ -20,12 +19,7 @@ class LocaleSwitcher extends StatelessWidget {
         _buildPopupMenuItem(
           const Locale('en'), 
           'English', 
-          currentLocale.languageCode == 'en'
-        ),
-        _buildPopupMenuItem(
-          const Locale('es'), 
-          'Español', 
-          currentLocale.languageCode == 'es'
+          true
         ),
       ],
     );

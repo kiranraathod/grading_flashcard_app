@@ -771,7 +771,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                               vertical: DS.spacingM,
                                             ),
                                           ),
-                                          child: const Text('Clear'),
+                                          child: Text('Clear'),
                                         ),
                                       ),
                                       
@@ -797,7 +797,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                               borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                                             ),
                                           ),
-                                          child: const Text('Show Answer'),
+                                          child: Text('Show Answer'),
                                         ),
                                       ),
                                     ],
@@ -881,7 +881,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                                 _showAnswer = false;
                                               });
                                             },
-                                            child: const Text('Back to Practice'),
+                                            child: Text('Back to Practice'),
                                           ),
                                         ],
                                       ),
@@ -937,7 +937,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                             color: _isCompleted ? context.primaryColor : context.onSurfaceVariantColor,
                           ),
                           label: Text(
-                            _isCompleted ? 'Completed' : 'Mark Complete',
+                            _isCompleted ? 'Completed' : 'Mark as Complete',
                             style: TextStyle(
                               color: _isCompleted ? context.primaryColor : context.onSurfaceVariantColor,
                             ),

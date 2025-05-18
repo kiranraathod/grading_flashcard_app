@@ -19,7 +19,6 @@ import 'services/job_description_service.dart';
 import 'blocs/recent_view/recent_view_bloc.dart';
 import 'blocs/search/search_bloc.dart';
 import 'widgets/error_handler.dart';
-import 'utils/locale_provider.dart';
 
 void main() {
   runApp(const MyApp());
@@ -55,7 +54,6 @@ class MyApp extends StatelessWidget {
     final interviewService = InterviewService();
     final recentViewService = RecentViewService();
     final jobDescriptionService = JobDescriptionService();
-    final localeProvider = LocaleProvider();
 
     // Create global instances of BLoCs to be shared across all screens
     final recentViewBloc = RecentViewBloc(recentViewService: recentViewService);
@@ -101,7 +99,6 @@ class MyApp extends StatelessWidget {
               ChangeNotifierProvider(create: (_) => userService),
               ChangeNotifierProvider(create: (_) => networkService),
               ChangeNotifierProvider(create: (_) => interviewService),
-              ChangeNotifierProvider(create: (_) => localeProvider),
 
               // Theme provider with callback support
               ChangeNotifierProvider(
@@ -132,8 +129,7 @@ class MyApp extends StatelessWidget {
                       context,
                       themeProvider,
                       _,
-                    ) => Consumer<LocaleProvider>(
-                      builder: (context, localeProvider, _) => TweenAnimationBuilder<double>(
+                    ) => TweenAnimationBuilder<double>(
                         duration: const Duration(milliseconds: 200),
                         tween: Tween<double>(
                           begin: themeProvider.isDarkMode ? 1.0 : 0.0,
@@ -156,17 +152,16 @@ class MyApp extends StatelessWidget {
                                   },
                                   debugShowCheckedModeBanner: false,
                                   // Localization config
-                                  locale: localeProvider.locale,
+                                  locale: const Locale('en'),
                                   localizationsDelegates: const [
                                     AppLocalizations.delegate,
                                     GlobalMaterialLocalizations.delegate,
                                     GlobalWidgetsLocalizations.delegate,
                                     GlobalCupertinoLocalizations.delegate,
                                   ],
-                                  supportedLocales: LocaleProvider.supportedLocales,
+                                  supportedLocales: const [Locale('en')],
                                 ),
                       ),
-                    ),
               ),
             ),
           ),

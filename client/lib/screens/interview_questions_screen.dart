@@ -362,7 +362,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Questions (${filteredQuestions.length})',
+                      "Questions (${filteredQuestions.length})",
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -397,7 +397,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                             Icons.play_circle,
                             size: 16,
                           ),
-                          label: const Text('Practice All'),
+                          label: Text('Practice All'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,

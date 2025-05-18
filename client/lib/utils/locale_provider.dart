@@ -40,8 +40,6 @@ class LocaleProvider extends ChangeNotifier {
   }
 
   static List<Locale> get supportedLocales => const [
-    Locale('en'), // English
-    Locale('es'), // Spanish
-    Locale('fr'), // French, for future
+    Locale('en'), // English only
   ];
 }

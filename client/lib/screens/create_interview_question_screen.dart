@@ -672,7 +672,7 @@ class _CreateInterviewQuestionScreenState
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text('Next'),
+            child: Text('Next'),
           ),
         ),
       ],
@@ -880,7 +880,7 @@ class _CreateInterviewQuestionScreenState
                 ),
                 side: BorderSide(color: Colors.grey.shade300),
               ),
-              child: const Text('Back'),
+              child: Text('Back'),
             ),
             ElevatedButton(
               onPressed:
@@ -892,7 +892,7 @@ class _CreateInterviewQuestionScreenState
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text('Next'),
+              child: Text('Next'),
             ),
           ],
         ),
@@ -1233,7 +1233,7 @@ class _CreateInterviewQuestionScreenState
                 ),
                 side: BorderSide(color: Colors.grey.shade300),
               ),
-              child: const Text('Back'),
+              child: Text('Back'),
             ),
             Row(
               children: [
@@ -1246,7 +1246,7 @@ class _CreateInterviewQuestionScreenState
                     ),
                     side: BorderSide(color: Colors.grey.shade300),
                   ),
-                  child: const Text('Save as Draft'),
+                  child: Text('Save as Draft'),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
@@ -1258,7 +1258,7 @@ class _CreateInterviewQuestionScreenState
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('Publish Question'),
+                  child: Text('Publish Question'),
                 ),
               ],
             ),
