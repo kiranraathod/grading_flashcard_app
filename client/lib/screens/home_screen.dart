@@ -23,6 +23,7 @@ import '../services/flashcard_service.dart';
 import '../services/interview_service.dart';
 import '../services/recent_view_service.dart';
 import '../widgets/interview/arrow_painter.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -166,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   child: Center(
                                     child: Text(
-                                      ['S', 'M', 'T', 'W', 'T', 'F', 'S'][index],
+                                      _getDayAbbreviation(context, index),
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
@@ -177,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  isToday ? 'Today' : '',
+                                  isToday ? AppLocalizations.of(context).today : '',
                                   style: context.bodySmall?.copyWith(
                                     color: context.onSurfaceVariantColor,
                                   ),
@@ -202,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      'Weekly Goal: $_daysCompleted/$_weeklyGoal days',
+                                      AppLocalizations.of(context).weeklyGoalFormat(_daysCompleted, _weeklyGoal),
                                       style: context.bodyMedium?.copyWith(
                                         color: context.onSurfaceVariantColor,
                                       ),
@@ -278,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ] : null,
                                   ),
                                   child: Text(
-                                    'Decks',
+                                    AppLocalizations.of(context).decksTab,
                                     style: context.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w500,
                                       color: _activeTab == 'Decks' 
@@ -320,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ] : null,
                                       ),
                                       child: Text(
-                                        'Interview Questions',
+                                        AppLocalizations.of(context).interviewQuestionsTab,
                                         style: context.bodyMedium?.copyWith(
                                           fontWeight: FontWeight.w500,
                                           color: _activeTab == 'Interview Questions' 
@@ -373,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ] : null,
                                   ),
                                   child: Text(
-                                    'Recent',
+                                    AppLocalizations.of(context).recentTab,
                                     style: context.bodyMedium?.copyWith(
                                       fontWeight: FontWeight.w500,
                                       color: _activeTab == 'Recent' 
@@ -401,7 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Icon(Icons.filter_list, size: 16, color: context.onSurfaceVariantColor),
                                   SizedBox(width: 4),
                                   Text(
-                                    'Filter',
+                                    AppLocalizations.of(context).filter,
                                     style: context.bodySmall,
                                   ),
                                 ],
@@ -419,7 +420,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Icon(Icons.access_time, size: 16, color: context.onSurfaceVariantColor),
                                   SizedBox(width: 4),
                                   Text(
-                                    'Last Updated',
+                                    AppLocalizations.of(context).lastUpdated,
                                     style: context.bodySmall,
                                   ),
                                   SizedBox(width: 4),
@@ -496,6 +497,21 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     ));
+  }
+  
+  // Helper method to get day abbreviation
+  String _getDayAbbreviation(BuildContext context, int index) {
+    final localizations = AppLocalizations.of(context);
+    switch (index) {
+      case 0: return localizations.sunday;
+      case 1: return localizations.monday;
+      case 2: return localizations.tuesday;
+      case 3: return localizations.wednesday;
+      case 4: return localizations.thursday;
+      case 5: return localizations.friday;
+      case 6: return localizations.saturday;
+      default: return '';
+    }
   }
   
   Widget _buildTabContent(FlashcardService flashcardService) {
@@ -609,7 +625,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Data Science Interview Questions',
+                '${AppLocalizations.of(context).dataScience} ${AppLocalizations.of(context).interviewQuestions}',
                 style: context.titleLarge,
               ),
               const SizedBox(height: DS.spacingS),
@@ -619,11 +635,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '64 questions total',
+                    AppLocalizations.of(context).questionCount(64),
                     style: context.bodyMedium,
                   ),
                   Text(
-                    'Updated 2d ago',
+                    AppLocalizations.of(context).updatedAgo('2d'),
                     style: context.bodySmall,
                   ),
                 ],
@@ -646,7 +662,7 @@ class _HomeScreenState extends State<HomeScreen> {
               
               // Status text
               Text(
-                'Not started',
+                AppLocalizations.of(context).notStarted,
                 style: context.bodySmall,
               ),
               
@@ -675,7 +691,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                   ),
                 ),
-                child: const Text('Practice Questions'),
+                child: Text(AppLocalizations.of(context).practiceQuestions),
               ),
             ],
           ),
@@ -685,7 +701,7 @@ class _HomeScreenState extends State<HomeScreen> {
         
         // Question Sets from Job Descriptions
         Text(
-          'Other Interview Categories',
+          AppLocalizations.of(context).otherCategories,
           style: context.titleMedium,
         ),
         
@@ -795,7 +811,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // After question sets, show topic categories
         const SizedBox(height: 32),
         Text(
-          'Browse by Topic',
+          AppLocalizations.of(context).browseByTopic,
           style: context.titleMedium,
         ),
         const SizedBox(height: 16),
@@ -914,7 +930,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             Text(
-              '$count questions',
+              AppLocalizations.of(context).questionCount(count),
               style: context.bodySmall,
             ),
           ],
@@ -993,7 +1009,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
             style: DS.primaryButtonStyle,
-            child: const Text('Create Deck'),
+            child: Text(AppLocalizations.of(context).createDeck),
           ),
         ],
       ),
