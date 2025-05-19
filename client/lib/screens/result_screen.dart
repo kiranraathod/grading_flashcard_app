@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../models/answer.dart' as answer_model;
 import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
 import '../widgets/suggestions_widget.dart';
 import '../utils/colors.dart';
 import '../utils/design_system.dart';
+import '../utils/app_localizations_extension.dart';
 import '../blocs/recent_view/recent_view_bloc.dart';
 import '../blocs/recent_view/recent_view_event.dart';
 
@@ -95,7 +97,7 @@ class _ResultScreenState extends State<ResultScreen> {
     final bool isSystemError = widget.answer.grade == 'X';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Results')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).results)),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(DS.spacingM),
         child: Column(
@@ -107,16 +109,16 @@ class _ResultScreenState extends State<ResultScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Question:', style: DS.headingSmall),
+                    Text(AppLocalizations.of(context).question, style: DS.headingSmall),
                     SizedBox(height: DS.spacingXs),
                     Text(widget.answer.question, style: DS.bodyMedium),
                     SizedBox(height: DS.spacingM),
-                    Text('Your Answer:', style: DS.headingSmall),
+                    Text(AppLocalizations.of(context).yourAnswerLabel, style: DS.headingSmall),
                     SizedBox(height: DS.spacingXs),
                     Text(widget.answer.userAnswer, style: DS.bodyMedium),
                     if (!isSystemError) ...[
                       SizedBox(height: DS.spacingM),
-                      Text('Correct Answer:', style: DS.headingSmall),
+                      Text(AppLocalizations.of(context).correctAnswer, style: DS.headingSmall),
                       SizedBox(height: DS.spacingXs),
                       Text(widget.correctAnswer, style: DS.bodyMedium),
                     ],
@@ -152,19 +154,23 @@ class _ResultScreenState extends State<ResultScreen> {
                         ),
                         SizedBox(width: DS.spacingM),
                         Text(
-                          isSystemError ? 'System Error' : 'Your Grade',
+                          isSystemError 
+                            ? AppLocalizations.of(context).systemError 
+                            : AppLocalizations.of(context).yourGrade,
                           style: DS.headingSmall,
                         ),
                       ],
                     ),
                     SizedBox(height: DS.spacingM),
                     Text(
-                      isSystemError ? 'Error Message:' : 'Feedback:',
+                      isSystemError 
+                        ? AppLocalizations.of(context).errorMessage 
+                        : AppLocalizations.of(context).feedbackLabel,
                       style: DS.bodyLarge.copyWith(fontWeight: FontWeight.bold),
                     ),
                     SizedBox(height: DS.spacingXs),
                     Text(
-                      widget.answer.feedback ?? 'No feedback available',
+                      widget.answer.feedback ?? AppLocalizations.of(context).noFeedback,
                       style: TextStyle(
                         color: isSystemError ? Colors.red[700] : null,
                       ),
@@ -177,10 +183,9 @@ class _ResultScreenState extends State<ResultScreen> {
             if (widget.answer.suggestions != null)
               SuggestionsWidget(
                 suggestions: widget.answer.suggestions!,
-                title:
-                    isSystemError
-                        ? 'Troubleshooting Steps'
-                        : 'Improvement Suggestions',
+                title: isSystemError
+                    ? AppLocalizations.of(context).troubleshootingSteps
+                    : AppLocalizations.of(context).improvementSuggestions,
               ),
             SizedBox(height: DS.spacingL),
             // Show progress update message when answer is correct
@@ -201,7 +206,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     SizedBox(width: DS.spacingS),
                     Expanded(
                       child: Text(
-                        'Your progress has been updated!',
+                        AppLocalizations.of(context).progressUpdated,
                         style: TextStyle(color: Colors.green.shade800),
                       ),
                     ),
@@ -233,7 +238,9 @@ class _ResultScreenState extends State<ResultScreen> {
                     AppColors.textOnPrimary.b.toInt(),
                   ),
                 ),
-                child: Text(isSystemError ? 'Try Again Later' : 'Continue'),
+                child: Text(isSystemError 
+                    ? AppLocalizations.of(context).tryAgainLater 
+                    : L10nExt.of(context).continueButton),
               ),
             ),
           ],

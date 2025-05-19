@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../blocs/study/study_bloc.dart';
 import '../blocs/study/study_event.dart';
 import '../blocs/study/study_state.dart';
@@ -12,10 +13,12 @@ import '../services/flashcard_service.dart';
 import '../services/speech_to_text_service.dart';
 import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
+import '../utils/app_localizations_extension.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/answer_input_widget.dart';
 import 'create_flashcard_screen.dart';
 import 'result_screen.dart';
+
 
 class StudyScreen extends StatelessWidget {
   final FlashcardSet set;
@@ -237,12 +240,12 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                 Navigator.of(context).pop();
               },
             ),
-            title: Text(state.flashcardSet?.title ?? 'Study'),
+            title: Text(state.flashcardSet?.title ?? AppLocalizations.of(context).study),
             actions: [
               // Edit button
               IconButton(
                 icon: const Icon(Icons.edit),
-                tooltip: 'Edit this flashcard set',
+                tooltip: AppLocalizations.of(context).editSet,
                 onPressed: () {
                   bloc.add(EditFlashcardSetRequested());
                   Navigator.push(
@@ -261,7 +264,7 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                   state.isMarkedForReview ? Icons.bookmark : Icons.bookmark_border,
                   color: state.isMarkedForReview ? context.warningColor : null,
                 ),
-                tooltip: 'Mark for review',
+                tooltip: AppLocalizations.of(context).markForReview,
                 onPressed: () {
                   if (state.currentFlashcard != null) {
                     bloc.add(
@@ -289,11 +292,11 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                   }
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'edit',
                     child: ListTile(
                       leading: Icon(Icons.edit),
-                      title: Text('Edit Set'),
+                      title: Text(AppLocalizations.of(context).editSetMenuItem),
                     ),
                   ),
                 ],
@@ -324,7 +327,7 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                           backgroundColor: context.surfaceColor,
                           foregroundColor: context.onSurfaceColor,
                         ),
-                        child: const Text('Back'),
+                        child: Text(AppLocalizations.of(context).back),
                       ),
                     ),
                   ),
@@ -355,7 +358,7 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                         // Show a brief loading indicator to indicate processing
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Processing your answer...'),
+                            content: Text(AppLocalizations.of(context).processingAnswer),
                             duration: Duration(milliseconds: 500),
                           )
                         );
@@ -385,10 +388,13 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                             backgroundColor: context.primaryColor,
                             foregroundColor: context.onPrimaryColor,
                           ),
-                          child: const Text('Previous'),
+                          child: Text(AppLocalizations.of(context).previous),
                         ),
                         Text(
-                          '${state.currentIndex + 1}/${state.flashcardSet?.flashcards.length ?? 0}',
+                          AppLocalizations.of(context).cardCountFormat(
+                            state.currentIndex + 1, 
+                            state.flashcardSet?.flashcards.length ?? 0
+                          ),
                           style: context.titleMedium,
                         ),
                         ElevatedButton(
@@ -399,7 +405,7 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                             backgroundColor: context.primaryColor,
                             foregroundColor: context.onPrimaryColor,
                           ),
-                          child: const Text('Next'),
+                          child: Text(AppLocalizations.of(context).next),
                         ),
                       ],
                     ),
@@ -419,7 +425,7 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                         ),
                         SizedBox(height: DS.spacingM),
                         Text(
-                          'Grading your answer...',
+                          L10nExt.of(context).gradingAnswer,
                           style: context.bodyLarge?.copyWith(color: context.onSurfaceColor),
                         ),
                       ],

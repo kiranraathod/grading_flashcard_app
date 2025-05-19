@@ -414,5 +414,105 @@
         "example": "10"
       }
     }
+  },
+
+  "study": "Study",
+  "@study": {
+    "description": "Title for the study screen when no set title is available"
+  },
+  "editSet": "Edit this flashcard set",
+  "@editSet": {
+    "description": "Tooltip for edit button in study screen"
+  },
+  "markForReview": "Mark for review",
+  "@markForReview": {
+    "description": "Tooltip for bookmark button in study screen"
+  },
+  "editSetMenuItem": "Edit Set",
+  "@editSetMenuItem": {
+    "description": "Menu item to edit flashcard set"
+  },
+  "previous": "Previous",
+  "@previous": {
+    "description": "Button to go to previous flashcard"
+  },
+  "cardCountFormat": "{current}/{total}",
+  "@cardCountFormat": {
+    "description": "Format for flashcard count indicator",
+    "placeholders": {
+      "current": {
+        "type": "int",
+        "example": "3"
+      },
+      "total": {
+        "type": "int",
+        "example": "10"
+      }
+    }
+  },
+  "processingAnswer": "Processing your answer...",
+  "@processingAnswer": {
+    "description": "Message shown when processing user's answer"
+  },
+  "gradingAnswer": "Grading your answer...",
+  "@gradingAnswer": {
+    "description": "Message shown during answer grading"
+  },
+  
+  "results": "Results",
+  "@results": {
+    "description": "Title for the results screen"
+  },
+  "question": "Question:",
+  "@question": {
+    "description": "Label for question in results"
+  },
+  "yourAnswerLabel": "Your Answer:",
+  "@yourAnswerLabel": {
+    "description": "Label for user's answer in results"
+  },
+  "correctAnswer": "Correct Answer:",
+  "@correctAnswer": {
+    "description": "Label for correct answer in results"
+  },
+  "systemError": "System Error",
+  "@systemError": {
+    "description": "Label for system error in results"
+  },
+  "yourGrade": "Your Grade",
+  "@yourGrade": {
+    "description": "Label for user's grade in results"
+  },
+  "feedbackLabel": "Feedback:",
+  "@feedbackLabel": {
+    "description": "Label for feedback in results"
+  },
+  "errorMessage": "Error Message:",
+  "@errorMessage": {
+    "description": "Label for error message in results"
+  },
+  "noFeedback": "No feedback available",
+  "@noFeedback": {
+    "description": "Message when no feedback is available"
+  },
+  "improvementSuggestions": "Improvement Suggestions",
+  "@improvementSuggestions": {
+    "description": "Title for improvement suggestions section"
+  },
+  "troubleshootingSteps": "Troubleshooting Steps",
+  "@troubleshootingSteps": {
+    "description": "Title for troubleshooting steps section"
+  },
+  "progressUpdated": "Your progress has been updated!",
+  "@progressUpdated": {
+    "description": "Message when progress has been updated"
+  },
+  "continueButton": "Continue",
+  "@continueButton": {
+    "description": "Button to continue after viewing results"
+  },
+  "tryAgainLater": "Try Again Later",
+  "@tryAgainLater": {
+    "description": "Button to try again later after system error"
   }
 }

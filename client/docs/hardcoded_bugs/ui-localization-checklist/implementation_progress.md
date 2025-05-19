@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document tracks the progress of implementing UI text localization in the FlashMaster application, replacing hardcoded strings with localized references. The implementation follows the [Flutter Internationalization Guide](https://docs.flutter.dev/ui/accessibility-and-localization/internationalization) using the `flutter_localizations` and `intl` packages.
+This document tracks the progress of implementing UI text localization in the FlashMaster application, replacing hardcoded strings with localized references. The implementation follows an English-only approach using the Flutter localization framework. The decision to focus on English-only has simplified the implementation while maintaining a foundation for future internationalization if needed.
 
 ## Task 1: UI Text Localization Implementation Status
 
@@ -11,11 +11,12 @@ This document tracks the progress of implementing UI text localization in the Fl
 - [x] Add Flutter intl package to pubspec.yaml *(May 17, 2025)*
 - [x] Run `flutter pub get` to install dependencies *(May 17, 2025)*
 - [x] Configure MaterialApp with localization delegates *(May 17, 2025)*
-- [x] Set up supported locales (en, es, etc.) *(May 17, 2025)*
+- [x] Set up supported locales (en only) *(May 17, 2025)*
 - [x] Create l10n.yaml configuration file *(May 17, 2025)*
 - [x] Set up localization generation workflow *(May 17, 2025)*
 - [x] Create base AppLocalizations class structure *(May 17, 2025)*
 - [x] Test basic localization setup *(May 17, 2025)*
+- [x] Update l10n.yaml with preferred-supported-locales: [en] *(May 19, 2025)*
 
 ### 1.2 Extract text strings from home screen ✅
 
@@ -50,19 +51,21 @@ This document tracks the progress of implementing UI text localization in the Fl
 - [x] Replace screen title and instructions *(May 19, 2025)*
 - [x] Replace button labels and status messages *(May 19, 2025)*
 - [x] Test all interview screens with localized strings *(May 19, 2025)*
+- [x] Remove language switcher and focus on English-only implementation *(May 19, 2025)*
 
-## 1.4 Extract text strings from study screens
+## 1.4 Extract text strings from study screens ✅
 
-- [ ] Identify all hardcoded strings in study_screen.dart
-- [ ] Add study screen string keys and values to ARB file
-- [ ] Replace screen title and navigation text
-- [ ] Replace button labels ("Show Answer", "Next", "Previous")
-- [ ] Replace status messages and progress indicators
-- [ ] Identify all hardcoded strings in result_screen.dart
-- [ ] Replace result titles and score descriptions
-- [ ] Replace feedback messages and suggestions
-- [ ] Replace button labels ("Try Again", "Return to Deck")
-- [ ] Test all study screens with localized strings
+- [x] Identify all hardcoded strings in study_screen.dart *(May 18, 2025)*
+- [x] Add study screen string keys and values to ARB file *(May 18, 2025)*
+- [x] Replace screen title and navigation text *(May 18, 2025)*
+- [x] Replace button labels ("Show Answer", "Next", "Previous") *(May 18, 2025)*
+- [x] Replace status messages and progress indicators *(May 18, 2025)*
+- [x] Identify all hardcoded strings in result_screen.dart *(May 18, 2025)*
+- [x] Replace result titles and score descriptions *(May 18, 2025)*
+- [x] Replace feedback messages and suggestions *(May 18, 2025)*
+- [x] Replace button labels (fixed "continue" keyword issue) *(May 19, 2025)*
+- [x] Test all study screens with localized strings *(May 19, 2025)*
+- [x] Fix Dart reserved keyword "continue" by renaming to "continueButton" *(May 19, 2025)*
 
 ## 1.5 Extract text strings from common widgets
 
@@ -78,17 +81,14 @@ This document tracks the progress of implementing UI text localization in the Fl
 - [ ] Replace button labels
 - [ ] Test all common widgets with localized strings
 
-## 1.6 Add default English localization
+## 1.6 Implement English-only localization ✅
 
-- [ ] Ensure all extracted strings have proper English translations
-- [ ] Review string naming conventions for consistency
-- [ ] Verify pluralization rules are correctly implemented
-- [ ] Check all interpolated values for proper formatting
-- [ ] Add metadata to ARB file (@@locale, @@context, etc.)
-- [ ] Add descriptions for translators
-- [ ] Run string extraction tool to verify coverage
-- [ ] Test all screens with English localization
-- [ ] Create documentation for adding new strings
+- [x] Remove Spanish localization files (app_es.arb, app_localizations_es.dart) *(May 19, 2025)*
+- [x] Remove LocaleProvider and LocaleSwitcher components *(May 19, 2025)*
+- [x] Update l10n.yaml to specify English as the only preferred locale *(May 19, 2025)*
+- [x] Set fixed locale and supportedLocales in MaterialApp to English only *(May 19, 2025)*
+- [x] Ensure all extracted strings have proper English translations *(May 19, 2025)*
+- [x] Test all screens with English localization *(May 19, 2025)*
 
 ## 1.7 Create localization testing mechanism
 
@@ -105,12 +105,24 @@ This document tracks the progress of implementing UI text localization in the Fl
 
 ### Challenges Encountered
 
-1. **Import Path Issue**:
+1. **Dart Reserved Keyword Conflict**:
+   - The key "continue" in the ARB file caused compilation errors as it's a reserved keyword in Dart
+   - Fixed by renaming the key to "continueButton" in app_en.arb and all references in code
+   - Added clear comments in the code explaining the reason for this naming convention
+   - This highlights the importance of checking string keys against language keywords
+
+2. **Multi-language vs English-only Decision**:
+   - Initially set up with both English and Spanish support, causing warnings about untranslated messages
+   - Refactored to focus on English-only implementation by removing Spanish files and related components
+   - Simplified the l10n.yaml configuration with `preferred-supported-locales: [en]`
+   - This decision balanced immediate development needs with maintaining a foundation for future expansion
+
+3. **Import Path Issue**:
    - Initially imported `../l10n/app_localizations.dart` which caused null errors
    - Changed to `package:flutter_gen/gen_l10n/app_localizations.dart` to use the correct generated file
    - This fixed the "Unexpected null value" error that was occurring
 
-2. **Day Abbreviations Optimization**:
+4. **Day Abbreviations Optimization**:
    - Instead of creating an array of localized strings that would be recreated on every build:
    ```dart
    [
@@ -133,9 +145,29 @@ This document tracks the progress of implementing UI text localization in the Fl
    }
    ```
 
+5. **Flutter Gen Deprecation Warning**:
+   - Encountered warning about synthetic package output being deprecated
+   - Noted that the approach will need to be updated in the future following Flutter recommendations
+   - This has been added to the project roadmap for a future refactoring task
+
 ### Key Changes Made
 
-1. **Import Changes**:
+1. **ARB File Changes**:
+   ```json
+   // Before
+   "continue": "Continue",
+   
+   // After
+   "continueButton": "Continue",
+   ```
+
+2. **File Removals**:
+   - Removed app_es.arb
+   - Removed app_localizations_es.dart
+   - Removed locale_provider.dart
+   - Removed locale_switcher.dart
+
+3. **Import Changes**:
    ```dart
    // Before
    import '../l10n/app_localizations.dart'
@@ -144,7 +176,7 @@ This document tracks the progress of implementing UI text localization in the Fl
    import 'package:flutter_gen/gen_l10n/app_localizations.dart'
    ```
 
-2. **Text Replacements**:
+4. **Text Replacements**:
    ```dart
    // Before
    Text('Data Science Interview Questions')
@@ -154,32 +186,31 @@ This document tracks the progress of implementing UI text localization in the Fl
         AppLocalizations.of(context).interviewQuestions)
    ```
 
-3. **Pluralization Implementation**:
+5. **Reserved Keyword Handling**:
    ```dart
    // Before
-   Text('64 questions total')
+   child: Text(isSystemError ? 'Try Again Later' : 'Continue')
    
    // After
-   Text(AppLocalizations.of(context).questionCount(64))
-   ```
-
-4. **Interpolation Implementation**:
-   ```dart
-   // Before
-   Text('Weekly Goal: $_daysCompleted/$_weeklyGoal days')
-   
-   // After
-   Text(AppLocalizations.of(context).weeklyGoalFormat(_daysCompleted, _weeklyGoal))
+   child: Text(isSystemError 
+     ? AppLocalizations.of(context).tryAgainLater 
+     : L10nExt.of(context).continueButton)
    ```
 
 ## Next Steps
 
-1. Complete Task 1.3: Extract text strings from interview screens
-2. Proceed with the remaining tasks in the localization checklist
-3. Implement testing across multiple locales to ensure proper display
+1. Complete Task 1.5: Extract text strings from common widgets
+2. Complete Task 1.7: Create localization testing mechanism
+3. Address the Flutter Gen deprecation warning
+4. Update project documentation to reflect the English-only decision
+5. Create guidelines for adding new localized strings
 
 ## References
 
 - [Flutter Internationalization Guide](https://docs.flutter.dev/ui/accessibility-and-localization/internationalization)
 - [Intl Package Documentation](https://pub.dev/packages/intl)
 - [Implementation Plan Document](../ui_hardcoded_values_implementation_plan.md)
+- [Flutter Gen Deprecation Notice](https://flutter.dev/to/flutter-gen-deprecation)
+- [Task 1.3 Implementation Notes](task_1.3.md)
+- [Task 1.4 Implementation Notes](task_1.4.md)
+- [English-Only Implementation](english_only_implementation.md)
