@@ -67,19 +67,19 @@ This document tracks the progress of implementing UI text localization in the Fl
 - [x] Test all study screens with localized strings *(May 19, 2025)*
 - [x] Fix Dart reserved keyword "continue" by renaming to "continueButton" *(May 19, 2025)*
 
-## 1.5 Extract text strings from common widgets
+## 1.5 Extract text strings from common widgets ✅
 
-- [ ] Identify all hardcoded strings in app_header.dart
-- [ ] Add common widget string keys and values to ARB file
-- [ ] Replace app title and navigation labels
-- [ ] Replace menu items and tooltips
-- [ ] Identify all hardcoded strings in flashcard_deck_card.dart
-- [ ] Replace status indicators ("New", "In Progress", "Completed")
-- [ ] Replace count labels ("{count} cards")
-- [ ] Identify all hardcoded strings in create_deck_card.dart
-- [ ] Replace card title and instruction text
-- [ ] Replace button labels
-- [ ] Test all common widgets with localized strings
+- [x] Identify all hardcoded strings in app_header.dart *(May 19, 2025)*
+- [x] Add common widget string keys and values to ARB file *(May 19, 2025)*
+- [x] Replace app title and navigation labels *(May 19, 2025)*
+- [x] Replace menu items and tooltips *(May 19, 2025)*
+- [x] Identify all hardcoded strings in flashcard_deck_card.dart *(May 19, 2025)*
+- [x] Replace status indicators ("New", "In Progress", "Completed") *(May 19, 2025)*
+- [x] Replace count labels ("{count} cards") *(May 19, 2025)*
+- [x] Identify all hardcoded strings in create_deck_card.dart *(May 19, 2025)*
+- [x] Replace card title and instruction text *(May 19, 2025)*
+- [x] Replace button labels *(May 19, 2025)*
+- [x] Test all common widgets with localized strings *(May 19, 2025)*
 
 ## 1.6 Implement English-only localization ✅
 
@@ -150,6 +150,12 @@ This document tracks the progress of implementing UI text localization in the Fl
    - Noted that the approach will need to be updated in the future following Flutter recommendations
    - This has been added to the project roadmap for a future refactoring task
 
+6. **Code Quality Issues with Imports and Widgets**:
+   - After localization implementation, encountered unused import warnings
+   - Fixed by removing unnecessary extension imports in files that only use AppLocalizations directly
+   - Encountered a widget type mixup (using Text instead of Icon) in menu item construction
+   - This highlights the importance of static analysis and thorough testing after refactoring
+
 ### Key Changes Made
 
 1. **ARB File Changes**:
@@ -197,13 +203,22 @@ This document tracks the progress of implementing UI text localization in the Fl
      : L10nExt.of(context).continueButton)
    ```
 
+6. **Widget Text Localization**:
+   ```dart
+   // Before
+   Text('${widget.cardCount} cards')
+   
+   // After
+   Text(AppLocalizations.of(context).cardsCount(widget.cardCount))
+   ```
+
 ## Next Steps
 
-1. Complete Task 1.5: Extract text strings from common widgets
-2. Complete Task 1.7: Create localization testing mechanism
-3. Address the Flutter Gen deprecation warning
-4. Update project documentation to reflect the English-only decision
-5. Create guidelines for adding new localized strings
+1. Complete Task 1.7: Create localization testing mechanism
+2. Address the Flutter Gen deprecation warning
+3. Update project documentation to reflect the English-only decision
+4. Create guidelines for adding new localized strings
+5. Document the complete localization process
 
 ## References
 

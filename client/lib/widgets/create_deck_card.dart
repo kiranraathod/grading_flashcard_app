@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/app_localizations_extension.dart';
 import '../utils/design_system.dart';
 
 class CreateDeckCard extends StatelessWidget {
@@ -23,7 +24,7 @@ class CreateDeckCard extends StatelessWidget {
               Icon(Icons.add, size: 32, color: Colors.grey.shade400),
               const SizedBox(height: 8),
               Text(
-                'Create New Deck',
+                L10nExt.of(context).createNewDeck,
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               ),
             ],

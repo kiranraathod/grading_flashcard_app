@@ -34,6 +34,23 @@ extension AppLocalizationsExtension on AppLocalizations {
   // Note: 'continue' is a reserved keyword in Dart, so using a different name
   String get continueButton => 'Continue';
   String get tryAgainLater => 'Try Again Later';
+  
+  // Common widget strings
+  String get search => 'Search';
+  String get achievements => 'Achievements';
+  String get profile => 'Profile';
+  String get settings => 'Settings';
+  String get logout => 'Logout';
+  
+  // Format methods for card counts and progress
+  String cardsCount(int count) => '$count cards';
+  String progressPercent(int progress) => '$progress% complete';
+  String updatedTimeAgo(String time) => 'Updated $time ago';
+  
+  // Button text for flashcard decks
+  String get startLearning => 'Start Learning';
+  String get createNewDeck => 'Create New Deck';
+  // Note: practiceQuestions is already defined in the ARB file
 }
 
 // Helper class for localization access - alternative to extension methods
@@ -73,6 +90,24 @@ class L10nExt {
   // Note: 'continue' is a reserved keyword in Dart, so using a different name
   String get continueButton => 'Continue';
   String get tryAgainLater => _l10n.tryAgainLater;
+  
+  // Common widget strings
+  String get search => _l10n.search;
+  String get achievements => _l10n.achievements;
+  String get profile => _l10n.profile;
+  String get settings => _l10n.settings;
+  String get logout => _l10n.logout;
+  
+  // Format methods for card counts and progress
+  String cardsCount(int count) => _l10n.cardsCount(count);
+  String progressPercent(int progress) => _l10n.progressPercent(progress);
+  String updatedTimeAgo(String time) => _l10n.updatedTimeAgo(time);
+  
+  // Button text for flashcard decks
+  String get startLearning => _l10n.startLearning;
+  String get createNewDeck => _l10n.createNewDeck;
+  String get practiceQuestions => _l10n.practiceQuestions;
+  String get notStarted => _l10n.notStarted;
   
   // Factory to create from context
   static L10nExt of(BuildContext context) {

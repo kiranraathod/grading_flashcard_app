@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/theme_utils.dart';
 import 'themed_gradient_container.dart';
 
@@ -138,13 +139,13 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                     children: [
                       Text(
                         widget.isStudyDeck
-                            ? '${widget.cardCount} cards'
-                            : '${widget.cardCount} questions',
+                            ? AppLocalizations.of(context).cardsCount(widget.cardCount)
+                            : AppLocalizations.of(context).questionCount(widget.cardCount),
                         style: context.bodySmall,
                       ),
                       if (!widget.isStudyDeck)
                         Text(
-                          'Updated 2d ago',
+                          AppLocalizations.of(context).updatedTimeAgo('2d'),
                           style: context.labelSmall,
                         ),
                     ],
@@ -183,8 +184,8 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                   const SizedBox(height: 4),
                   Text(
                     widget.progressPercent > 0 
-                        ? '${widget.progressPercent}% complete' 
-                        : 'Not started',
+                        ? AppLocalizations.of(context).progressPercent(widget.progressPercent)
+                        : AppLocalizations.of(context).notStarted,
                     style: context.bodySmall?.copyWith(
                       color: widget.progressPercent > 0
                           ? context.primaryColor
@@ -226,7 +227,7 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      widget.isStudyDeck ? 'Start Learning' : 'Practice Questions',
+                      widget.isStudyDeck ? AppLocalizations.of(context).startLearning : AppLocalizations.of(context).practiceQuestions,
                       style: context.bodySmall,
                     ),
                   ),

@@ -116,7 +116,7 @@ class _AppHeaderState extends State<AppHeader> {
                           fontSize: 16,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Search',
+                          hintText: AppLocalizations.of(context).search,
                           hintStyle: TextStyle(
                             color: context.isDarkMode 
                                 ? Colors.white.withValues(alpha: 0.5)
@@ -170,7 +170,7 @@ class _AppHeaderState extends State<AppHeader> {
                   color: context.onSurfaceVariantColor,
                   size: 20,
                 ),
-                tooltip: 'Achievements',
+                tooltip: AppLocalizations.of(context).achievements,
               ),
               
               const SizedBox(width: 8),
@@ -211,7 +211,7 @@ class _AppHeaderState extends State<AppHeader> {
                       children: [
                         const Icon(Icons.person_outline, size: 18),
                         const SizedBox(width: 8),
-                        const Text('Profile'),
+                        Text(AppLocalizations.of(context).profile),
                       ],
                     ),
                   ),
@@ -221,7 +221,7 @@ class _AppHeaderState extends State<AppHeader> {
                       children: [
                         const Icon(Icons.settings_outlined, size: 18),
                         const SizedBox(width: 8),
-                        const Text('Settings'),
+                        Text(AppLocalizations.of(context).settings),
                       ],
                     ),
                   ),
@@ -232,7 +232,7 @@ class _AppHeaderState extends State<AppHeader> {
                       children: [
                         const Icon(Icons.logout_outlined, size: 18),
                         const SizedBox(width: 8),
-                        const Text('Logout'),
+                        Text(AppLocalizations.of(context).logout),
                       ],
                     ),
                   ),

@@ -514,5 +514,70 @@
   "tryAgainLater": "Try Again Later",
   "@tryAgainLater": {
     "description": "Button to try again later after system error"
+  },
+  
+  "search": "Search",
+  "@search": {
+    "description": "Placeholder text for search field"
+  },
+  "achievements": "Achievements",
+  "@achievements": {
+    "description": "Tooltip for achievements button"
+  },
+  "profile": "Profile",
+  "@profile": {
+    "description": "Profile menu item"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Settings menu item"
+  },
+  "logout": "Logout",
+  "@logout": {
+    "description": "Logout menu item"
+  },
+  
+  "cardsCount": "{count} cards",
+  "@cardsCount": {
+    "description": "Number of cards in a flashcard deck",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "progressPercent": "{progress}% complete",
+  "@progressPercent": {
+    "description": "Progress percentage display",
+    "placeholders": {
+      "progress": {
+        "type": "int",
+        "example": "75"
+      }
+    }
+  },
+  "updatedTimeAgo": "Updated {time} ago",
+  "@updatedTimeAgo": {
+    "description": "Time since last update with time parameter",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "2d"
+      }
+    }
+  },
+  "startLearning": "Start Learning",
+  "@startLearning": {
+    "description": "Button to start learning a flashcard deck"
+  },
+  "practiceQuestions": "Practice Questions",
+  "@practiceQuestions": {
+    "description": "Button to practice interview questions"
+  },
+  
+  "createNewDeck": "Create New Deck",
+  "@createNewDeck": {
+    "description": "Text for create new deck card"
   }
 }
