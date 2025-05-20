@@ -4,9 +4,6 @@ import '../models/interview_question.dart';
 import '../services/interview_service.dart';
 import '../utils/colors.dart';
 import '../utils/category_mapper.dart';
-import '../widgets/multi_action_fab.dart';
-import 'create_flashcard_screen.dart';
-import 'job_description_question_generator_screen.dart';
 
 class CreateInterviewQuestionScreen extends StatefulWidget {
   final InterviewQuestion? questionToEdit;
@@ -259,36 +256,7 @@ class _CreateInterviewQuestionScreenState
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      floatingActionButton: _currentStep == 3 ? null : MultiActionFab(
-        backgroundColor: Colors.green,
-        tooltip: 'Create new content',
-        options: [
-          MultiActionFabOption(
-            label: 'Create Flashcards',
-            icon: Icons.style,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CreateFlashcardScreen(),
-                ),
-              );
-            },
-          ),
-          MultiActionFabOption(
-            label: 'Generate from Job Description',
-            icon: Icons.description,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const JobDescriptionQuestionGeneratorScreen(),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+      // FAB removed from all steps
       body: Column(
         children: [
           // Steps indicator

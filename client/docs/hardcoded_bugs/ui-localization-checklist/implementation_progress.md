@@ -90,16 +90,6 @@ This document tracks the progress of implementing UI text localization in the Fl
 - [x] Ensure all extracted strings have proper English translations *(May 19, 2025)*
 - [x] Test all screens with English localization *(May 19, 2025)*
 
-## 1.7 Create localization testing mechanism
-
-- [ ] Set up pseudo-localization for testing
-- [ ] Create a mock locale that expands text length (~30% longer)
-- [ ] Create a mock locale that uses non-Latin characters
-- [ ] Add visual test for string overflow in alternative languages
-- [ ] Create automated test for missing translations
-- [ ] Implement string length validation
-- [ ] Add UI for switching locales during development
-- [ ] Document localization testing procedures
 
 ## Implementation Notes & Lessons Learned
 
