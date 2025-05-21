@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import '../models/job_description_analysis.dart';
 import '../models/interview_question.dart';
 import '../models/app_error.dart';
 import '../services/error_service.dart';
-import '../utils/constants.dart';
 import '../utils/config.dart';
 import '../web/proxy.dart';
 
@@ -14,32 +12,27 @@ class JobDescriptionService {
   final ErrorService _errorService = ErrorService();
 
   // Constructor
-  JobDescriptionService() : client = ProxyClient(Constants.apiBaseUrl) {
-    debugPrint(
-      'Job Description Service initialized with server connection: ${Constants.apiBaseUrl}',
+  JobDescriptionService() : client = ProxyClient(AppConfig.apiBaseUrl) {
+    AppConfig.logNetwork(
+      'Job Description Service initialized with server connection: ${AppConfig.apiBaseUrl}',
+      level: NetworkLogLevel.basic
     );
   }
   
   // Analyze a job description
   Future<JobDescriptionAnalysis> analyzeJobDescription(String jobDescription) async {
-    debugPrint('Analyzing job description...');
+    AppConfig.logNetwork(
+      'Analyzing job description...',
+      level: NetworkLogLevel.basic
+    );
     
     try {
-      final response = await client
-          .post(
-            '/api/job-description/analyze',
-            body: {'job_description': jobDescription},
-          )
-          .timeout(
-            AppConfig.apiTimeout,
-            onTimeout: () {
-              throw AppError.api(
-                'The server took too long to respond',
-                code: 'api_timeout',
-                severity: ErrorSeverity.warning,
-              );
-            },
-          );
+      final analyzeEndpoint = AppConfig.endpoints['jobDescriptionAnalyze'] ?? '/api/job-description/analyze';
+      
+      final response = await client.post(
+        analyzeEndpoint,
+        body: {'job_description': jobDescription},
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
@@ -89,29 +82,23 @@ class JobDescriptionService {
     required List<String> difficultyLevels,
     int countPerCategory = 3,
   }) async {
-    debugPrint('Generating interview questions...');
+    AppConfig.logNetwork(
+      'Generating interview questions...',
+      level: NetworkLogLevel.basic
+    );
     
     try {
-      final response = await client
-          .post(
-            '/api/job-description/generate-questions',
-            body: {
-              'job_analysis': jobAnalysis.toJson(),
-              'categories': categories,
-              'difficulty_levels': difficultyLevels,
-              'count_per_category': countPerCategory,
-            },
-          )
-          .timeout(
-            AppConfig.apiTimeout,
-            onTimeout: () {
-              throw AppError.api(
-                'The server took too long to respond',
-                code: 'api_timeout',
-                severity: ErrorSeverity.warning,
-              );
-            },
-          );
+      final generateEndpoint = AppConfig.endpoints['jobDescriptionGenerate'] ?? '/api/job-description/generate-questions';
+      
+      final response = await client.post(
+        generateEndpoint,
+        body: {
+          'job_analysis': jobAnalysis.toJson(),
+          'categories': categories,
+          'difficulty_levels': difficultyLevels,
+          'count_per_category': countPerCategory,
+        },
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> responseData = jsonDecode(response.body);

@@ -25,15 +25,15 @@ This document tracks the progress of implementing API Configuration Management i
 - [x] Create helper methods for endpoint URL construction *(May 20, 2025)*
 - [x] Add support for versioned API endpoints *(May 20, 2025)*
 
-### 2.3 Extract network settings ⬜
+### 2.3 Extract network settings ✅
 
-- [ ] Move timeout values from individual services to configuration
-- [ ] Move retry settings to configuration
-- [ ] Create unified network configuration class
-- [ ] Implement connection handling based on environment
-- [ ] Create helper methods for timeout and retry settings
-- [ ] Add support for configurable request logging
-- [ ] Standardize error handling across all API calls
+- [x] Move timeout values from individual services to configuration *(May 20, 2025)*
+- [x] Move retry settings to configuration *(May 20, 2025)*
+- [x] Create unified network configuration class *(May 20, 2025)*
+- [x] Implement connection handling based on environment *(May 20, 2025)*
+- [x] Create helper methods for timeout and retry settings *(May 20, 2025)*
+- [x] Add support for configurable request logging *(May 20, 2025)*
+- [x] Standardize error handling across all API calls *(May 20, 2025)*
 
 ### 2.4 Implement environment switching ⬜
 
@@ -57,7 +57,7 @@ This document tracks the progress of implementing API Configuration Management i
 
 ## Implementation Status
 
-As of May 20, 2025, we have completed the first two major subtasks of the API Configuration Management implementation. This represents significant progress in centralization of API configurations, with a focus on maintainability and environment awareness.
+As of May 20, 2025, we have completed the first three major subtasks of the API Configuration Management implementation. This represents significant progress in centralization of API configurations, with a focus on maintainability and environment awareness.
 
 ### Completed Work
 
@@ -70,202 +70,203 @@ class AppConfig {
   // Private constructor to prevent instantiation
   AppConfig._();
   
-  // Environment
+  // Current environment setting
   static Environment _environment = Environment.dev;
-  
-  // Getter for current environment
   static Environment get environment => _environment;
   
-  // Initialize with specific environment
-  static void initialize(Environment env) {
-    _environment = env;
-    _loadEnvironmentSettings();
-  }
+  // Network configuration
+  static Duration apiTimeout = const Duration(seconds: 60);
+  static int maxRetryAttempts = 3;
+  static Duration retryDelay = const Duration(seconds: 2);
+  static NetworkLogLevel networkLogLevel = NetworkLogLevel.basic;
   
-  // API configuration
-  static late String apiBaseUrl;
-  static late Duration apiTimeout;
-  static late int maxRetryAttempts;
+  // Connection configuration
+  static Duration networkCheckInterval = const Duration(seconds: 30);
+  static Duration connectivityTimeout = const Duration(seconds: 5);
   
   // API endpoints
-  static late Map<String, String> endpoints;
+  static Map<String, String> endpoints = {
+    'grade': '/api/grade',
+    'suggestions': '/api/suggestions',
+    'feedback': '/api/feedback',
+    'interviewGrade': '/api/interview-grade',
+    'interviewGradeBatch': '/api/interview-grade-batch',
+    'jobDescriptionAnalyze': '/api/job-description/analyze',
+    'jobDescriptionGenerate': '/api/job-description/generate-questions',
+    'ping': '/api/ping'
+  };
   
-  // Load settings based on environment
-  static void _loadEnvironmentSettings() {
-    switch (_environment) {
-      case Environment.dev:
-        apiBaseUrl = 'http://localhost:3000';
-        apiTimeout = const Duration(seconds: 60);
-        maxRetryAttempts = 3;
-        _loadEndpoints(isDev: true);
-        break;
-      case Environment.staging:
-        apiBaseUrl = 'https://api.staging.flashmaster.com';
-        apiTimeout = const Duration(seconds: 30);
-        maxRetryAttempts = 2;
-        _loadEndpoints(isDev: false);
-        break;
-      case Environment.prod:
-        apiBaseUrl = 'https://api.flashmaster.com';
-        apiTimeout = const Duration(seconds: 15);
-        maxRetryAttempts = 1;
-        _loadEndpoints(isDev: false);
-        break;
-    }
+  // Helper for timeout with retry functionality
+  static Future<T> withTimeout<T>({
+    required Future<T> Function() operation,
+    Duration? timeout,
+    Future<T> Function()? onTimeout,
+    String context = 'operation',
+  }) async {
+    // Implementation
   }
   
-  // Load API endpoints
-  static void _loadEndpoints({required bool isDev}) {
-    endpoints = {
-      'grade': '/api/grade',
-      'suggestions': '/api/suggestions',
-      'feedback': '/api/feedback',
-      'interviewGrade': '/api/interview-grade',
-      'interviewGradeBatch': '/api/interview-grade-batch',
-      'jobDescriptionAnalyze': '/api/job-description/analyze',
-      'jobDescriptionGenerateQuestions': '/api/job-description/generate-questions',
+  // Helper for retry functionality
+  static Future<T> withRetry<T>({
+    required Future<T> Function() operation,
+    int? maxAttempts,
+    Duration? delay,
+    bool Function(Exception)? retryIf,
+    String context = 'operation',
+  }) async {
+    // Implementation
+  }
+  
+  // Log network activity based on current log level setting
+  static void logNetwork(String message, {NetworkLogLevel level = NetworkLogLevel.basic}) {
+    if (level.index <= networkLogLevel.index) {
+      debugPrint('[Network] $message');
+    }
+  }
+}
+
+// Network log level enum
+enum NetworkLogLevel { none, errors, basic, verbose }
+```
+
+#### ProxyClient Enhancements
+
+The ProxyClient has been enhanced to use the centralized network configuration:
+
+```dart
+class ProxyClient {
+  final String baseUrl;
+
+  ProxyClient(this.baseUrl);
+
+  // POST request with error handling, timeouts, retries, and logging
+  Future<http.Response> post(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    Duration? timeout,
+    int? maxRetries,
+    Duration? retryDelay,
+    Map<String, String>? additionalHeaders,
+  }) async {
+    final uri = Uri.parse('$baseUrl$endpoint');
+    final headers = {
+      ...AppConfig.defaultHeaders,
+      ...?additionalHeaders,
     };
     
-    // Add extra debug endpoints for dev environment
-    if (isDev) {
-      endpoints['debug'] = '/api/debug';
-      endpoints['mockGrade'] = '/api/mock-grade';
-    }
-  }
-  
-  // Testing support
-  static void overrideForTest({
-    Environment? environment,
-    String? apiBaseUrl,
-    Duration? apiTimeout,
-    int? maxRetryAttempts,
-    Map<String, String>? endpoints,
-  }) {
-    if (environment != null) _environment = environment;
-    if (apiBaseUrl != null) AppConfig.apiBaseUrl = apiBaseUrl;
-    if (apiTimeout != null) AppConfig.apiTimeout = apiTimeout;
-    if (maxRetryAttempts != null) AppConfig.maxRetryAttempts = maxRetryAttempts;
-    if (endpoints != null) AppConfig.endpoints = endpoints;
-  }
-  
-  // Reset to default values (for testing)
-  static void resetToDefaults() {
-    _environment = Environment.dev;
-    _loadEnvironmentSettings();
-  }
-}
-
-// Environment enum
-enum Environment {
-  dev,
-  staging,
-  prod,
-}
-```
-
-#### API Service Refactoring
-
-All API services have been updated to use the centralized configuration:
-
-```dart
-// api_service.dart example (excerpt)
-final response = await client
-    .post(
-      AppConfig.endpoints['grade']!,
-      body: {
-        'flashcardId': answer.flashcardId,
-        'question': answer.question,
-        'userAnswer': answer.userAnswer,
-        'correctAnswer': answer.correctAnswer,
-      },
-    )
-    .timeout(
-      AppConfig.apiTimeout,
-      onTimeout: () {
-        debugPrint('API request timed out');
-        final error = AppError.api(
-          'The server took too long to respond',
-          code: 'api_timeout',
-          severity: ErrorSeverity.warning,
-          context: {
-            'endpoint': AppConfig.endpoints['grade'],
-            'timeout': AppConfig.apiTimeout.inSeconds,
+    // Log request based on log level
+    AppConfig.logNetwork(
+      'POST $endpoint - Request: ${jsonEncode(body)}', 
+      level: NetworkLogLevel.verbose
+    );
+    
+    return AppConfig.withRetry<http.Response>(
+      operation: () async {
+        return AppConfig.withTimeout<http.Response>(
+          operation: () async {
+            // Implementation
+          },
+          timeout: timeout ?? AppConfig.apiTimeout,
+          context: 'POST $endpoint',
+          onTimeout: () {
+            // Handle timeout
           },
         );
-        _errorService.reportError(error);
-        throw error;
+      },
+      maxAttempts: maxRetries ?? AppConfig.maxRetryAttempts,
+      delay: retryDelay ?? AppConfig.retryDelay,
+      context: 'POST $endpoint',
+      retryIf: (exception) {
+        // Retry logic
       },
     );
+  }
+  
+  // GET request with the same error handling, timeouts, and retries
+  Future<http.Response> get(...) async {
+    // Implementation
+  }
+}
 ```
 
-#### Environment Detection
+#### Network Service Refactoring
 
-We've implemented environment detection based on build configuration:
+The NetworkService has been updated to use the centralized configuration:
 
 ```dart
-// main.dart (excerpt)
-void main() {
-  // Determine environment based on build configuration
-  final environment = _determineEnvironment();
-  
-  // Initialize the configuration system
-  AppConfig.initialize(environment);
-  
-  runApp(MyApp());
-}
+class NetworkService extends ChangeNotifier {
+  bool _isOnline = false;
+  bool _isServerReachable = false;
+  DateTime _lastCheck = DateTime.now();
+  Timer? _periodicCheck;
 
-Environment _determineEnvironment() {
-  // Use the flavor system in Flutter
-  const flavor = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
-  
-  switch (flavor) {
-    case 'prod':
-      return Environment.prod;
-    case 'staging':
-      return Environment.staging;
-    default:
-      return Environment.dev;
+  // Constructor
+  NetworkService() {
+    // Initial check
+    checkConnectivity();
+    
+    // Periodic check with configurable interval
+    _periodicCheck = Timer.periodic(AppConfig.networkCheckInterval, (timer) {
+      checkConnectivity();
+    });
+    
+    AppConfig.logNetwork(
+      'NetworkService initialized with check interval: ${AppConfig.networkCheckInterval.inSeconds}s',
+      level: NetworkLogLevel.basic
+    );
+  }
+
+  Future<void> checkConnectivity() async {
+    await _checkInternetConnection();
+    if (_isOnline) {
+      await _checkServerConnection();
+    } else {
+      _isServerReachable = false;
+    }
+    
+    _lastCheck = DateTime.now();
+    notifyListeners();
+    
+    AppConfig.logNetwork(
+      'Connectivity check: Online=$_isOnline, ServerReachable=$_isServerReachable',
+      level: NetworkLogLevel.basic
+    );
   }
 }
 ```
 
 ### Challenges Encountered
 
-1. **Service Refactoring Complexity**:
-   - Services had numerous hardcoded references to API endpoints
-   - Required careful search and replace to ensure all endpoints were updated
-   - Needed to update error handling context information as well
+1. **Comprehensive Timeout and Retry Handling**:
+   - Created generic helper methods to standardize timeout and retry behavior
+   - Added support for conditional retries based on error types
+   - Implemented context-aware logging of network operations
 
-2. **Environment-Specific Configuration**:
-   - Initial implementation had hard-to-maintain switch statements
-   - Refactored to use a more extensible configuration loading system
-   - Added capability to override values, which is particularly useful for testing
+2. **Configurable Logging System**:
+   - Added a network-specific logging system with different verbosity levels
+   - Made logging configurable per environment (verbose in dev, errors-only in prod)
+   - Ensured consistent log formatting for better debugging
 
-3. **Constants Class Migration**:
-   - Had to maintain backward compatibility during migration
-   - Updated Constants class to delegate to AppConfig class
-   - Added deprecation warnings to encourage direct AppConfig usage
+3. **API Service Refactoring**:
+   - Updated all service classes to use the new helper methods
+   - Standardized error handling across all API calls
+   - Added better error context information
 
-4. **Testing Infrastructure**:
-   - Modified existing tests to work with the new configuration system
-   - Created mock configurations for testing specific error conditions
-   - Added helper methods for test environment setup and teardown
+4. **Testing Enhancements**:
+   - Added ways to override network settings for specific test scenarios
+   - Implemented network configuration mocking
+   - Created utilities for simulating different network conditions
 
 ## Next Steps
 
-With Tasks 2.1 and 2.2 completed, our next priorities are:
+With Tasks 2.1, 2.2, and 2.3 completed, our next priorities are:
 
-1. **Complete Task 2.3**: Extract all network settings to the configuration system
-   - Move timeout values from individual services
-   - Create a unified network configuration class
-   - Standardize error handling across API calls
-
-2. **Begin Task 2.4**: Implement the environment switching mechanism
+1. **Begin Task 2.4**: Implement the environment switching mechanism
    - Add runtime environment detection logic
    - Create build configuration for different environments
    - Implement visual indicators for non-production environments
 
-3. **Finalize Task 2.5**: Create comprehensive documentation
+2. **Finalize Task 2.5**: Create comprehensive documentation
    - Document all configuration options
    - Create examples for common customization scenarios
    - Develop troubleshooting guides
@@ -277,3 +278,4 @@ With Tasks 2.1 and 2.2 completed, our next priorities are:
 - [API Service Files in Project](../../lib/services/)
 - [Constants File](../../lib/utils/constants.dart)
 - [Current AppConfig](../../lib/utils/config.dart)
+- [Network Settings Implementation](task_2.3.md)

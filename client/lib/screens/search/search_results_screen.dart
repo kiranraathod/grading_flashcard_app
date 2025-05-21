@@ -603,7 +603,8 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> with SingleTi
               context,
               MaterialPageRoute(
                 builder: (context) => FlashcardScreen.fromSet(
-                  flashcardSet: parentDeck,
+                  parentDeck,
+                  key: null,
                   initialCardIndex: cardIndex >= 0 ? cardIndex : 0,
                 ),
               ),

@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import '../models/interview_answer.dart';
 import '../models/app_error.dart';
 import '../services/error_service.dart';
-import '../utils/constants.dart';
 import '../utils/config.dart';
 import '../web/proxy.dart';
 
@@ -13,54 +11,42 @@ class InterviewApiService {
   final ErrorService _errorService = ErrorService();
 
   // Constructor
-  InterviewApiService() : client = ProxyClient(Constants.apiBaseUrl) {
-    debugPrint(
-      'Interview API Service initialized with server connection: ${Constants.apiBaseUrl}',
+  InterviewApiService() : client = ProxyClient(AppConfig.apiBaseUrl) {
+    AppConfig.logNetwork(
+      'Interview API Service initialized with server connection: ${AppConfig.apiBaseUrl}',
+      level: NetworkLogLevel.basic
     );
   }
 
   // Method for grading a single interview answer
   Future<InterviewAnswer> gradeInterviewAnswer(InterviewAnswer answer) async {
-    debugPrint('Grading interview answer: ${answer.questionText} => ${answer.userAnswer}');
-    debugPrint('Category: ${answer.category}, Difficulty: ${answer.difficulty}');
-
+    AppConfig.logNetwork(
+      'Grading interview answer: ${answer.questionText} => ${answer.userAnswer}',
+      level: NetworkLogLevel.verbose
+    );
+    
     try {
-      debugPrint('Making API request to ${Constants.apiBaseUrl}/api/interview-grade');
-      final response = await client
-          .post(
-            '/api/interview-grade',
-            body: {
-              'questionId': answer.questionId,
-              'questionText': answer.questionText,
-              'userAnswer': answer.userAnswer,
-              'category': answer.category,
-              'difficulty': answer.difficulty,
-            },
-          )
-          .timeout(
-            AppConfig.apiTimeout,
-            onTimeout: () {
-              debugPrint('API request timed out');
-              final error = AppError.api(
-                'The server took too long to respond',
-                code: 'api_timeout',
-                severity: ErrorSeverity.warning,
-                context: {
-                  'endpoint': '/api/interview-grade',
-                  'timeout': AppConfig.apiTimeout.inSeconds,
-                },
-              );
-              _errorService.reportError(error);
-              throw error;
-            },
-          );
-
-      debugPrint('API response status: ${response.statusCode}');
+      final interviewGradeEndpoint = AppConfig.endpoints['interviewGrade'] ?? '/api/interview-grade';
+      
+      AppConfig.logNetwork(
+        'Making API request to $interviewGradeEndpoint',
+        level: NetworkLogLevel.basic
+      );
+      
+      final response = await client.post(
+        interviewGradeEndpoint,
+        body: {
+          'questionId': answer.questionId,
+          'questionText': answer.questionText,
+          'userAnswer': answer.userAnswer,
+          'category': answer.category,
+          'difficulty': answer.difficulty,
+        },
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
-        debugPrint('API response data: $responseData');
-
+        
         // Validate response data
         if (validateResponseData(responseData)) {
           return InterviewAnswer(
@@ -74,13 +60,12 @@ class InterviewApiService {
             suggestions: List<String>.from(responseData['suggestions']),
           );
         } else {
-          debugPrint('Invalid response data format, using fallback');
           final error = AppError.api(
             'Invalid response format from server',
             code: 'invalid_response',
             severity: ErrorSeverity.warning,
             context: {
-              'endpoint': '/api/interview-grade',
+              'endpoint': interviewGradeEndpoint,
               'responseData': responseData,
             },
           );
@@ -88,14 +73,13 @@ class InterviewApiService {
           return createFallbackAnswer(answer);
         }
       } else {
-        debugPrint('API error: ${response.statusCode} - ${response.body}');
         final error = AppError.api(
           'Server returned an error',
           code: 'server_error',
           severity: ErrorSeverity.warning,
           details: 'Status code: ${response.statusCode}',
           context: {
-            'endpoint': '/api/interview-grade',
+            'endpoint': interviewGradeEndpoint,
             'statusCode': response.statusCode,
             'responseBody': response.body,
           },
@@ -103,9 +87,7 @@ class InterviewApiService {
         _errorService.reportError(error);
         return createFallbackAnswer(answer);
       }
-    } catch (e, stackTrace) {
-      debugPrint('Error during API call: $e');
-      
+    } catch (e, stackTrace) {      
       // If we already have a structured error, just propagate it
       if (e is AppError) {
         return createFallbackAnswer(answer);
@@ -116,7 +98,7 @@ class InterviewApiService {
         e,
         stackTrace: stackTrace,
         context: {
-          'endpoint': '/api/interview-grade',
+          'endpoint': AppConfig.endpoints['interviewGrade'],
           'questionId': answer.questionId,
           'questionText': answer.questionText,
         },
@@ -128,18 +110,29 @@ class InterviewApiService {
 
   // Method to grade multiple interview answers in a batch
   Future<List<InterviewAnswer>> gradeBatchAnswers(List<InterviewAnswer> answers) async {
-    debugPrint('Grading batch of ${answers.length} interview answers');
+    AppConfig.logNetwork(
+      'Grading batch of ${answers.length} interview answers',
+      level: NetworkLogLevel.basic
+    );
     
     // Filter out empty answers
     final nonEmptyAnswers = answers.where((a) => a.userAnswer.trim().isNotEmpty).toList();
     
     if (nonEmptyAnswers.isEmpty) {
-      debugPrint('No non-empty answers to grade');
+      AppConfig.logNetwork(
+        'No non-empty answers to grade',
+        level: NetworkLogLevel.basic
+      );
       return answers; // Return original answers without grading
     }
 
     try {
-      debugPrint('Making batch API request to ${Constants.apiBaseUrl}/api/interview-grade-batch');
+      final batchEndpoint = AppConfig.endpoints['interviewGradeBatch'] ?? '/api/interview-grade-batch';
+      
+      AppConfig.logNetwork(
+        'Making batch API request to $batchEndpoint',
+        level: NetworkLogLevel.basic
+      );
       
       // Prepare batch request body
       final List<Map<String, dynamic>> requestItems = nonEmptyAnswers.map((answer) => {
@@ -150,34 +143,17 @@ class InterviewApiService {
         'difficulty': answer.difficulty,
       }).toList();
       
-      final response = await client
-          .post(
-            '/api/interview-grade-batch',
-            body: {'answers': requestItems},
-          )
-          .timeout(
-            AppConfig.apiTimeout,
-            onTimeout: () {
-              debugPrint('API batch request timed out');
-              final error = AppError.api(
-                'The server took too long to respond',
-                code: 'api_timeout',
-                severity: ErrorSeverity.warning,
-                context: {
-                  'endpoint': '/api/interview-grade-batch',
-                  'timeout': AppConfig.apiTimeout.inSeconds,
-                },
-              );
-              _errorService.reportError(error);
-              throw error;
-            },
-          );
-
-      debugPrint('Batch API response status: ${response.statusCode}');
+      final response = await client.post(
+        batchEndpoint,
+        body: {'answers': requestItems},
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> responseData = jsonDecode(response.body);
-        debugPrint('Received responses for ${responseData.length} answers');
+        AppConfig.logNetwork(
+          'Received responses for ${responseData.length} answers',
+          level: NetworkLogLevel.verbose
+        );
 
         // Create a map of the original answers by questionId for easy lookup
         final Map<String, InterviewAnswer> answerMap = {
@@ -209,7 +185,10 @@ class InterviewApiService {
           return answerMap[original.questionId] ?? original;
         }).toList();
       } else {
-        debugPrint('API batch error: ${response.statusCode} - ${response.body}');
+        AppConfig.logNetwork(
+          'API batch error: ${response.statusCode} - ${response.body}',
+          level: NetworkLogLevel.errors
+        );
         throw AppError.api(
           'Server returned an error for batch grading',
           code: 'server_error',
@@ -218,12 +197,15 @@ class InterviewApiService {
         );
       }
     } catch (e, stackTrace) {
-      debugPrint('Error during batch API call: $e');
+      AppConfig.logNetwork(
+        'Error during batch API call: $e',
+        level: NetworkLogLevel.errors
+      );
       throw AppError.unknown(
         e,
         stackTrace: stackTrace,
         context: {
-          'endpoint': '/api/interview-grade-batch',
+          'endpoint': AppConfig.endpoints['interviewGradeBatch'],
           'answerCount': nonEmptyAnswers.length,
         },
       );
@@ -236,42 +218,65 @@ class InterviewApiService {
     if (!data.containsKey('score') ||
         !data.containsKey('feedback') ||
         !data.containsKey('suggestions')) {
-      debugPrint('Missing required fields in response data');
+      AppConfig.logNetwork(
+        'Missing required fields in response data',
+        level: NetworkLogLevel.errors
+      );
       return false;
     }
 
     // Validate score is a number between 0 and 100
     final score = data['score'];
     if (score is! num || score < 0 || score > 100) {
-      debugPrint('Invalid score in response: $score');
+      AppConfig.logNetwork(
+        'Invalid score in response: $score',
+        level: NetworkLogLevel.errors
+      );
       return false;
     }
 
     // Validate feedback is a non-empty string
     if (data['feedback'] == null || (data['feedback'] as String).isEmpty) {
-      debugPrint('Missing or empty feedback in response');
+      AppConfig.logNetwork(
+        'Missing or empty feedback in response',
+        level: NetworkLogLevel.errors
+      );
       return false;
     }
 
     // Validate suggestions is a list
     if (data['suggestions'] == null || data['suggestions'] is! List) {
-      debugPrint('Missing or invalid suggestions in response');
+      AppConfig.logNetwork(
+        'Missing or invalid suggestions in response',
+        level: NetworkLogLevel.errors
+      );
       return false;
     }
 
     // Make sure suggestions list is not empty
     if ((data['suggestions'] as List).isEmpty) {
-      debugPrint('Empty suggestions list in response');
+      AppConfig.logNetwork(
+        'Empty suggestions list in response',
+        level: NetworkLogLevel.errors
+      );
       return false;
     }
 
-    debugPrint('Response data validation passed');
+    AppConfig.logNetwork(
+      'Response data validation passed',
+      level: NetworkLogLevel.verbose
+    );
     return true;
   }
 
   // Helper method to create a fallback answer
   InterviewAnswer createFallbackAnswer(InterviewAnswer answer) {
     // Create a fallback answer for when the API call fails
+    AppConfig.logNetwork(
+      'Creating fallback interview answer',
+      level: NetworkLogLevel.basic
+    );
+    
     return InterviewAnswer(
       questionId: answer.questionId,
       questionText: answer.questionText,

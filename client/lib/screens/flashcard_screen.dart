@@ -13,22 +13,21 @@ import 'result_screen.dart';
 class FlashcardScreen extends StatefulWidget {
   final List<Flashcard> flashcards;
   final int initialCardIndex;
+  final String? setTitle; // Optional set title for display
 
   const FlashcardScreen({
     super.key, 
     required this.flashcards,
     this.initialCardIndex = 0,
+    this.setTitle,
   });
-  
-  // Constructor that accepts a FlashcardSet
-  factory FlashcardScreen.fromSet({
-    Key? key,
-    required FlashcardSet flashcardSet,
-    int initialCardIndex = 0,
-  }) {
+
+  // Factory constructor to create from a set
+  static FlashcardScreen fromSet(FlashcardSet set, {Key? key, int initialCardIndex = 0}) {
     return FlashcardScreen(
       key: key,
-      flashcards: flashcardSet.flashcards,
+      flashcards: set.flashcards,
+      setTitle: set.title,
       initialCardIndex: initialCardIndex,
     );
   }
@@ -38,277 +37,177 @@ class FlashcardScreen extends StatefulWidget {
 }
 
 class _FlashcardScreenState extends State<FlashcardScreen> {
-  late PageController _pageController;
-  int _currentIndex = 0;
-  final ApiService _apiService = ApiService();
-  final SpeechToTextService _speechService = SpeechToTextService();
-  bool _isLoading = false;
-  bool _isOfflineMode = false;
-
+  late int _currentIndex;
+  String _userAnswer = '';
+  bool _isSubmitting = false;
+  bool _showAnswer = false;
+  late ApiService _apiService;
+  late SpeechToTextService _speechToTextService;
+  
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialCardIndex;
-    _pageController = PageController(initialPage: widget.initialCardIndex);
-    _speechService.initialize();
-
-    // Check network status
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final networkService = Provider.of<NetworkService>(
-        context,
-        listen: false,
-      );
-      networkService.checkConnectivity();
-    });
   }
-
+  
   @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _apiService = Provider.of<ApiService>(context);
+    _speechToTextService = Provider.of<SpeechToTextService>(context);
   }
 
-  void _navigateToNext() {
-    if (_currentIndex < widget.flashcards.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _navigateToPrevious() {
-    if (_currentIndex > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  void _toggleMarkForReview() {
+  void _nextCard() {
     setState(() {
-      widget.flashcards[_currentIndex].isMarkedForReview =
-          !widget.flashcards[_currentIndex].isMarkedForReview;
+      if (_currentIndex < widget.flashcards.length - 1) {
+        _currentIndex++;
+        _userAnswer = '';
+        _showAnswer = false;
+      }
+    });
+  }  void _previousCard() {
+    setState(() {
+      if (_currentIndex > 0) {
+        _currentIndex--;
+        _userAnswer = '';
+        _showAnswer = false;
+      }
     });
   }
 
-  void _toggleOfflineMode() {
+  void _toggleAnswer() {
     setState(() {
-      _isOfflineMode = !_isOfflineMode;
+      _showAnswer = !_showAnswer;
     });
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isOfflineMode
-              ? 'Offline mode enabled - using local grading'
-              : 'Online mode enabled - using LLM grading',
+  void _handleUserAnswer(String answer) {
+    setState(() {
+      _userAnswer = answer;
+    });
+  }
+
+  Future<void> _submitAnswer() async {
+    if (_userAnswer.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter an answer'),
+          duration: Duration(seconds: 2),
         ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
+      );
+      return;
+    }
 
-  Future<void> _submitAnswer(String userAnswer) async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isSubmitting = true;
+    });
 
     try {
-      // Create initial answer object with correct answer
-      final answer = Answer(
-        flashcardId: widget.flashcards[_currentIndex].id,
-        question: widget.flashcards[_currentIndex].question,
-        userAnswer: userAnswer,
-        correctAnswer: widget.flashcards[_currentIndex].answer, // Added this line
-      );
-
-      // Check network status from provider
-      final networkService = Provider.of<NetworkService>(
-        context,
-        listen: false,
-      );
-      final bool canUseOnlineGrading =
-          networkService.isOnline &&
-          networkService.isServerReachable &&
-          !_isOfflineMode;
-
-      if (canUseOnlineGrading) {
-        // Try online grading
-        try {
-          final gradedAnswer = await _apiService.gradeAnswer(answer);
-
-          if (!mounted) return;
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => ResultScreen(
-                    answer: gradedAnswer,
-                    correctAnswer: widget.flashcards[_currentIndex].answer,
-                    onContinue: () {
-                      Navigator.pop(context);
-                      _navigateToNext();
-                    },
-                  ),
-            ),
-          );
-        } catch (e) {
-          if (!mounted) return;
-
-          // Show LLM not connected error
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'LLM is not connected. Please check your connection and try again.',
-              ),
-              duration: Duration(seconds: 3),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } else {
-        // Show LLM not connected message
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'LLM is not connected. Please check your connection and try again.',
-            ),
-            duration: Duration(seconds: 3),
-            backgroundColor: Colors.red,
-          ),
-        );
+      // Check network connectivity
+      final networkService = Provider.of<NetworkService>(context, listen: false);
+      
+      if (!networkService.isOnline) {
+        // Handle offline mode
+        _toggleAnswer();
+        setState(() {
+          _isSubmitting = false;
+        });
+        return;
       }
+
+      final currentCard = widget.flashcards[_currentIndex];
+      final answer = Answer(
+        flashcardId: currentCard.id,
+        question: currentCard.question,
+        userAnswer: _userAnswer,
+        correctAnswer: currentCard.answer,
+      );
+
+      final gradedAnswer = await _apiService.gradeAnswer(answer);
+      
+      if (!mounted) return;
+      
+      // Navigate to result screen for this card
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ResultScreen(
+            answer: gradedAnswer,
+            correctAnswer: currentCard.answer,
+            onContinue: _nextCard,
+          ),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error submitting answer: $e')));
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      
+      // Fallback to showing the answer directly
+      _toggleAnswer();
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isSubmitting = false;
+        });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Network status from provider
+    final currentCard = widget.flashcards[_currentIndex];
     final networkService = Provider.of<NetworkService>(context);
-    final bool hasConnectivityIssues =
-        !networkService.isOnline || !networkService.isServerReachable;
-
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Flashcards'),
+        title: Text(widget.setTitle ?? 'Flashcards'),
         actions: [
-          // Toggle offline mode button
           IconButton(
-            icon: Icon(_isOfflineMode ? Icons.cloud_off : Icons.cloud),
-            onPressed: _toggleOfflineMode,
-            tooltip:
-                _isOfflineMode
-                    ? 'Switch to online mode'
-                    : 'Switch to offline mode',
-          ),
-
-          // Bookmark button
-          IconButton(
-            icon: Icon(
-              widget.flashcards[_currentIndex].isMarkedForReview
-                  ? Icons.bookmark
-                  : Icons.bookmark_border,
-            ),
-            onPressed: _toggleMarkForReview,
-            tooltip: 'Mark for review',
+            icon: const Icon(Icons.help_outline),
+            onPressed: _toggleAnswer,
+            tooltip: 'Show Answer',
           ),
         ],
       ),
       body: Column(
         children: [
-          // Connectivity banner with updated text
-          if (hasConnectivityIssues && !_isOfflineMode)
-            Container(
-              width: double.infinity,
-              color: Colors.red.shade700,
-              padding: const EdgeInsets.symmetric(
-                vertical: 8.0,
-                horizontal: 16.0,
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.cloud_off, color: Colors.white),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'LLM is not connected. Grading feature unavailable.',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => networkService.checkConnectivity(),
-                    style: TextButton.styleFrom(foregroundColor: Colors.white),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-
-          // Main content
           Expanded(
-            child:
-                _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : Column(
-                      children: [
-                        Expanded(
-                          child: PageView.builder(
-                            controller: _pageController,
-                            onPageChanged: (index) {
-                              setState(() => _currentIndex = index);
-                            },
-                            itemCount: widget.flashcards.length,
-                            itemBuilder: (context, index) {
-                              return FlashcardWidget(
-                                flashcard: widget.flashcards[index],
-                              );
-                            },
-                          ),
-                        ),
-                        AnswerInputWidget(
-                          speechService: _speechService,
-                          onSubmit: _submitAnswer,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              ElevatedButton(
-                                onPressed:
-                                    _currentIndex > 0
-                                        ? _navigateToPrevious
-                                        : null,
-                                child: const Text('Previous'),
-                              ),
-                              Text(
-                                '${_currentIndex + 1}/${widget.flashcards.length}',
-                              ),
-                              ElevatedButton(
-                                onPressed:
-                                    _currentIndex < widget.flashcards.length - 1
-                                        ? _navigateToNext
-                                        : null,
-                                child: const Text('Next'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+            child: FlashcardWidget(
+              flashcard: currentCard,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: _currentIndex > 0 ? _previousCard : null,
+                  tooltip: 'Previous Card',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.arrow_forward),
+                  onPressed: _nextCard,
+                  tooltip: 'Next Card',
+                ),
+              ],
+            ),
+          ),
+          AnswerInputWidget(
+            speechService: _speechToTextService,
+            onSubmit: (value) {
+              _handleUserAnswer(value);
+              _submitAnswer();
+            },
+            isDisabled: _isSubmitting || !networkService.isOnline,
           ),
         ],
       ),

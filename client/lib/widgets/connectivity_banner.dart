@@ -14,32 +14,32 @@ class ConnectivityBanner extends StatelessWidget {
       return const SizedBox.shrink();
     }
     
-    final String message = !networkService.isOnline
-        ? 'No internet connection. Using offline grading.'
-        : 'Cannot reach grading server. Using offline grading.';
+    // Determine message and color based on connectivity state
+    final String message;
+    final Color backgroundColor;
+    
+    if (!networkService.isOnline) {
+      message = 'You are currently offline. Some features may be limited.';
+      backgroundColor = Colors.red.shade700;
+    } else if (!networkService.isServerReachable) {
+      message = 'Cannot connect to server. Using offline mode.';
+      backgroundColor = Colors.orange.shade700;
+    } else {
+      // Should never reach here due to the first condition
+      return const SizedBox.shrink();
+    }
     
     return Container(
       width: double.infinity,
-      color: Colors.amber.shade700,
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      child: Row(
-        children: [
-          const Icon(Icons.wifi_off, color: Colors.white),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-          TextButton(
-            onPressed: () => networkService.checkConnectivity(),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Retry'),
-          ),
-        ],
+      color: backgroundColor,
+      padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 16.0),
+      child: Text(
+        message,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }

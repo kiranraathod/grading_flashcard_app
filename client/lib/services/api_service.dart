@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import '../models/answer.dart' as answer_model;
 import '../models/app_error.dart';
 import '../services/error_service.dart';
-import '../utils/constants.dart';
 import '../utils/config.dart';
 import '../web/proxy.dart';
 
@@ -14,58 +12,49 @@ class ApiService {
   final bool _useLocalGrading = false; // Ensure this is set to false to use the API
 
   // Constructor
-  ApiService() : client = ProxyClient(Constants.apiBaseUrl) {
-    debugPrint(
-      'API Service initialized with server connection: ${Constants.apiBaseUrl}',
+  ApiService() : client = ProxyClient(AppConfig.apiBaseUrl) {
+    AppConfig.logNetwork(
+      'API Service initialized with server connection: ${AppConfig.apiBaseUrl}',
+      level: NetworkLogLevel.basic
     );
   }
 
   Future<answer_model.Answer> gradeAnswer(answer_model.Answer answer) async {
-    debugPrint('Grading answer: ${answer.question} => ${answer.userAnswer}');
-    debugPrint('Correct answer: ${answer.correctAnswer}');  // Log the correct answer
-
+    AppConfig.logNetwork(
+      'Grading answer: ${answer.question} => ${answer.userAnswer}',
+      level: NetworkLogLevel.verbose
+    );
+    
     // Use local grading if requested (for offline mode or debugging)
     if (_useLocalGrading) {
-      debugPrint('Using local grading - skipping API call');
+      AppConfig.logNetwork(
+        'Using local grading - skipping API call',
+        level: NetworkLogLevel.basic
+      );
       return _createSmartFallbackAnswer(answer);
     }
 
     try {
-      debugPrint('Making API request to ${Constants.apiBaseUrl}/api/grade');
-      final response = await client
-          .post(
-            '/api/grade',
-            body: {
-              'flashcardId': answer.flashcardId,
-              'question': answer.question,
-              'userAnswer': answer.userAnswer,
-              'correctAnswer': answer.correctAnswer,
-            },
-          )
-          .timeout(
-            AppConfig.apiTimeout,
-            onTimeout: () {
-              debugPrint('API request timed out');
-              final error = AppError.api(
-                'The server took too long to respond',
-                code: 'api_timeout',
-                severity: ErrorSeverity.warning,
-                context: {
-                  'endpoint': '/api/grade',
-                  'timeout': AppConfig.apiTimeout.inSeconds,
-                },
-              );
-              _errorService.reportError(error);
-              throw error;
-            },
-          );
-
-      debugPrint('API response status: ${response.statusCode}');
+      final gradeEndpoint = AppConfig.endpoints['grade'] ?? '/api/grade';
+      
+      AppConfig.logNetwork(
+        'Making API request to $gradeEndpoint',
+        level: NetworkLogLevel.basic
+      );
+      
+      final response = await client.post(
+        gradeEndpoint,
+        body: {
+          'flashcardId': answer.flashcardId,
+          'question': answer.question,
+          'userAnswer': answer.userAnswer,
+          'correctAnswer': answer.correctAnswer,
+        },
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
-        debugPrint('API response data: $responseData');
-
+        
         // Validate response data
         if (_validateResponseData(responseData)) {
           return answer_model.Answer(
@@ -78,13 +67,12 @@ class ApiService {
             suggestions: List<String>.from(responseData['suggestions']),
           );
         } else {
-          debugPrint('Invalid response data format, using smart fallback');
           final error = AppError.api(
             'Invalid response format from server',
             code: 'invalid_response',
             severity: ErrorSeverity.warning,
             context: {
-              'endpoint': '/api/grade',
+              'endpoint': gradeEndpoint,
               'responseData': responseData,
             },
           );
@@ -92,14 +80,13 @@ class ApiService {
           return _createSmartFallbackAnswer(answer);
         }
       } else {
-        debugPrint('API error: ${response.statusCode} - ${response.body}');
         final error = AppError.api(
           'Server returned an error',
           code: 'server_error',
           severity: ErrorSeverity.warning,
           details: 'Status code: ${response.statusCode}',
           context: {
-            'endpoint': '/api/grade',
+            'endpoint': gradeEndpoint,
             'statusCode': response.statusCode,
             'responseBody': response.body,
           },
@@ -108,8 +95,6 @@ class ApiService {
         return _createSmartFallbackAnswer(answer);
       }
     } catch (e, stackTrace) {
-      debugPrint('Error during API call: $e');
-      
       // If we already have a structured error, just propagate it
       if (e is AppError) {
         return _createSmartFallbackAnswer(answer);
@@ -120,7 +105,7 @@ class ApiService {
         e,
         stackTrace: stackTrace,
         context: {
-          'endpoint': '/api/grade',
+          'endpoint': AppConfig.endpoints['grade'],
           'flashcardId': answer.flashcardId,
           'question': answer.question,
         },
@@ -135,36 +120,54 @@ class ApiService {
     if (!data.containsKey('grade') ||
         !data.containsKey('feedback') ||
         !data.containsKey('suggestions')) {
-      debugPrint('Missing required fields in response data');
+      AppConfig.logNetwork(
+        'Missing required fields in response data',
+        level: NetworkLogLevel.errors
+      );
       return false;
     }
 
     // Validate grade is a valid letter grade
     final validGrades = ['A', 'B', 'C', 'D', 'F', 'X'];  // Added 'X' for system errors
     if (!validGrades.contains(data['grade'])) {
-      debugPrint('Invalid grade in response: ${data['grade']}');
+      AppConfig.logNetwork(
+        'Invalid grade in response: ${data["grade"]}',
+        level: NetworkLogLevel.errors
+      );
       return false;
     }
 
     // Validate feedback is a non-empty string
     if (data['feedback'] == null || (data['feedback'] as String).isEmpty) {
-      debugPrint('Missing or empty feedback in response');
+      AppConfig.logNetwork(
+        'Missing or empty feedback in response',
+        level: NetworkLogLevel.errors
+      );
       return false;
     }
 
     // Validate suggestions is a list
     if (data['suggestions'] == null || data['suggestions'] is! List) {
-      debugPrint('Missing or invalid suggestions in response');
+      AppConfig.logNetwork(
+        'Missing or invalid suggestions in response',
+        level: NetworkLogLevel.errors
+      );
       return false;
     }
 
     // Make sure suggestions list is not empty
     if ((data['suggestions'] as List).isEmpty) {
-      debugPrint('Empty suggestions list in response');
+      AppConfig.logNetwork(
+        'Empty suggestions list in response',
+        level: NetworkLogLevel.errors
+      );
       return false;
     }
 
-    debugPrint('Response data validation passed');
+    AppConfig.logNetwork(
+      'Response data validation passed',
+      level: NetworkLogLevel.verbose
+    );
     return true;
   }
 
@@ -173,9 +176,10 @@ class ApiService {
     final String userAnswer = answer.userAnswer.toLowerCase().trim();
     final String correctAnswer = answer.correctAnswer.toLowerCase().trim();
 
-    debugPrint('Smart fallback grading: comparing user answer with correct answer');
-    debugPrint('User answer: "$userAnswer"');
-    debugPrint('Correct answer: "$correctAnswer"');
+    AppConfig.logNetwork(
+      'Smart fallback grading: comparing user answer with correct answer',
+      level: NetworkLogLevel.basic
+    );
 
     // Different levels of matching for more nuanced grading
     final bool isExactMatch = userAnswer == correctAnswer;
@@ -292,7 +296,7 @@ class ApiService {
       if (userAnswer.contains(keyword)) matchCount++;
     }
     
-    // Return true if at least 30% of key elements are present
+    // Return true if at least the threshold percentage of key elements are present
     return matchCount / correctKeywords.length >= AppConfig.keyElementsMatchThreshold;
   }
 }

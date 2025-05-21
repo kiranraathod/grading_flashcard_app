@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../utils/constants.dart';
+import '../utils/config.dart';
 
 class NetworkService extends ChangeNotifier {
-  bool _isOnline = false; // Start with offline mode for testing
-  bool _isServerReachable = false; // Start with server unreachable for testing
+  bool _isOnline = false;
+  bool _isServerReachable = false;
   DateTime _lastCheck = DateTime.now();
   Timer? _periodicCheck;
 
@@ -17,10 +17,15 @@ class NetworkService extends ChangeNotifier {
     // Initial check
     checkConnectivity();
     
-    // Periodic check every 30 seconds
-    _periodicCheck = Timer.periodic(const Duration(seconds: 30), (timer) {
+    // Periodic check with configurable interval
+    _periodicCheck = Timer.periodic(AppConfig.networkCheckInterval, (timer) {
       checkConnectivity();
     });
+    
+    AppConfig.logNetwork(
+      'NetworkService initialized with check interval: ${AppConfig.networkCheckInterval.inSeconds}s',
+      level: NetworkLogLevel.basic
+    );
   }
 
   Future<void> checkConnectivity() async {
@@ -33,20 +38,32 @@ class NetworkService extends ChangeNotifier {
     
     _lastCheck = DateTime.now();
     notifyListeners();
+    
+    AppConfig.logNetwork(
+      'Connectivity check: Online=$_isOnline, ServerReachable=$_isServerReachable',
+      level: NetworkLogLevel.basic
+    );
   }
 
   Future<void> _checkInternetConnection() async {
     try {
-      // Use our own backend for connectivity check instead of Google
-      // This avoids CORS issues when running in a web browser
+      // Use our own backend for connectivity check
+      final pingEndpoint = AppConfig.endpoints['ping'] ?? '/api/ping';
       final response = await http.get(
-        Uri.parse('${Constants.apiBaseUrl}/api/ping'),
-      ).timeout(const Duration(seconds: 5));
+        Uri.parse('${AppConfig.apiBaseUrl}$pingEndpoint'),
+      ).timeout(AppConfig.connectivityTimeout);
       
       _isOnline = response.statusCode >= 200 && response.statusCode < 300;
-      debugPrint('Internet connectivity: $_isOnline');
+      
+      AppConfig.logNetwork(
+        'Internet connectivity check: $_isOnline (${response.statusCode})',
+        level: NetworkLogLevel.verbose
+      );
     } catch (e) {
-      debugPrint('Internet connectivity check failed: $e');
+      AppConfig.logNetwork(
+        'Internet connectivity check failed: $e',
+        level: NetworkLogLevel.errors
+      );
       _isOnline = false;
     }
   }
@@ -55,13 +72,20 @@ class NetworkService extends ChangeNotifier {
     try {
       // Check if API server is reachable and responsive
       final response = await http.get(
-        Uri.parse('${Constants.apiBaseUrl}/'),
-      ).timeout(const Duration(seconds: 5));
+        Uri.parse('${AppConfig.apiBaseUrl}/'),
+      ).timeout(AppConfig.connectivityTimeout);
       
       _isServerReachable = response.statusCode >= 200 && response.statusCode < 300;
-      debugPrint('Server connectivity: $_isServerReachable (${response.statusCode})');
+      
+      AppConfig.logNetwork(
+        'Server connectivity check: $_isServerReachable (${response.statusCode})',
+        level: NetworkLogLevel.verbose
+      );
     } catch (e) {
-      debugPrint('Server connectivity check failed: $e');
+      AppConfig.logNetwork(
+        'Server connectivity check failed: $e',
+        level: NetworkLogLevel.errors
+      );
       _isServerReachable = false;
     }
   }
@@ -71,6 +95,11 @@ class NetworkService extends ChangeNotifier {
     _isOnline = !enabled;
     _isServerReachable = !enabled;
     notifyListeners();
+    
+    AppConfig.logNetwork(
+      'Manual connectivity override: Online=$_isOnline, ServerReachable=$_isServerReachable',
+      level: NetworkLogLevel.basic
+    );
   }
 
   @override
