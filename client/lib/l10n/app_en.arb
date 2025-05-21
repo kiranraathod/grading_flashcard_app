@@ -579,5 +579,34 @@
   "createNewDeck": "Create New Deck",
   "@createNewDeck": {
     "description": "Text for create new deck card"
+  },
+  
+  "submitToTrackProgress": "Submit your answer to track your progress",
+  "@submitToTrackProgress": {
+    "description": "Hint text about progress tracking in answer input widget"
+  },
+  "typeYourAnswer": "Type your answer...",
+  "@typeYourAnswer": {
+    "description": "Placeholder for answer input field"
+  },
+  "stopListening": "Stop listening",
+  "@stopListening": {
+    "description": "Tooltip for stop listening button in speech to text"
+  },
+  "startSpeechToText": "Start speech to text",
+  "@startSpeechToText": {
+    "description": "Tooltip for start speech to text button"
+  },
+  "submitAnswerUpdateProgress": "Submit Answer to Update Progress",
+  "@submitAnswerUpdateProgress": {
+    "description": "Button text to submit answer and update progress"
+  },
+  "offlineMessage": "You are currently offline. Some features may be limited.",
+  "@offlineMessage": {
+    "description": "Message displayed when device is offline"
+  },
+  "serverConnectionError": "Cannot connect to server. Using offline mode.",
+  "@serverConnectionError": {
+    "description": "Message displayed when server is unreachable"
   }
 }

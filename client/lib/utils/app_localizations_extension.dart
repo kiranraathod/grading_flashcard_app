@@ -51,6 +51,17 @@ extension AppLocalizationsExtension on AppLocalizations {
   String get startLearning => 'Start Learning';
   String get createNewDeck => 'Create New Deck';
   // Note: practiceQuestions is already defined in the ARB file
+  
+  // Answer input widget strings
+  String get submitToTrackProgress => 'Submit your answer to track your progress';
+  String get typeYourAnswer => 'Type your answer...';
+  String get stopListening => 'Stop listening';
+  String get startSpeechToText => 'Start speech to text';
+  String get submitAnswerUpdateProgress => 'Submit Answer to Update Progress';
+  
+  // Connectivity banner strings
+  String get offlineMessage => 'You are currently offline. Some features may be limited.';
+  String get serverConnectionError => 'Cannot connect to server. Using offline mode.';
 }
 
 // Helper class for localization access - alternative to extension methods
@@ -108,6 +119,17 @@ class L10nExt {
   String get createNewDeck => _l10n.createNewDeck;
   String get practiceQuestions => _l10n.practiceQuestions;
   String get notStarted => _l10n.notStarted;
+  
+  // Answer input widget strings
+  String get submitToTrackProgress => _l10n.submitToTrackProgress;
+  String get typeYourAnswer => _l10n.typeYourAnswer;
+  String get stopListening => _l10n.stopListening;
+  String get startSpeechToText => _l10n.startSpeechToText;
+  String get submitAnswerUpdateProgress => _l10n.submitAnswerUpdateProgress;
+  
+  // Connectivity banner strings
+  String get offlineMessage => _l10n.offlineMessage;
+  String get serverConnectionError => _l10n.serverConnectionError;
   
   // Factory to create from context
   static L10nExt of(BuildContext context) {

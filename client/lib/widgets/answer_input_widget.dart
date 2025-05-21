@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/speech_to_text_service.dart';
 import '../utils/colors.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class AnswerInputWidget extends StatefulWidget {
   final SpeechToTextService speechService;
@@ -90,7 +91,7 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Submit your answer to track your progress',
+                    AppLocalizations.of(context).submitToTrackProgress,
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.blue.shade700,
@@ -106,8 +107,8 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
               Expanded(
                 child: TextField(
                   controller: _controller,
-                  decoration: const InputDecoration(
-                    hintText: 'Type your answer...',
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(context).typeYourAnswer,
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 3,
@@ -128,7 +129,9 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
                       ? null 
                       : (_isListening ? _stopListening : _startListening),
                   tooltip:
-                      _isListening ? 'Stop listening' : 'Start speech to text',
+                      _isListening 
+                        ? AppLocalizations.of(context).stopListening 
+                        : AppLocalizations.of(context).startSpeechToText,
                 ),
             ],
           ),
@@ -141,7 +144,7 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
               foregroundColor: Colors.white,
             ),
             icon: const Icon(Icons.send),
-            label: const Text('Submit Answer to Update Progress'),
+            label: Text(AppLocalizations.of(context).submitAnswerUpdateProgress),
           ),
         ],
       ),

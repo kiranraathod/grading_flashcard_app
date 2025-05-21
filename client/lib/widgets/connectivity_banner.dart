@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/network_service.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ConnectivityBanner extends StatelessWidget {
   const ConnectivityBanner({super.key});
@@ -19,10 +20,10 @@ class ConnectivityBanner extends StatelessWidget {
     final Color backgroundColor;
     
     if (!networkService.isOnline) {
-      message = 'You are currently offline. Some features may be limited.';
+      message = AppLocalizations.of(context).offlineMessage;
       backgroundColor = Colors.red.shade700;
     } else if (!networkService.isServerReachable) {
-      message = 'Cannot connect to server. Using offline mode.';
+      message = AppLocalizations.of(context).serverConnectionError;
       backgroundColor = Colors.orange.shade700;
     } else {
       // Should never reach here due to the first condition

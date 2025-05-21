@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class SearchBarWidget extends StatelessWidget {
   const SearchBarWidget({super.key});
@@ -21,7 +22,7 @@ class SearchBarWidget extends StatelessWidget {
       ),
       child: TextField(
         decoration: InputDecoration(
-          hintText: 'Search',
+          hintText: AppLocalizations.of(context).search,
           hintStyle: TextStyle(
             color: Colors.grey.shade400,
             fontSize: 16,
