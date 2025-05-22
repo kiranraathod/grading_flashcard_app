@@ -247,4 +247,55 @@ extension ResponsiveContext on BuildContext {
               : 1024,
     );
   }
+  
+  /// Get card column count for current screen
+  int get cardColumnCount => DS.getCardColumnCountForContext(this);
+  
+  /// Get effective width accounting for padding
+  double getEffectiveWidth({double horizontalPadding = 0}) {
+    return screenWidth - horizontalPadding;
+  }
+  
+  /// Get responsive value using design system breakpoints
+  T responsiveValue<T>({
+    required T xs,
+    T? sm,
+    T? md,
+    T? lg,
+    T? xl,
+  }) {
+    return DS.responsiveValue(this, xs: xs, sm: sm, md: md, lg: lg, xl: xl);
+  }
+  
+  /// Get responsive grid delegate with optimal defaults
+  SliverGridDelegateWithFixedCrossAxisCount get responsiveGridDelegate {
+    return ResponsiveHelpers.getResponsiveGridDelegate(this);
+  }
+  
+  /// Get responsive grid delegate for card layouts
+  SliverGridDelegateWithFixedCrossAxisCount getCardGridDelegate({
+    double? childAspectRatio,
+    double? crossAxisSpacing,
+    double? mainAxisSpacing,
+  }) {
+    final columnCount = cardColumnCount;
+    final spacing = orientationAwareSpacing;
+    
+    return SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: columnCount,
+      childAspectRatio: childAspectRatio ?? (isPhone ? 1.0 : 1.2),
+      crossAxisSpacing: crossAxisSpacing ?? spacing,
+      mainAxisSpacing: mainAxisSpacing ?? spacing,
+    );
+  }
+  
+  /// Get orientation-aware spacing
+  double get orientationAwareSpacing {
+    if (isLandscape && isPhone) {
+      return DS.spacingS; // Reduce spacing in landscape phone mode
+    } else if (isLandscape && isTablet) {
+      return DS.spacingL; // Increase spacing in landscape tablet mode
+    }
+    return isPhone ? DS.spacingM : (isTablet ? DS.spacingL : DS.spacingXl);
+  }
 }

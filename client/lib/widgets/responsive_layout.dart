@@ -153,3 +153,121 @@ class BreakpointLayout extends StatelessWidget {
     }
   }
 }
+
+/// A widget that builds different widgets based on breakpoints using a simple builder function
+/// This is useful for inline responsive behavior without creating separate builder functions
+class BreakpointBuilder extends StatelessWidget {
+  /// Builder function that receives context and current breakpoint information
+  final Widget Function(BuildContext context, ScreenSizeCategory screenSize, DeviceType deviceType, bool isLandscape) builder;
+
+  /// Constructor
+  const BreakpointBuilder({
+    super.key,
+    required this.builder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = ResponsiveHelpers.getScreenSizeCategory(context);
+    final deviceType = ResponsiveHelpers.getDeviceType(context);
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    
+    return builder(context, screenSize, deviceType, isLandscape);
+  }
+}
+
+/// A widget that adapts to orientation changes with breakpoint awareness
+class OrientationBreakpointLayout extends StatelessWidget {
+  /// Builder for portrait orientation
+  final Widget Function(BuildContext context, ScreenSizeCategory screenSize)? portraitBuilder;
+  
+  /// Builder for landscape orientation  
+  final Widget Function(BuildContext context, ScreenSizeCategory screenSize)? landscapeBuilder;
+  
+  /// Fallback builder
+  final Widget Function(BuildContext context, ScreenSizeCategory screenSize) defaultBuilder;
+
+  /// Constructor
+  const OrientationBreakpointLayout({
+    super.key,
+    this.portraitBuilder,
+    this.landscapeBuilder,
+    required this.defaultBuilder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = ResponsiveHelpers.getScreenSizeCategory(context);
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    
+    if (isLandscape && landscapeBuilder != null) {
+      return landscapeBuilder!(context, screenSize);
+    } else if (!isLandscape && portraitBuilder != null) {
+      return portraitBuilder!(context, screenSize);
+    }
+    
+    return defaultBuilder(context, screenSize);
+  }
+}
+
+/// A utility widget for creating responsive grid layouts with optimal defaults
+class ResponsiveGrid extends StatelessWidget {
+  /// Items to display in the grid
+  final List<Widget> children;
+  
+  /// Optional custom column count (overrides responsive calculation)
+  final int? columnCount;
+  
+  /// Child aspect ratio
+  final double? childAspectRatio;
+  
+  /// Cross axis spacing
+  final double? crossAxisSpacing;
+  
+  /// Main axis spacing
+  final double? mainAxisSpacing;
+  
+  /// Padding around the grid
+  final EdgeInsets? padding;
+  
+  /// Whether to shrink wrap the grid
+  final bool shrinkWrap;
+  
+  /// Physics for the grid
+  final ScrollPhysics? physics;
+
+  /// Constructor
+  const ResponsiveGrid({
+    super.key,
+    required this.children,
+    this.columnCount,
+    this.childAspectRatio,
+    this.crossAxisSpacing,
+    this.mainAxisSpacing,
+    this.padding,
+    this.shrinkWrap = false,
+    this.physics,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveColumnCount = columnCount ?? context.cardColumnCount;
+    final effectiveSpacing = context.orientationAwareSpacing;
+    
+    return Padding(
+      padding: padding ?? EdgeInsets.zero,
+      child: GridView.builder(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: effectiveColumnCount,
+          childAspectRatio: childAspectRatio ?? (context.isPhone ? 1.0 : 1.2),
+          crossAxisSpacing: crossAxisSpacing ?? effectiveSpacing,
+          mainAxisSpacing: mainAxisSpacing ?? effectiveSpacing,
+        ),
+        shrinkWrap: shrinkWrap,
+        physics: physics,
+        itemCount: children.length,
+        itemBuilder: (context, index) => children[index],
+      ),
+    );
+  }
+}

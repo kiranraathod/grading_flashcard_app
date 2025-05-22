@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'colors.dart';
+import 'responsive_helpers.dart';
 
 /// A comprehensive design system with spacing, sizing, elevation, and responsive breakpoints
 /// 
@@ -221,6 +222,23 @@ class DS {
   static const double breakpointXl = 1280.0; // Extra large screens (large desktops)
   static const double breakpoint2xl = 1536.0; // Double extra large screens
   
+  // MARK: - Card Grid Breakpoints
+  /// Specialized breakpoints for card grid layouts
+  /// These are optimized for card aspect ratios and optimal content display
+  static const double cardBreakpoint1Col = 0.0;    // Always allow 1 column
+  static const double cardBreakpoint2Col = 320.0;  // 2 columns for small screens
+  static const double cardBreakpoint3Col = 500.0;  // 3 columns for medium screens
+  static const double cardBreakpoint4Col = 700.0;  // 4 columns for large screens
+  static const double cardBreakpoint5Col = 900.0;  // 5 columns for extra large screens
+  
+  // MARK: - Content Width Breakpoints  
+  /// Breakpoints for optimal content width at different screen sizes
+  static const double contentMaxWidthSm = 540.0;   // Small content container
+  static const double contentMaxWidthMd = 720.0;   // Medium content container  
+  static const double contentMaxWidthLg = 960.0;   // Large content container
+  static const double contentMaxWidthXl = 1140.0;  // Extra large content container
+  static const double contentMaxWidth2xl = 1320.0; // Double extra large content container
+  
   /// Helper methods for responsive design
   static bool isExtraSmallScreen(BuildContext context) {
     return MediaQuery.of(context).size.width < breakpointXs;
@@ -260,6 +278,32 @@ class DS {
     return xs;
   }
   
+  /// Get optimal card grid column count based on available width
+  static int getCardColumnCount(double availableWidth) {
+    if (availableWidth >= cardBreakpoint5Col) return 5;
+    if (availableWidth >= cardBreakpoint4Col) return 4;
+    if (availableWidth >= cardBreakpoint3Col) return 3;
+    if (availableWidth >= cardBreakpoint2Col) return 2;
+    return 1;
+  }
+  
+  /// Get optimal card grid column count based on context
+  static int getCardColumnCountForContext(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    return getCardColumnCount(width);
+  }
+  
+  /// Get optimal content container width based on screen size
+  static double getContentMaxWidth(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    
+    if (width >= breakpointXl) return contentMaxWidth2xl;
+    if (width >= breakpointLg) return contentMaxWidthXl;
+    if (width >= breakpointMd) return contentMaxWidthLg;
+    if (width >= breakpointSm) return contentMaxWidthMd;
+    return contentMaxWidthSm;
+  }
+  
   // MARK: - Button styles
   /// Pre-configured button styles to ensure consistency
   static final ButtonStyle primaryButtonStyle = ElevatedButton.styleFrom(
@@ -291,14 +335,11 @@ extension DesignSystemContext on BuildContext {
   double get screenWidth => screenSize.width;
   double get screenHeight => screenSize.height;
   
-  /// Check device type
-  bool get isPhone => screenWidth < DS.breakpointMd;
-  bool get isTablet => screenWidth >= DS.breakpointMd && screenWidth < DS.breakpointLg;
-  bool get isDesktop => screenWidth >= DS.breakpointLg;
+  /// Check device type (delegated to ResponsiveContext to avoid conflicts)
+  // Note: Use context.isPhone, context.isTablet, context.isDesktop from ResponsiveContext
   
-  /// Get device orientation
-  bool get isLandscape => screenWidth > screenHeight;
-  bool get isPortrait => screenWidth <= screenHeight;
+  /// Get device orientation (delegated to ResponsiveContext to avoid conflicts)
+  // Note: Use context.isLandscape, context.isPortrait from ResponsiveContext
   
   /// Scale a value based on screen width
   double scaleWidth(double value) {
@@ -316,21 +357,27 @@ extension DesignSystemContext on BuildContext {
     return value * scaleFactor;
   }
   
-  /// Get spacing value scaled to screen size
-  double get spacing2xs => isPhone ? DS.spacing2xs * 0.8 : DS.spacing2xs;
-  double get spacingXs => isPhone ? DS.spacingXs * 0.8 : DS.spacingXs;
-  double get spacingS => isPhone ? DS.spacingS * 0.9 : DS.spacingS;
-  double get spacingM => isPhone ? DS.spacingM * 0.9 : DS.spacingM;
-  double get spacingL => isPhone ? DS.spacingL * 0.9 : DS.spacingL;
-  double get spacingXl => isPhone ? DS.spacingXl * 0.9 : DS.spacingXl;
-  double get spacing2xl => isPhone ? DS.spacing2xl * 0.9 : DS.spacing2xl;
-  double get spacing3xl => isPhone ? DS.spacing3xl * 0.9 : DS.spacing3xl;
+  /// Get spacing value scaled to screen size (using responsive context for device type)
+  double get spacing2xs => ResponsiveHelpers.getDeviceType(this) == DeviceType.phone ? DS.spacing2xs * 0.8 : DS.spacing2xs;
+  double get spacingXs => ResponsiveHelpers.getDeviceType(this) == DeviceType.phone ? DS.spacingXs * 0.8 : DS.spacingXs;
+  double get spacingS => ResponsiveHelpers.getDeviceType(this) == DeviceType.phone ? DS.spacingS * 0.9 : DS.spacingS;
+  double get spacingM => ResponsiveHelpers.getDeviceType(this) == DeviceType.phone ? DS.spacingM * 0.9 : DS.spacingM;
+  double get spacingL => ResponsiveHelpers.getDeviceType(this) == DeviceType.phone ? DS.spacingL * 0.9 : DS.spacingL;
+  double get spacingXl => ResponsiveHelpers.getDeviceType(this) == DeviceType.phone ? DS.spacingXl * 0.9 : DS.spacingXl;
+  double get spacing2xl => ResponsiveHelpers.getDeviceType(this) == DeviceType.phone ? DS.spacing2xl * 0.9 : DS.spacing2xl;
+  double get spacing3xl => ResponsiveHelpers.getDeviceType(this) == DeviceType.phone ? DS.spacing3xl * 0.9 : DS.spacing3xl;
   
   /// Helper for responsive padding (useful for container padding)
-  EdgeInsets get responsivePadding => EdgeInsets.all(
-    isPhone ? DS.spacingS : (isTablet ? DS.spacingM : DS.spacingL)
-  );
+  EdgeInsets get responsivePadding {
+    final deviceType = ResponsiveHelpers.getDeviceType(this);
+    return EdgeInsets.all(
+      deviceType == DeviceType.phone ? DS.spacingS : (deviceType == DeviceType.tablet ? DS.spacingM : DS.spacingL)
+    );
+  }
   
   /// Helper for grid spacing (useful for GridView spacing)
-  double get gridSpacing => isPhone ? DS.spacingM : (isTablet ? DS.spacingL : DS.spacingXl);
+  double get gridSpacing {
+    final deviceType = ResponsiveHelpers.getDeviceType(this);
+    return deviceType == DeviceType.phone ? DS.spacingM : (deviceType == DeviceType.tablet ? DS.spacingL : DS.spacingXl);
+  }
 }

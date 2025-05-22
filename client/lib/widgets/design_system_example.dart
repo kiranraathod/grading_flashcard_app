@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../utils/design_system.dart';
+import '../utils/responsive_helpers.dart';
 
 class ResponsiveCardExample extends StatelessWidget {
   final String title;

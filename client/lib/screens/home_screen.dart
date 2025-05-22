@@ -9,6 +9,7 @@ import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
 import '../utils/spacing_components.dart';
 import '../utils/keyboard_shortcuts.dart';
+import '../utils/responsive_helpers.dart';
 import '../blocs/recent_view/recent_view_bloc.dart';
 import '../blocs/recent_view/recent_view_event.dart';
 import '../screens/search/search_results_screen.dart';
@@ -646,36 +647,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // CRITICAL FIX: Account for parent padding in width calculations
-    final fullScreenWidth = MediaQuery.of(context).size.width;
     final parentPadding = DS.spacingL * 2; // SingleChildScrollView padding on both sides
-    final effectiveScreenWidth = fullScreenWidth - parentPadding;
+    final effectiveScreenWidth = context.getEffectiveWidth(horizontalPadding: parentPadding);
     
     // Ultra-minimal horizontal padding to maximize content width
     final horizontalPadding = DS.spacing2xs * 0.25;  // Optimized for card layout (1.0px)
     // Ultra-minimal spacing between cards to maximize usable space  
     final cardSpacing = DS.spacing2xs * 0.75;  // Optimized for card layout (3.0px)
     
-    // Calculate the optimal number of columns based on EFFECTIVE available width
-    int calculateOptimalColumns() {
-      // Use optimized breakpoints for card layout (maintains current behavior)
-      const cardBreakpoint4Col = 700.0;  // Optimized for 4-column layout
-      const cardBreakpoint3Col = 500.0;  // Optimized for 3-column layout  
-      const cardBreakpoint2Col = 320.0;  // Optimized for 2-column layout
-      
-      if (effectiveScreenWidth >= cardBreakpoint4Col) {
-        return 4;      // 4 columns for medium-large screens
-      }
-      if (effectiveScreenWidth >= cardBreakpoint3Col) {
-        return 3;      // 3 columns for medium screens
-      }
-      if (effectiveScreenWidth >= cardBreakpoint2Col) {
-        return 2;      // 2 columns for small screens
-      }
-      return 1;        // 1 column for very small screens
-    }
-    
-    // Get the optimal number of columns for current width
-    final columns = calculateOptimalColumns();
+    // Calculate the optimal number of columns using design system breakpoints
+    final optimalColumns = DS.getCardColumnCount(effectiveScreenWidth);
     
     // Calculate optimal card width with controlled maximum size
     double getAdaptiveCardWidth() {
@@ -683,11 +664,11 @@ class _HomeScreenState extends State<HomeScreen> {
       final availableWidth = effectiveScreenWidth - (horizontalPadding * 2);
       
       // For multi-column layouts, calculate exact width distribution
-      final totalGapWidth = (columns - 1) * cardSpacing;
+      final totalGapWidth = (optimalColumns - 1) * cardSpacing;
       
       // Calculate card width with perfect distribution
       final remainingWidth = availableWidth - totalGapWidth;
-      final calculatedCardWidth = remainingWidth / columns;
+      final calculatedCardWidth = remainingWidth / optimalColumns;
       
       // Apply maximum card width constraint for better visual balance
       final maxCardWidth = 365.0; // Target card width for optimal appearance
@@ -774,14 +755,14 @@ class _HomeScreenState extends State<HomeScreen> {
             var updatedItems = List<Widget>.from(items);
             
             // Add placeholders when needed for multi-row layouts
-            if (columns > 1) {
+            if (optimalColumns > 1) {
               final totalItems = flashcardSets.length + 1; // +1 for create deck card
-              final totalRows = (totalItems / columns).ceil();
-              final lastRowItems = totalItems % columns == 0 ? columns : totalItems % columns;
+              final totalRows = (totalItems / optimalColumns).ceil();
+              final lastRowItems = totalItems % optimalColumns == 0 ? optimalColumns : totalItems % optimalColumns;
               
               // Only add placeholders when there's a partial last row
-              if (totalRows > 1 && lastRowItems != columns) {
-                final placeholdersNeeded = columns - lastRowItems;
+              if (totalRows > 1 && lastRowItems != optimalColumns) {
+                final placeholdersNeeded = optimalColumns - lastRowItems;
                 for (int i = 0; i < placeholdersNeeded; i++) {
                   updatedItems.add(SizedBox(
                     width: getAdaptiveCardWidth(),
@@ -926,16 +907,19 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildQuestionSetGrid(List<QuestionSet> questionSets) {
     return Column(
       children: [
-        // Question sets grid - Updated to match Browse by Topic grid layout
+        // Question sets grid - Updated to use responsive design system breakpoints
         GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount:
-                MediaQuery.of(context).size.width >= 1024
-                    ? 3
-                    : (MediaQuery.of(context).size.width >= 640 ? 2 : 1),
+            crossAxisCount: context.responsiveValue(
+              xs: 1,
+              sm: 1, 
+              md: 2,
+              lg: 3,
+              xl: 3,
+            ),
             childAspectRatio: 2.5, // Match the topic cards aspect ratio
-            crossAxisSpacing: context.isPhone ? 8 : 16,
-            mainAxisSpacing: context.isPhone ? 8 : 16,
+            crossAxisSpacing: context.orientationAwareSpacing,
+            mainAxisSpacing: context.orientationAwareSpacing,
           ),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -1102,13 +1086,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return GridView.builder(
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount:
-            MediaQuery.of(context).size.width >= 1024
-                ? 3
-                : (MediaQuery.of(context).size.width >= 640 ? 2 : 1),
+        crossAxisCount: context.responsiveValue(
+          xs: 1,
+          sm: 1,
+          md: 2,
+          lg: 3,
+          xl: 3,
+        ),
         childAspectRatio: 2.5,
-        crossAxisSpacing: context.isPhone ? DS.spacingXs : DS.spacingS,
-        mainAxisSpacing: context.isPhone ? DS.spacingXs : DS.spacingS,
+        crossAxisSpacing: context.orientationAwareSpacing,
+        mainAxisSpacing: context.orientationAwareSpacing,
       ),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),

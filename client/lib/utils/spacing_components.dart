@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'design_system.dart';
+import 'responsive_helpers.dart';
 
 /// Standardized spacing components for consistent layouts
 class DSSpacing {
