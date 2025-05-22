@@ -48,6 +48,10 @@ class DS {
   static const double avatarSizeXl = 72.0;  // Extra large avatars
   static const double avatarSize2xl = 96.0; // Double extra large avatars
   
+  // Card component dimensions
+  static const double cardHeight = 201.0;    // Standard card height
+  static const double cardHeightCompact = 160.0; // Compact card height
+  
   // MARK: - Durations
   /// Animation durations for consistent motion
   static const Duration durationFast = Duration(milliseconds: 150);

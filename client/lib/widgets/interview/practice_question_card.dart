@@ -125,7 +125,7 @@ class PracticeQuestionCard extends StatelessWidget {
                           child: Text(
                             question.text,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: DS.bodyLarge.fontSize, // 16px from design system
                               fontWeight: FontWeight.w500,
                               color: context.isDarkMode 
                                   ? Colors.white  
@@ -138,13 +138,13 @@ class PracticeQuestionCard extends StatelessWidget {
                           Icon(
                             Icons.check_circle,
                             color: Colors.green,
-                            size: 20,
+                            size: DS.iconSizeS, // 20px
                           ),
                         
                         // Navigation chevron - replaced with the original style
                         Icon(
                           Icons.arrow_forward_ios,
-                          size: 16,
+                          size: DS.iconSizeXs,
                           color: context.isDarkMode 
                               ? Colors.white.withValues(alpha: 0.6)
                               : Colors.grey.shade400,
@@ -156,8 +156,8 @@ class PracticeQuestionCard extends StatelessWidget {
                     
                     // Category, subtopic, and difficulty as pill-shaped tags
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: DS.spacingXs,
+                      runSpacing: DS.spacingXs,
                       children: [
                         // Category badge
                         Container(
@@ -167,12 +167,12 @@ class PracticeQuestionCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: _getCategoryColor(context),
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(DS.borderRadiusMedium + 4), // ~16px
                           ),
                           child: Text(
                             _getCategoryName(),
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: DS.bodySmall.fontSize, // 12px
                               fontWeight: FontWeight.w500,
                               color: context.isDarkMode ? Colors.white : Colors.grey.shade800,
                             ),
@@ -187,12 +187,12 @@ class PracticeQuestionCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: difficultyColor,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(DS.borderRadiusMedium + 4), // ~16px
                           ),
                           child: Text(
                             difficultyName,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: DS.bodySmall.fontSize, // 12px
                               fontWeight: FontWeight.w500,
                               color: context.isDarkMode ? Colors.white : Colors.grey.shade800,
                             ),
@@ -202,15 +202,15 @@ class PracticeQuestionCard extends StatelessWidget {
                         // Completion status
                         if (question.isCompleted)
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8, 
-                              vertical: 2
+                            padding: EdgeInsets.symmetric(
+                              horizontal: DS.spacingXs, 
+                              vertical: DS.spacing2xs * 0.5 // 2px
                             ),
                             decoration: BoxDecoration(
                               color: context.isDarkMode
                                   ? const Color(0xFF34D399).withValues(alpha: 0.15)
                                   : Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(DS.borderRadiusMedium + 4), // ~16px
                               border: Border.all(
                                 color: context.isDarkMode
                                     ? const Color(0xFF34D399).withValues(alpha: 0.3)
@@ -222,16 +222,16 @@ class PracticeQuestionCard extends StatelessWidget {
                               children: [
                                 Icon(
                                   Icons.check_circle,
-                                  size: 14,
+                                  size: DS.iconSizeXs - 2, // 14px
                                   color: context.isDarkMode
                                       ? const Color(0xFF34D399)
                                       : Colors.green.shade700,
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: DS.spacing2xs),
                                 Text(
                                   'Completed',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: DS.bodySmall.fontSize, // 12px
                                     fontWeight: FontWeight.w500,
                                     color: context.isDarkMode
                                         ? const Color(0xFF34D399)
@@ -254,19 +254,19 @@ class PracticeQuestionCard extends StatelessWidget {
                           onPressed: onTap,
                           icon: Icon(
                             Icons.play_circle_outline,
-                            size: 16,
+                            size: DS.iconSizeXs,
                             color: context.isDarkMode ? Colors.white : null,
                           ),
                           label: Text(
                             'Practice',
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: DS.bodyMedium.fontSize, // 14px
                               fontWeight: FontWeight.w500,
                               color: context.isDarkMode ? Colors.white : null,
                             ),
                           ),
                           style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: DS.spacingXs, vertical: DS.spacing2xs),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             foregroundColor: context.primaryColor,
@@ -274,7 +274,7 @@ class PracticeQuestionCard extends StatelessWidget {
                                 ? context.primaryColor.withValues(alpha: 0.2)
                                 : Colors.blue.shade50,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(DS.borderRadiusMedium + 4), // ~16px
                             ),
                           ),
                         ),

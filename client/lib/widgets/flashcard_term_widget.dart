@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../utils/design_system.dart';
+import '../utils/spacing_components.dart';
 
 class FlashcardTermWidget extends StatefulWidget {
   final String initialTerm;
@@ -58,7 +60,7 @@ class _FlashcardTermWidgetState extends State<FlashcardTermWidget> {
             controller: _termController,
             hasImageOption: true,
           ),
-          const SizedBox(height: 16),
+          DSSpacing.verticalL,
           _buildInputField(
             label: 'Definition',
             controller: _definitionController,
@@ -79,16 +81,16 @@ class _FlashcardTermWidgetState extends State<FlashcardTermWidget> {
       children: [
         if (hasImageOption)
           Container(
-            width: 60,
-            height: 60,
-            margin: const EdgeInsets.only(right: 16),
+            width: DS.buttonHeightXl + 4, // 60px
+            height: DS.buttonHeightXl + 4, // 60px
+            margin: EdgeInsets.only(right: DS.spacingM),
             decoration: BoxDecoration(
               border: Border.all(
                 color: Colors.grey.shade300,
                 width: 2,
                 style: BorderStyle.solid,
               ),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
             ),
             child: Icon(
               Icons.image,
@@ -103,7 +105,7 @@ class _FlashcardTermWidgetState extends State<FlashcardTermWidget> {
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(DS.borderRadiusLarge),
                 borderSide: BorderSide.none,
               ),
             ),

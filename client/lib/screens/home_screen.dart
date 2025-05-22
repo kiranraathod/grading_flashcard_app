@@ -7,6 +7,7 @@ import '../widgets/recent/recent_tab_content.dart';
 import '../widgets/multi_action_fab.dart';
 import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
+import '../utils/spacing_components.dart';
 import '../utils/keyboard_shortcuts.dart';
 import '../blocs/recent_view/recent_view_bloc.dart';
 import '../blocs/recent_view/recent_view_event.dart';
@@ -181,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: DS.spacing2xs),
+                                  DSSpacing.verticalXS,
                                   Text(
                                     isToday
                                         ? AppLocalizations.of(context).today
@@ -195,7 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             }),
                           ),
 
-                          const SizedBox(height: DS.spacingL),
+                          DSSpacing.verticalXL,
 
                           // Progress bar with dynamic calculation
                           Builder(
@@ -232,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: DS.spacingXs),
+                                  DSSpacing.verticalS,
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(2),
                                     child: LinearProgressIndicator(
@@ -252,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: DS.spacingM),
+                    DSSpacing.verticalL,
 
                     // Tabs styled to match React code
                     Container(
@@ -503,7 +504,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     _buildFilterButton(context),
-                                    const SizedBox(height: DS.spacingXs),
+                                    DSSpacing.verticalS,
                                     _buildSortButton(context),
                                   ],
                                 );
@@ -514,7 +515,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     _buildFilterButton(context),
-                                    const SizedBox(width: DS.spacingXs),
+                                    DSSpacing.horizontalS,
                                     _buildSortButton(context),
                                   ],
                                 );
@@ -716,7 +717,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final List<Widget> items = [
               ...flashcardSets.map((set) => SizedBox(
                 width: getAdaptiveCardWidth(),
-                height: 201, // Increased to fix overflow error
+                height: DS.cardHeight, // Use design system card height
                 child: FlashcardDeckCard(
                   title: set.title,
                   category: set.description.isNotEmpty ? set.description : 'Python',
@@ -755,7 +756,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // Create Deck Card - also needs fixed width
               SizedBox(
                 width: getAdaptiveCardWidth(),
-                height: 201, // Increased to fix overflow error
+                height: DS.cardHeight, // Use design system card height
                 child: CreateDeckCard(
                   onTap: () {
                     Navigator.push(
@@ -833,7 +834,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 '${AppLocalizations.of(context).dataScience} ${AppLocalizations.of(context).interviewQuestions}',
                 style: context.titleLarge,
               ),
-              const SizedBox(height: DS.spacingS),
+              DSSpacing.verticalM,
 
               // Question count and update time
               Row(
@@ -850,7 +851,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
 
-              const SizedBox(height: DS.spacingS),
+              DSSpacing.verticalM,
 
               // Progress bar (empty for now)
               Container(
@@ -863,7 +864,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Progress bar would go here
               ),
 
-              const SizedBox(height: 4),
+              DSSpacing.screenSection,
 
               // Status text
               Text(
@@ -903,7 +904,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
 
-        const SizedBox(height: DS.spacingL),
+        DSSpacing.screenSection,
 
         // Question Sets from Job Descriptions
         Text(
@@ -911,7 +912,7 @@ class _HomeScreenState extends State<HomeScreen> {
           style: context.titleMedium,
         ),
 
-        const SizedBox(height: DS.spacingM),
+        DSSpacing.verticalL,
 
         // Show question sets if available, otherwise show topic categories
         questionSets.isEmpty
@@ -996,7 +997,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
 
         // Add a button to create a new question set from a job description
-        const SizedBox(height: DS.spacingM),
+        DSSpacing.verticalL,
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -1021,12 +1022,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
 
         // After question sets, show topic categories
-        const SizedBox(height: DS.spacing2xl),
+        DSSpacing.vertical3XL,
         Text(
           AppLocalizations.of(context).browseByTopic,
           style: context.titleMedium,
         ),
-        const SizedBox(height: DS.spacingM),
+        DSSpacing.verticalL,
         _buildTopicCategories(),
       ],
     );
@@ -1214,11 +1215,11 @@ class _HomeScreenState extends State<HomeScreen> {
             size: DS.iconSize2xl + 16, // 64px total
             color: context.onSurfaceVariantColor,
           ),
-          const SizedBox(height: DS.spacingM),
+          DSSpacing.verticalL,
           Text(title, style: context.titleLarge),
-          const SizedBox(height: DS.spacingS),
+          DSSpacing.verticalM,
           Text(subtitle, style: context.bodyMedium),
-          const SizedBox(height: DS.spacingL),
+          DSSpacing.screenSection,
           ElevatedButton(
             onPressed: () {
               Navigator.push(
@@ -1258,7 +1259,7 @@ class _HomeScreenState extends State<HomeScreen> {
             size: DS.iconSizeM,
             color: context.onSurfaceVariantColor,
           ),
-          const SizedBox(width: DS.spacing2xs),
+          DSSpacing.horizontalXS,
           Text(
             AppLocalizations.of(context).filter,
             style: context.bodySmall,
@@ -1291,13 +1292,13 @@ class _HomeScreenState extends State<HomeScreen> {
             size: DS.iconSizeM,
             color: context.onSurfaceVariantColor,
           ),
-          const SizedBox(width: DS.spacing2xs),
+          DSSpacing.horizontalXS,
           Text(
             AppLocalizations.of(context).lastUpdated,
             style: context.bodySmall,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(width: DS.spacing2xs),
+          DSSpacing.horizontalXS,
           Icon(
             Icons.keyboard_arrow_down,
             size: DS.iconSizeM,

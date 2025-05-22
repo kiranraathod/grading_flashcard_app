@@ -12,15 +12,15 @@ class CreateDeckCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         // Match sizing breakpoints from FlashcardDeckCard for consistency
-        final isVerySmall = constraints.maxWidth < 200;
-        final isSmall = constraints.maxWidth < 280;
+        final isVerySmall = constraints.maxWidth < DS.breakpointXs * 0.56; // ~200px
+        final isSmall = constraints.maxWidth < DS.breakpointSm * 0.44;     // ~280px
         // Variable is used in the ternary height calculation below
         
         return GestureDetector(
           onTap: onTap,
           child: Container(
             width: constraints.maxWidth, // Explicitly set width to match parent constraint
-            height: 201, // Increased to match FlashcardDeckCard and fix overflow
+            height: DS.cardHeight, // Use design system card height (201px)
             margin: EdgeInsets.zero, // No margins to maximize space usage
             decoration: BoxDecoration(
               color: Colors.white,
@@ -31,12 +31,16 @@ class CreateDeckCard extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add, size: isVerySmall ? 24 : (isSmall ? 28 : 32), color: Colors.grey.shade400),
-                  SizedBox(height: isVerySmall ? 4 : 8),
+                  Icon(
+                    Icons.add, 
+                    size: isVerySmall ? DS.iconSizeL : (isSmall ? DS.iconSizeL + 4 : DS.buttonHeightS), // 32-36px range
+                    color: Colors.grey.shade400
+                  ),
+                  SizedBox(height: isVerySmall ? DS.spacing2xs : DS.spacingXs),
                   Text(
                     L10nExt.of(context).createNewDeck,
                     style: TextStyle(
-                      fontSize: isVerySmall ? 12 : 14, 
+                      fontSize: isVerySmall ? DS.bodySmall.fontSize : 14, 
                       color: Colors.grey.shade500
                     ),
                   ),

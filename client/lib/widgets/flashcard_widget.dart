@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../models/flashcard.dart';
+import '../utils/design_system.dart';
+import '../utils/spacing_components.dart';
 
 class FlashcardWidget extends StatefulWidget {
   final Flashcard flashcard;
@@ -22,7 +24,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: DS.durationMedium, // 300ms from design system
     );
     _animation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
@@ -81,13 +83,13 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
 
   Widget _buildFrontCard() {
     return Card(
-      elevation: 4,
-      margin: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: DS.elevationS, // 2.0 from design system
+      margin: EdgeInsets.all(DS.spacingM),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(DS.borderRadiusLarge)),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(DS.spacingL),
         width: double.infinity,
-        height: 300,
+        height: 300, // Keep specific height for flashcard functionality
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -95,19 +97,19 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
               widget.flashcard.question.isNotEmpty 
                   ? widget.flashcard.question 
                   : 'No question available. Please edit this flashcard.',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: DS.bodyLarge.fontSize! + 4, fontWeight: FontWeight.bold), // 20px
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            const Text(
+            DSSpacing.verticalL,
+            Text(
               'Tap to reveal answer',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+              style: TextStyle(fontSize: DS.bodyMedium.fontSize, color: Colors.grey),
             ),
             // Add a hint icon to encourage user interaction
             Container(
-              margin: const EdgeInsets.only(top: 8),
-              width: 40,
-              height: 40,
+              margin: EdgeInsets.only(top: DS.spacingXs),
+              width: DS.avatarSizeM,
+              height: DS.avatarSizeM,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.grey.shade200,
@@ -115,7 +117,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
               child: Icon(
                 Icons.touch_app,
                 color: Colors.grey.shade600,
-                size: 20,
+                size: DS.iconSizeS,
               ),
             ),
           ],
@@ -126,42 +128,42 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
 
   Widget _buildBackCard() {
     return Card(
-      elevation: 4,
-      margin: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: DS.elevationS, // 2.0 from design system
+      margin: EdgeInsets.all(DS.spacingM),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(DS.borderRadiusLarge)),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(DS.spacingL),
         width: double.infinity,
-        height: 300,
+        height: 300, // Keep specific height for flashcard functionality
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
+            Text(
               'Answer',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: DS.bodyLarge.fontSize,
                 fontWeight: FontWeight.bold,
                 color: Colors.grey,
               ),
             ),
-            const SizedBox(height: 16),
+            DSSpacing.verticalL,
             Text(
               widget.flashcard.answer.isNotEmpty
                   ? widget.flashcard.answer
                   : 'No answer available. Please edit this flashcard.',
-              style: const TextStyle(fontSize: 20),
+              style: TextStyle(fontSize: DS.bodyLarge.fontSize! + 4), // 20px
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            const Text(
+            DSSpacing.verticalL,
+            Text(
               'Tap to see question',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+              style: TextStyle(fontSize: DS.bodyMedium.fontSize, color: Colors.grey),
             ),
             // Add a hint icon to encourage user interaction
             Container(
-              margin: const EdgeInsets.only(top: 8),
-              width: 40,
-              height: 40,
+              margin: EdgeInsets.only(top: DS.spacingXs),
+              width: DS.avatarSizeM,
+              height: DS.avatarSizeM,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.grey.shade200,
@@ -169,7 +171,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
               child: Icon(
                 Icons.flip,
                 color: Colors.grey.shade600,
-                size: 20,
+                size: DS.iconSizeS,
               ),
             ),
           ],

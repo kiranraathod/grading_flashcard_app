@@ -122,7 +122,7 @@ class InterviewQuestionCard extends StatelessWidget {
                       child: Text(
                         question.text,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: DS.bodyLarge.fontSize, // 16px from design system
                           fontWeight: FontWeight.w500,
                           color: context.isDarkMode 
                               ? Colors.white  // Full white for better readability
@@ -138,7 +138,7 @@ class InterviewQuestionCard extends StatelessWidget {
                       ),
                       constraints: const BoxConstraints(),
                       padding: EdgeInsets.zero,
-                      iconSize: 20,
+                      iconSize: DS.iconSizeS, // 20px
                     ),
                   ],
                 ),
@@ -156,12 +156,12 @@ class InterviewQuestionCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: _getCategoryColor(context),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(DS.borderRadiusMedium + 4), // ~16px
                       ),
                       child: Text(
                         _getCategoryName(),
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: DS.bodySmall.fontSize, // 12px from design system
                           fontWeight: FontWeight.w500,
                           color: context.isDarkMode ? Colors.white : Colors.grey.shade800,
                         ),
@@ -174,7 +174,7 @@ class InterviewQuestionCard extends StatelessWidget {
                     Text(
                       '• ${question.subtopic}',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: DS.bodySmall.fontSize! + 1, // 13px (12+1)
                         color: context.isDarkMode 
                             ? Colors.white.withValues(alpha: 0.7)
                             : context.onSurfaceVariantColor,
@@ -191,12 +191,12 @@ class InterviewQuestionCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: difficultyColor,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(DS.borderRadiusMedium + 4), // ~16px
                       ),
                       child: Text(
                         difficultyName,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: DS.bodySmall.fontSize, // 12px from design system
                           fontWeight: FontWeight.w500,
                           color: context.isDarkMode ? Colors.white : Colors.grey.shade800,
                         ),
@@ -213,16 +213,16 @@ class InterviewQuestionCard extends StatelessWidget {
                     // Completion indicator
                     if (question.isCompleted)
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8, 
-                          vertical: 2
+                        padding: EdgeInsets.symmetric(
+                          horizontal: DS.spacingXs, 
+                          vertical: DS.spacing2xs * 0.5 // 2px
                         ),
                         margin: const EdgeInsets.only(right: DS.spacingS),
                         decoration: BoxDecoration(
                           color: context.isDarkMode
                               ? const Color(0xFF34D399).withValues(alpha: 0.15)
                               : Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(DS.borderRadiusXs),
                           border: Border.all(
                             color: context.isDarkMode
                                 ? const Color(0xFF34D399).withValues(alpha: 0.3)
@@ -234,16 +234,16 @@ class InterviewQuestionCard extends StatelessWidget {
                           children: [
                             Icon(
                               Icons.check_circle,
-                              size: 14,
+                              size: DS.iconSizeXs - 2, // 14px
                               color: context.isDarkMode
                                   ? const Color(0xFF34D399)
                                   : Colors.green.shade700,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: DS.spacing2xs),
                             Text(
                               'Completed',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: DS.bodySmall.fontSize, // 12px
                                 fontWeight: FontWeight.w500,
                                 color: context.isDarkMode
                                     ? const Color(0xFF34D399)
@@ -258,19 +258,19 @@ class InterviewQuestionCard extends StatelessWidget {
                       onPressed: onPractice,
                       icon: Icon(
                         Icons.play_circle_outline,
-                        size: 16,
+                        size: DS.iconSizeXs,
                         color: context.isDarkMode ? Colors.white : null,
                       ),
                       label: Text(
                         'Practice',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: DS.bodyMedium.fontSize, // 14px
                           fontWeight: FontWeight.w500,
                           color: context.isDarkMode ? Colors.white : null,
                         ),
                       ),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(horizontal: DS.spacingXs, vertical: DS.spacing2xs),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         foregroundColor: context.primaryColor,
@@ -278,7 +278,7 @@ class InterviewQuestionCard extends StatelessWidget {
                             ? context.primaryColor.withValues(alpha: 0.2)
                             : Colors.blue.shade50,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(DS.borderRadiusMedium + 4), // ~16px
                         ),
                       ),
                     ),
@@ -289,7 +289,7 @@ class InterviewQuestionCard extends StatelessWidget {
                     ElevatedButton(
                       onPressed: onViewAnswer,
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: EdgeInsets.symmetric(horizontal: DS.spacingS, vertical: DS.spacing2xs + 2), // 12px, 6px
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         elevation: 0,
@@ -300,7 +300,7 @@ class InterviewQuestionCard extends StatelessWidget {
                             ? const Color(0xFF6EE7B7)  // Very bright emerald for max contrast
                             : const Color(0xFF10B981),  // Original emerald in light mode
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                           side: BorderSide(
                             color: context.isDarkMode 
                                 ? const Color(0xFF4ADE80).withValues(alpha: 0.5)
@@ -312,7 +312,7 @@ class InterviewQuestionCard extends StatelessWidget {
                       child: Text(
                         'View Answer',
                         style: TextStyle(
-                          fontSize: 16,  // Increased from 15
+                          fontSize: DS.bodyLarge.fontSize,  // 16px from design system
                           fontWeight: FontWeight.w700,  // Bold for better readability
                           letterSpacing: 0.3,  // Slightly increased letter spacing
                           color: context.isDarkMode 
@@ -331,14 +331,14 @@ class InterviewQuestionCard extends StatelessWidget {
                           onPressed: onShare,
                           icon: Icon(
                             Icons.share,
-                            size: 18,
+                            size: DS.iconSizeXs + 2, // 18px
                             color: context.isDarkMode 
                                 ? Colors.white.withValues(alpha: 0.7)
                                 : Colors.grey.shade500,
                           ),
                           constraints: const BoxConstraints(),
                           padding: EdgeInsets.zero,
-                          splashRadius: 20,
+                          splashRadius: DS.iconSizeS,
                         ),
                         
                         const SizedBox(width: DS.spacingS),
@@ -347,14 +347,14 @@ class InterviewQuestionCard extends StatelessWidget {
                           onPressed: onEdit,
                           icon: Icon(
                             Icons.edit,
-                            size: 18,
+                            size: DS.iconSizeXs + 2, // 18px
                             color: context.isDarkMode 
                                 ? Colors.white.withValues(alpha: 0.7)
                                 : Colors.grey.shade500,
                           ),
                           constraints: const BoxConstraints(),
                           padding: EdgeInsets.zero,
-                          splashRadius: 20,
+                          splashRadius: DS.iconSizeS,
                         ),
                       ],
                     ),

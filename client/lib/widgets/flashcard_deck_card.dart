@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/theme_utils.dart';
+import '../utils/design_system.dart';
+import '../utils/spacing_components.dart';
 import 'themed_gradient_container.dart';
 
 class FlashcardDeckCard extends StatefulWidget {
@@ -35,13 +37,13 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
       onExit: (_) => setState(() => _isHovered = false),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          // More precise breakpoints based on card width rather than screen width
-          final isVerySmall = constraints.maxWidth < 200;
-          final isSmall = constraints.maxWidth < 280;
-          final isMedium = constraints.maxWidth < 350;
+          // Responsive breakpoints based on card width - using design system inspired values
+          final isVerySmall = constraints.maxWidth < DS.breakpointXs * 0.56; // ~200px
+          final isSmall = constraints.maxWidth < DS.breakpointSm * 0.44;     // ~280px  
+          final isMedium = constraints.maxWidth < DS.breakpointMd * 0.46;    // ~350px
           
-          // Adaptive sizing based on available width - make more aggressive
-          final contentPadding = isVerySmall ? 4.0 : (isSmall ? 6.0 : (isMedium ? 8.0 : 12.0)); // Reduced from previous values
+          // Adaptive sizing based on available width - using design system spacing
+          final contentPadding = isVerySmall ? DS.spacing2xs : (isSmall ? DS.spacing2xs + 2 : (isMedium ? DS.spacingXs : DS.spacingS)); // 4-12px range
           final titleStyle = isVerySmall ? 
                             context.bodySmall?.copyWith(fontWeight: FontWeight.bold) :
                             (isSmall ? 
@@ -52,12 +54,12 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
           
           return Container(
             width: constraints.maxWidth, // Explicitly set width to match parent constraint
-            height: 201, // Increased by 1 pixel to fix overflow error
+            height: DS.cardHeight, // Use design system card height (201px)
             clipBehavior: Clip.antiAlias, // Ensure nothing overflows
             margin: EdgeInsets.zero, // No margins to maximize space usage
             decoration: BoxDecoration(
           color: context.surfaceColor,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
           border: Border.all(
             color: context.isDarkMode 
                 ? context.colorScheme.outline.withValues(alpha: 0.2)
@@ -65,21 +67,9 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
             width: context.isDarkMode ? 1.2 : 1.0,
           ),
           boxShadow: _isHovered ? (
-            context.isDarkMode ? [
-              BoxShadow(
-                color: const Color(0x99000000), // rgba(0, 0, 0, 0.6) for hover
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ] : context.cardShadow
+            context.isDarkMode ? DS.getShadow(DS.elevationM, color: const Color(0x99000000)) : context.cardShadow
           ) : (
-            context.isDarkMode ? [
-              BoxShadow(
-                color: const Color(0x66000000), // rgba(0, 0, 0, 0.4) for normal state
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ] : null
+            context.isDarkMode ? DS.getShadow(DS.elevationS, color: const Color(0x66000000)) : null
           ),
         ),
         child: Column(
@@ -88,9 +78,9 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
             // Header section with themed gradient
             ThemedGradientContainer(
               isInterview: !widget.isStudyDeck,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(8),
-                topRight: Radius.circular(8),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(DS.borderRadiusSmall),
+                topRight: Radius.circular(DS.borderRadiusSmall),
               ),
               child: Padding(
                 padding: EdgeInsets.all(contentPadding),
@@ -104,15 +94,15 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                         // Category badge
                         Container(
                           margin: EdgeInsets.only(bottom: 
-                            isVerySmall ? 2 : (isSmall ? 3 : (isMedium ? 4 : 8))
+                            isVerySmall ? DS.spacing2xs * 0.5 : (isSmall ? DS.spacing2xs * 0.75 : (isMedium ? DS.spacing2xs : DS.spacingXs))
                           ),
                           padding: EdgeInsets.symmetric(
-                            horizontal: isVerySmall ? 3 : (isSmall ? 4 : (isMedium ? 6 : 8)),
-                            vertical: isVerySmall ? 1 : 2,
+                            horizontal: isVerySmall ? DS.spacing2xs * 0.75 : (isSmall ? DS.spacing2xs : (isMedium ? DS.spacing2xs + 2 : DS.spacingXs)),
+                            vertical: isVerySmall ? 1 : DS.spacing2xs * 0.5,
                           ),
                           decoration: BoxDecoration(
                             color: context.surfaceColor,
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(DS.borderRadiusXs),
                           ),
                           child: Text(
                             widget.category,
@@ -135,8 +125,8 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                     // Play button (visible on hover)
                     if (_isHovered)
                       Container(
-                        height: 32,
-                        width: 32,
+                        height: DS.buttonHeightS,
+                        width: DS.buttonHeightS,
                         decoration: BoxDecoration(
                           color: context.surfaceColor,
                           shape: BoxShape.circle,
@@ -144,7 +134,7 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                         child: Center(
                           child: Icon(
                             Icons.play_arrow,
-                            size: 16,
+                            size: DS.iconSizeXs,
                             color: widget.isStudyDeck
                                 ? context.primaryColor
                                 : context.secondaryColor,
@@ -183,21 +173,21 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                   ),
                   
                   // Always show progress bar, but with zero width for 0%
-                  SizedBox(height: isVerySmall ? 4 : (isSmall ? 6 : 8)),
+                  SizedBox(height: isVerySmall ? DS.spacing2xs : (isSmall ? DS.spacing2xs + 2 : DS.spacingXs)),
                   SizedBox(
-                    height: isVerySmall ? 4.0 : 6.0,
+                    height: isVerySmall ? DS.spacing2xs : DS.spacing2xs + 2, // 4-6px
                     child: LinearProgressIndicator(
                       value: widget.progressPercent > 0 ? widget.progressPercent / 100 : 0.001,
                       backgroundColor: context.isDarkMode
                           ? context.surfaceVariantColor.withValues(alpha: 0.3)
                           : context.surfaceVariantColor,
                       valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: BorderRadius.circular(DS.borderRadiusXs * 0.75), // ~3px
                     ),
                   ),
                   
                   // Text status below progress bar
-                  const SizedBox(height: 4),
+                  DSSpacing.verticalXS,
                   Text(
                     widget.progressPercent > 0 
                         ? AppLocalizations.of(context).progressPercent(widget.progressPercent)
@@ -228,7 +218,7 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
             // Spacer to push the button to the bottom with minimum height
             Expanded(
               child: SizedBox(
-                height: 10, // Reduced minimum height for more compact layout
+                height: DS.spacingXs + 2, // 10px - compact but sufficient
               ),
             ),
             
@@ -245,18 +235,18 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                 style: TextButton.styleFrom(
                   foregroundColor: context.onSurfaceVariantColor,
                   padding: EdgeInsets.symmetric(
-                    vertical: 6  // Further reduced padding for maximum compactness
+                    vertical: DS.spacing2xs + 2  // 6px - compact but accessible
                   ),
-                  shape: const RoundedRectangleBorder(
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(8),
-                      bottomRight: Radius.circular(8),
+                      bottomLeft: Radius.circular(DS.borderRadiusSmall),
+                      bottomRight: Radius.circular(DS.borderRadiusSmall),
                     ),
                   ),
                 ),
                 child: Padding(
                   padding: EdgeInsets.only(
-                    left: isVerySmall ? 6 : (isSmall ? 8 : (isMedium ? 12 : 16))
+                    left: isVerySmall ? DS.spacing2xs + 2 : (isSmall ? DS.spacingXs : (isMedium ? DS.spacingS : DS.spacingM))
                   ),
                   child: Align(
                     alignment: Alignment.centerLeft,
