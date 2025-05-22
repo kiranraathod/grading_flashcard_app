@@ -34,31 +34,32 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _activeTab = 'Decks';
-  
+
   // Data for streak calendar
   final int _weeklyGoal = 7;
   final int _daysCompleted = 5;
-  
+
   // Focus node for search functionality
   final FocusNode _searchFocusNode = FocusNode();
-  
+
   // Calculate the progress percentage based on completed flashcards
   int _calculateProgress(FlashcardSet set) {
     if (set.flashcards.isEmpty) return 0;
-    
+
     // Count completed flashcards
-    int completedCount = set.flashcards.where((card) => card.isCompleted).length;
-    
+    int completedCount =
+        set.flashcards.where((card) => card.isCompleted).length;
+
     // Calculate percentage - always start at zero for clean state
     return (completedCount / set.flashcards.length * 100).round();
   }
-  
+
   @override
   void dispose() {
     _searchFocusNode.dispose();
     super.dispose();
   }
-  
+
   // Navigate to the search screen
   void _navigateToSearch() {
     Navigator.push(
@@ -68,452 +69,556 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final flashcardService = Provider.of<FlashcardService>(context);
-    
+
     return KeyboardShortcuts(
       searchFocusNode: _searchFocusNode,
       onSearchShortcut: _navigateToSearch,
       child: Scaffold(
-      backgroundColor: context.backgroundColor,
-      body: Column(
-        children: [
-          // App header
-          AppHeader(key: GlobalKey()),
-          
-          // Main content with scrolling
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(DS.spacingL),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Streak calendar (simplified version from reference)
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Streak calendar
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: List.generate(7, (index) {
-                            // Get the current day of the week
-                            final now = DateTime.now();
-                            
-                            // Convert between different day-of-week systems:
-                            // - Our display array: ['S', 'M', 'T', 'W', 'T', 'F', 'S'] (0=Sun, 1=Mon, ..., 6=Sat)
-                            // - DateTime.weekday: (1=Mon, 2=Tue, ..., 7=Sun)
-                            int currentWeekdayIndex;
-                            
-                            // Map DateTime.weekday to our array index
-                            switch (now.weekday) {
-                              case 1: // Monday maps to index 1
-                                currentWeekdayIndex = 1;
-                                break;
-                              case 2: // Tuesday maps to index 2
-                                currentWeekdayIndex = 2;
-                                break;
-                              case 3: // Wednesday maps to index 3
-                                currentWeekdayIndex = 3;
-                                break;
-                              case 4: // Thursday maps to index 4
-                                currentWeekdayIndex = 4;
-                                break;
-                              case 5: // Friday maps to index 5
-                                currentWeekdayIndex = 5;
-                                break;
-                              case 6: // Saturday maps to index 6
-                                currentWeekdayIndex = 6;
-                                break;
-                              case 7: // Sunday maps to index 0
-                                currentWeekdayIndex = 0;
-                                break;
-                              default:
-                                currentWeekdayIndex = 0;
-                            }
-                            
-                            // Determine the day style dynamically based on the current day
-                            bool isToday = index == currentWeekdayIndex;
-                            bool isPast = index < currentWeekdayIndex; // Days before today
-                            
-                            Color bgColor = context.surfaceVariantColor;
-                            Color textColor = context.onSurfaceVariantColor;
-                            Border? border;
-                            
-                            if (isToday) {
-                              bgColor = context.primaryColor.withOpacityFix(0.1);
-                              textColor = context.primaryColor;
-                              border = Border.all(
-                                color: context.primaryColor,
-                                width: 2,
-                              );
-                            } else if (isPast) {
-                              bgColor = context.primaryColor;
-                              textColor = context.onPrimaryColor;
-                            }
-                            
-                            return Column(
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: bgColor,
-                                    shape: BoxShape.circle,
-                                    border: border,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      _getDayAbbreviation(context, index),
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: textColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  isToday ? AppLocalizations.of(context).today : '',
-                                  style: context.bodySmall?.copyWith(
-                                    color: context.onSurfaceVariantColor,
-                                  ),
-                                ),
-                              ],
-                            );
-                          }),
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Progress bar with dynamic calculation
-                        Builder(
-                          builder: (context) {
-                            // Calculate percentage dynamically
-                            final double progressPercentage = _daysCompleted / _weeklyGoal;
-                            final int progressPercent = (progressPercentage * 100).round();
-                            
-                            return Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      AppLocalizations.of(context).weeklyGoalFormat(_daysCompleted, _weeklyGoal),
-                                      style: context.bodyMedium?.copyWith(
-                                        color: context.onSurfaceVariantColor,
-                                      ),
-                                    ),
-                                    Text(
-                                      '$progressPercent%',
-                                      style: context.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: context.primaryColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(2),
-                                  child: LinearProgressIndicator(
-                                    value: progressPercentage,
-                                    backgroundColor: context.surfaceVariantColor,
-                                    valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
-                                    minHeight: 8,
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacingM),
-                  
-                  // Tabs styled to match React code
-                  Container(
-                    margin: EdgeInsets.only(bottom: 24), // mt-6 in Tailwind is 1.5rem (24px)
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Tabs in a container with gray background
-                        Container(
-                          decoration: BoxDecoration(
-                            color: context.surfaceVariantColor,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              // Decks tab
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _activeTab = 'Decks';
-                                  });
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: _activeTab == 'Decks' ? context.surfaceColor : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: _activeTab == 'Decks' && context.isDarkMode
-                                        ? Border.all(
-                                            color: context.primaryColor.withValues(alpha: 0.2),
-                                            width: 1,
-                                          )
-                                        : null,
-                                    boxShadow: _activeTab == 'Decks' ? [
-                                      BoxShadow(
-                                        color: context.isDarkMode 
-                                            ? context.primaryColor.withValues(alpha: 0.1)
-                                            : Colors.grey.withOpacityFix(0.1),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      )
-                                    ] : null,
-                                  ),
-                                  child: Text(
-                                    AppLocalizations.of(context).decksTab,
-                                    style: context.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w500,
-                                      color: _activeTab == 'Decks' 
-                                        ? context.primaryColor
-                                        : context.onSurfaceVariantColor,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              
-                              // Interview Questions tab with arrow
-                              Stack(
+        backgroundColor: context.backgroundColor,
+        body: Column(
+          children: [
+            // App header
+            AppHeader(key: GlobalKey()),
+
+            // Main content with scrolling
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(DS.spacingL),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Streak calendar (simplified version from reference)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Streak calendar
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: List.generate(7, (index) {
+                              // Get the current day of the week
+                              final now = DateTime.now();
+
+                              // Convert between different day-of-week systems:
+                              // - Our display array: ['S', 'M', 'T', 'W', 'T', 'F', 'S'] (0=Sun, 1=Mon, ..., 6=Sat)
+                              // - DateTime.weekday: (1=Mon, 2=Tue, ..., 7=Sun)
+                              int currentWeekdayIndex;
+
+                              // Map DateTime.weekday to our array index
+                              switch (now.weekday) {
+                                case 1: // Monday maps to index 1
+                                  currentWeekdayIndex = 1;
+                                  break;
+                                case 2: // Tuesday maps to index 2
+                                  currentWeekdayIndex = 2;
+                                  break;
+                                case 3: // Wednesday maps to index 3
+                                  currentWeekdayIndex = 3;
+                                  break;
+                                case 4: // Thursday maps to index 4
+                                  currentWeekdayIndex = 4;
+                                  break;
+                                case 5: // Friday maps to index 5
+                                  currentWeekdayIndex = 5;
+                                  break;
+                                case 6: // Saturday maps to index 6
+                                  currentWeekdayIndex = 6;
+                                  break;
+                                case 7: // Sunday maps to index 0
+                                  currentWeekdayIndex = 0;
+                                  break;
+                                default:
+                                  currentWeekdayIndex = 0;
+                              }
+
+                              // Determine the day style dynamically based on the current day
+                              bool isToday = index == currentWeekdayIndex;
+                              bool isPast =
+                                  index <
+                                  currentWeekdayIndex; // Days before today
+
+                              Color bgColor = context.surfaceVariantColor;
+                              Color textColor = context.onSurfaceVariantColor;
+                              Border? border;
+
+                              if (isToday) {
+                                bgColor = context.primaryColor.withOpacityFix(
+                                  0.1,
+                                );
+                                textColor = context.primaryColor;
+                                border = Border.all(
+                                  color: context.primaryColor,
+                                  width: 2,
+                                );
+                              } else if (isPast) {
+                                bgColor = context.primaryColor;
+                                textColor = context.onPrimaryColor;
+                              }
+
+                              return Column(
                                 children: [
-                                  InkWell(
-                                    onTap: () {
-                                      setState(() {
-                                        _activeTab = 'Interview Questions';
-                                      });
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: _activeTab == 'Interview Questions' ? context.surfaceColor : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: _activeTab == 'Interview Questions' && context.isDarkMode
-                                            ? Border.all(
-                                                color: context.primaryColor.withValues(alpha: 0.2),
-                                                width: 1,
-                                              )
-                                            : null,
-                                        boxShadow: _activeTab == 'Interview Questions' ? [
-                                          BoxShadow(
-                                            color: context.isDarkMode 
-                                                ? context.primaryColor.withValues(alpha: 0.1)
-                                                : Colors.grey.withOpacityFix(0.1),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          )
-                                        ] : null,
-                                      ),
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: bgColor,
+                                      shape: BoxShape.circle,
+                                      border: border,
+                                    ),
+                                    child: Center(
                                       child: Text(
-                                        AppLocalizations.of(context).interviewQuestionsTab,
-                                        style: context.bodyMedium?.copyWith(
-                                          fontWeight: FontWeight.w500,
-                                          color: _activeTab == 'Interview Questions' 
-                                            ? context.primaryColor
-                                            : context.onSurfaceVariantColor,
+                                        _getDayAbbreviation(context, index),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: textColor,
                                         ),
                                       ),
                                     ),
                                   ),
-                                  
-                                  // Arrow indicator (only show when tab is active)
-                                  if (_activeTab == 'Interview Questions')
-                                    Positioned(
-                                      top: -15,
-                                      right: 20,
-                                      child: CustomPaint(
-                                        size: const Size(20, 15),
-                                        painter: ArrowPainter(color: context.errorColor),
-                                      ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    isToday
+                                        ? AppLocalizations.of(context).today
+                                        : '',
+                                    style: context.bodySmall?.copyWith(
+                                      color: context.onSurfaceVariantColor,
                                     ),
-                                ],
-                              ),
-                              
-                              // Recent tab
-                              InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _activeTab = 'Recent';
-                                  });
-                                },
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: _activeTab == 'Recent' ? context.surfaceColor : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: _activeTab == 'Recent' && context.isDarkMode
-                                        ? Border.all(
-                                            color: context.primaryColor.withValues(alpha: 0.2),
-                                            width: 1,
-                                          )
-                                        : null,
-                                    boxShadow: _activeTab == 'Recent' ? [
-                                      BoxShadow(
-                                        color: context.isDarkMode 
-                                            ? context.primaryColor.withValues(alpha: 0.1)
-                                            : Colors.grey.withOpacityFix(0.1),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      )
-                                    ] : null,
                                   ),
-                                  child: Text(
-                                    AppLocalizations.of(context).recentTab,
-                                    style: context.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w500,
-                                      color: _activeTab == 'Recent' 
-                                        ? context.primaryColor
-                                        : context.onSurfaceVariantColor,
+                                ],
+                              );
+                            }),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Progress bar with dynamic calculation
+                          Builder(
+                            builder: (context) {
+                              // Calculate percentage dynamically
+                              final double progressPercentage =
+                                  _daysCompleted / _weeklyGoal;
+                              final int progressPercent =
+                                  (progressPercentage * 100).round();
+
+                              return Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        ).weeklyGoalFormat(
+                                          _daysCompleted,
+                                          _weeklyGoal,
+                                        ),
+                                        style: context.bodyMedium?.copyWith(
+                                          color: context.onSurfaceVariantColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        '$progressPercent%',
+                                        style: context.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: context.primaryColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(2),
+                                    child: LinearProgressIndicator(
+                                      value: progressPercentage,
+                                      backgroundColor:
+                                          context.surfaceVariantColor,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        context.primaryColor,
+                                      ),
+                                      minHeight: 8,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacingM),
+
+                    // Tabs styled to match React code
+                    Container(
+                      margin: EdgeInsets.only(
+                        bottom: 24,
+                      ), // mt-6 in Tailwind is 1.5rem (24px)
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start, // Align everything to the left
+                        children: [
+                          // Tabs and filters in a single row with space between
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Tabs aligned to the left
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: context.surfaceVariantColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min, // Don't expand beyond needed
+                                  children: [
+                                // Decks tab
+                                InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _activeTab = 'Decks';
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          _activeTab == 'Decks'
+                                              ? context.surfaceColor
+                                              : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border:
+                                          _activeTab == 'Decks' &&
+                                                  context.isDarkMode
+                                              ? Border.all(
+                                                color: context.primaryColor
+                                                    .withValues(alpha: 0.2),
+                                                width: 1,
+                                              )
+                                              : null,
+                                      boxShadow:
+                                          _activeTab == 'Decks'
+                                              ? [
+                                                BoxShadow(
+                                                  color:
+                                                      context.isDarkMode
+                                                          ? context.primaryColor
+                                                              .withValues(
+                                                                alpha: 0.1,
+                                                              )
+                                                          : Colors.grey
+                                                              .withOpacityFix(
+                                                                0.1,
+                                                              ),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ]
+                                              : null,
+                                    ),
+                                    child: Text(
+                                      AppLocalizations.of(context).decksTab,
+                                      style: context.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                        color:
+                                            _activeTab == 'Decks'
+                                                ? context.primaryColor
+                                                : context.onSurfaceVariantColor,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+
+                                // Interview Questions tab with arrow
+                                Stack(
+                                  children: [
+                                    InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          _activeTab = 'Interview Questions';
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              _activeTab ==
+                                                      'Interview Questions'
+                                                  ? context.surfaceColor
+                                                  : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border:
+                                              _activeTab ==
+                                                          'Interview Questions' &&
+                                                      context.isDarkMode
+                                                  ? Border.all(
+                                                    color: context.primaryColor
+                                                        .withValues(alpha: 0.2),
+                                                    width: 1,
+                                                  )
+                                                  : null,
+                                          boxShadow:
+                                              _activeTab ==
+                                                      'Interview Questions'
+                                                  ? [
+                                                    BoxShadow(
+                                                      color:
+                                                          context.isDarkMode
+                                                              ? context
+                                                                  .primaryColor
+                                                                  .withValues(
+                                                                    alpha: 0.1,
+                                                                  )
+                                                              : Colors.grey
+                                                                  .withOpacityFix(
+                                                                    0.1,
+                                                                  ),
+                                                      blurRadius: 4,
+                                                      offset: const Offset(
+                                                        0,
+                                                        2,
+                                                      ),
+                                                    ),
+                                                  ]
+                                                  : null,
+                                        ),
+                                        child: Text(
+                                          AppLocalizations.of(
+                                            context,
+                                          ).interviewQuestionsTab,
+                                          style: context.bodyMedium?.copyWith(
+                                            fontWeight: FontWeight.w500,
+                                            color:
+                                                _activeTab ==
+                                                        'Interview Questions'
+                                                    ? context.primaryColor
+                                                    : context
+                                                        .onSurfaceVariantColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Arrow indicator (only show when tab is active)
+                                    if (_activeTab == 'Interview Questions')
+                                      Positioned(
+                                        top: -15,
+                                        right: 20,
+                                        child: CustomPaint(
+                                          size: const Size(20, 15),
+                                          painter: ArrowPainter(
+                                            color: context.errorColor,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+
+                                // Recent tab
+                                InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _activeTab = 'Recent';
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          _activeTab == 'Recent'
+                                              ? context.surfaceColor
+                                              : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border:
+                                          _activeTab == 'Recent' &&
+                                                  context.isDarkMode
+                                              ? Border.all(
+                                                color: context.primaryColor
+                                                    .withValues(alpha: 0.2),
+                                                width: 1,
+                                              )
+                                              : null,
+                                      boxShadow:
+                                          _activeTab == 'Recent'
+                                              ? [
+                                                BoxShadow(
+                                                  color:
+                                                      context.isDarkMode
+                                                          ? context.primaryColor
+                                                              .withValues(
+                                                                alpha: 0.1,
+                                                              )
+                                                          : Colors.grey
+                                                              .withOpacityFix(
+                                                                0.1,
+                                                              ),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ]
+                                              : null,
+                                    ),
+                                    child: Text(
+                                      AppLocalizations.of(context).recentTab,
+                                      style: context.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                        color:
+                                            _activeTab == 'Recent'
+                                                ? context.primaryColor
+                                                : context.onSurfaceVariantColor,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        
-                        // Filter and Sort
-                        Row(
-                          children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: context.colorScheme.outline),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.filter_list, size: 16, color: context.onSurfaceVariantColor),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    AppLocalizations.of(context).filter,
-                                    style: context.bodySmall,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Container(
-                              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: context.colorScheme.outline),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.access_time, size: 16, color: context.onSurfaceVariantColor),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    AppLocalizations.of(context).lastUpdated,
-                                    style: context.bodySmall,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Icon(Icons.keyboard_arrow_down, size: 16, color: context.onSurfaceVariantColor),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                          
+                          // Filter and Sort controls aligned to the right
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              // Check if we have enough space for both filters side by side
+                              final availableWidth = constraints.maxWidth;
+                              final shouldStack = availableWidth < 300; // Threshold for stacking
+                              
+                              if (shouldStack) {
+                                // Stack vertically on narrow screens
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildFilterButton(context),
+                                    const SizedBox(height: 8),
+                                    _buildSortButton(context),
+                                  ],
+                                );
+                              } else {
+                                // Display horizontally without flexible sizing to avoid constraints issues
+                                return Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildFilterButton(context),
+                                    const SizedBox(width: 8),
+                                    _buildSortButton(context),
+                                  ],
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: DS.spacingL),
-                  
-                  // Tab content
-                  _buildTabContent(flashcardService),
-                ],
+                ),
+                    const SizedBox(height: DS.spacingL),
+
+                    // Tab content
+                    _buildTabContent(flashcardService),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+
+        // Multi-action Floating Action Button
+        floatingActionButton: MultiActionFab(
+          backgroundColor: context.primaryColor, // This will now use grey
+          activeColor:
+              context.isDarkMode
+                  ? context.appTheme.primaryDarkHover ?? context.primaryColor
+                  : context.primaryColor,
+          tooltip: 'Create new content',
+          options: [
+            MultiActionFabOption(
+              label: 'Create Flashcards',
+              icon: Icons.style,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CreateFlashcardScreen(),
+                  ),
+                ).then((_) {
+                  if (mounted) setState(() {});
+                });
+              },
+            ),
+            MultiActionFabOption(
+              label: 'Create New Question',
+              icon: Icons.add,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CreateInterviewQuestionScreen(),
+                  ),
+                ).then((_) {
+                  if (mounted) setState(() {});
+                });
+              },
+            ),
+            MultiActionFabOption(
+              label: 'Generate from Job Description',
+              icon: Icons.description,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (context) =>
+                            const JobDescriptionQuestionGeneratorScreen(),
+                  ),
+                ).then((_) {
+                  if (mounted) setState(() {});
+                });
+              },
+            ),
+          ],
+        ),
       ),
-      
-      // Multi-action Floating Action Button
-      floatingActionButton: MultiActionFab(
-        backgroundColor: context.primaryColor,  // This will now use grey
-        activeColor: context.isDarkMode 
-            ? context.appTheme.primaryDarkHover ?? context.primaryColor 
-            : context.primaryColor,
-        tooltip: 'Create new content',
-        options: [
-          MultiActionFabOption(
-            label: 'Create Flashcards',
-            icon: Icons.style,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CreateFlashcardScreen(),
-                ),
-              ).then((_) {
-                if (mounted) setState(() {});
-              });
-            },
-          ),
-          MultiActionFabOption(
-            label: 'Create New Question',
-            icon: Icons.add,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CreateInterviewQuestionScreen(),
-                ),
-              ).then((_) {
-                if (mounted) setState(() {});
-              });
-            },
-          ),
-          MultiActionFabOption(
-            label: 'Generate from Job Description',
-            icon: Icons.description,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const JobDescriptionQuestionGeneratorScreen(),
-                ),
-              ).then((_) {
-                if (mounted) setState(() {});
-              });
-            },
-          ),
-        ],
-      ),
-    ));
+    );
   }
-  
+
   // Helper method to get day abbreviation
   String _getDayAbbreviation(BuildContext context, int index) {
     final localizations = AppLocalizations.of(context);
     switch (index) {
-      case 0: return localizations.sunday;
-      case 1: return localizations.monday;
-      case 2: return localizations.tuesday;
-      case 3: return localizations.wednesday;
-      case 4: return localizations.thursday;
-      case 5: return localizations.friday;
-      case 6: return localizations.saturday;
-      default: return '';
+      case 0:
+        return localizations.sunday;
+      case 1:
+        return localizations.monday;
+      case 2:
+        return localizations.tuesday;
+      case 3:
+        return localizations.wednesday;
+      case 4:
+        return localizations.thursday;
+      case 5:
+        return localizations.friday;
+      case 6:
+        return localizations.saturday;
+      default:
+        return '';
     }
   }
-  
+
   Widget _buildTabContent(FlashcardService flashcardService) {
     switch (_activeTab) {
       case 'Decks':
@@ -526,89 +631,182 @@ class _HomeScreenState extends State<HomeScreen> {
         return _buildDecksTab(flashcardService);
     }
   }
-  
+
   Widget _buildDecksTab(FlashcardService flashcardService) {
     // Get flashcard sets from service
     final flashcardSets = flashcardService.sets;
-    
+
     // If no sets, show empty state
     if (flashcardSets.isEmpty) {
-      return _buildEmptyState('No flashcard decks yet', 'Create your first deck');
+      return _buildEmptyState(
+        'No flashcard decks yet',
+        'Create your first deck',
+      );
+    }
+
+    // CRITICAL FIX: Account for parent padding in width calculations
+    final fullScreenWidth = MediaQuery.of(context).size.width;
+    final parentPadding = DS.spacingL * 2; // SingleChildScrollView padding on both sides
+    final effectiveScreenWidth = fullScreenWidth - parentPadding;
+    
+    // Ultra-minimal horizontal padding to maximize content width
+    final horizontalPadding = 1.0;  // Further reduced from 2.0
+    // Ultra-minimal spacing between cards to maximize usable space
+    final cardSpacing = 3.0;  // Further reduced from 4.0
+    
+    // Calculate the optimal number of columns based on EFFECTIVE available width
+    int calculateOptimalColumns() {
+      if (effectiveScreenWidth >= 700) {
+        return 4;      // 4 columns for medium-large screens (reduced from 750)
+      }
+      if (effectiveScreenWidth >= 500) {
+        return 3;      // 3 columns for medium screens (reduced from 550)
+      }
+      if (effectiveScreenWidth >= 320) {
+        return 2;      // 2 columns for small screens (reduced from 350)
+      }
+      return 1;                              // 1 column for very small screens
     }
     
-    // Responsive grid layout similar to the React code
-    // (grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6)
-    final screenWidth = MediaQuery.of(context).size.width;
-    int crossAxisCount = 1;
+    // Get the optimal number of columns for current width
+    final columns = calculateOptimalColumns();
     
-    if (screenWidth >= 1024) { // lg breakpoint
-      crossAxisCount = 4;
-    } else if (screenWidth >= 640) { // sm breakpoint
-      crossAxisCount = 2;
-    } else {
-      crossAxisCount = 1;
+    // Calculate optimal card width with controlled maximum size
+    double getAdaptiveCardWidth() {
+      // Calculate available width precisely using EFFECTIVE screen width
+      final availableWidth = effectiveScreenWidth - (horizontalPadding * 2);
+      
+      // For multi-column layouts, calculate exact width distribution
+      final totalGapWidth = (columns - 1) * cardSpacing;
+      
+      // Calculate card width with perfect distribution
+      final remainingWidth = availableWidth - totalGapWidth;
+      final calculatedCardWidth = remainingWidth / columns;
+      
+      // Apply maximum card width constraint for better visual balance
+      final maxCardWidth = 365.0; // Target card width for optimal appearance
+      final cardWidth = calculatedCardWidth > maxCardWidth ? maxCardWidth : calculatedCardWidth;
+      
+      // Return controlled width for better visual balance
+      return cardWidth;
     }
-    
-    return GridView.count(
-      crossAxisCount: crossAxisCount,
-      childAspectRatio: 0.85, // Cards are slightly taller than wide
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 24, // gap-6 in Tailwind is 1.5rem (24px)
-      mainAxisSpacing: 24, // gap-6
-      children: [
-        ...flashcardSets.map((set) => FlashcardDeckCard(
-              title: set.title,
-              category: set.description.isNotEmpty ? set.description : 'Python',
-              cardCount: set.flashcards.length,
-              progressPercent: _calculateProgress(set),
-              isStudyDeck: true,
-              onTap: () async {
-                // Navigate to study screen with the actual flashcard set
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => StudyScreen(
-                      set: set,
-                    ),
-                  ),
-                ).then((_) {
-                  // Check if the widget is still mounted before accessing context
-                  if (mounted) {
-                    // Explicitly reload flashcard sets after returning
-                    final flashcardService = Provider.of<FlashcardService>(context, listen: false);
-                    flashcardService.reloadSets(); // Use the public reload method
+
+    return Container(
+      // CRITICAL FIX: Use effective screen width for container constraints
+      width: effectiveScreenWidth,
+      constraints: BoxConstraints(
+        minWidth: effectiveScreenWidth,
+        maxWidth: effectiveScreenWidth,
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+        child: ListView(
+          shrinkWrap: true,
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+        children: [
+            // If the number of items doesn't match the column count exactly,
+            // add spacer items to ensure proper distribution
+            Builder(builder: (context) {
+            final List<Widget> items = [
+              ...flashcardSets.map((set) => SizedBox(
+                width: getAdaptiveCardWidth(),
+                height: 201, // Increased to fix overflow error
+                child: FlashcardDeckCard(
+                  title: set.title,
+                  category: set.description.isNotEmpty ? set.description : 'Python',
+                  cardCount: set.flashcards.length,
+                  progressPercent: _calculateProgress(set),
+                  isStudyDeck: true,
+                  onTap: () async {
+                    // Store service reference before async operation to avoid BuildContext across async gaps
+                    final flashcardService = Provider.of<FlashcardService>(
+                      context,
+                      listen: false,
+                    );
                     
+                    // Navigate to study screen with the actual flashcard set
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => StudyScreen(set: set),
+                      ),
+                    );
+
+                    // Check if the widget is still mounted after navigation
+                    if (!mounted) return;
+
+                    // Reload flashcard sets using stored service reference
+                    flashcardService.reloadSets(); // Use the public reload method
+
                     // Extra safety - force state refresh
                     setState(() {
-                      debugPrint('Forcing home screen refresh after returning from study');
+                      debugPrint(
+                        'Forcing home screen refresh after returning from study',
+                      );
                     });
-                  }
-                });
-                
-                // Force refresh after returning
-                setState(() {
-                  debugPrint('Refreshing home screen after study session');
-                });
-              },
-            )),
-        CreateDeckCard(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const CreateFlashcardScreen(),
+                  },
+                ),
+              )),
+              // Create Deck Card - also needs fixed width
+              SizedBox(
+                width: getAdaptiveCardWidth(),
+                height: 201, // Increased to fix overflow error
+                child: CreateDeckCard(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CreateFlashcardScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ];
+            
+            // No special handling needed for single-column - just use consistent width calculation
+            var updatedItems = List<Widget>.from(items);
+            
+            // Add placeholders when needed for multi-row layouts
+            if (columns > 1) {
+              final totalItems = flashcardSets.length + 1; // +1 for create deck card
+              final totalRows = (totalItems / columns).ceil();
+              final lastRowItems = totalItems % columns == 0 ? columns : totalItems % columns;
+              
+              // Only add placeholders when there's a partial last row
+              if (totalRows > 1 && lastRowItems != columns) {
+                final placeholdersNeeded = columns - lastRowItems;
+                for (int i = 0; i < placeholdersNeeded; i++) {
+                  updatedItems.add(SizedBox(
+                    width: getAdaptiveCardWidth(),
+                    height: 0, // Zero height to not affect layout
+                  ));
+                }
+              }
+            }
+            
+            return SizedBox(
+              // CRITICAL FIX: Use effective width for Wrap constraint
+              width: effectiveScreenWidth - (horizontalPadding * 2),
+              child: Wrap(
+                spacing: cardSpacing,
+                runSpacing: cardSpacing,
+                // Always use start alignment to ensure consistent spacing
+                alignment: WrapAlignment.start,
+                children: updatedItems,
               ),
             );
-          },
-        ),
-      ],
+          }),
+        ],
+      ),
+      ),
     );
   }
-  
+
   Widget _buildInterviewTab() {
     final interviewService = Provider.of<InterviewService>(context);
     final questionSets = interviewService.questionSets;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -619,7 +817,9 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: BoxDecoration(
             color: context.secondaryColor.withOpacityFix(0.1),
             borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-            border: Border.all(color: context.secondaryColor.withOpacityFix(0.2)),
+            border: Border.all(
+              color: context.secondaryColor.withOpacityFix(0.2),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -629,7 +829,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: context.titleLarge,
               ),
               const SizedBox(height: DS.spacingS),
-              
+
               // Question count and update time
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -644,9 +844,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: DS.spacingS),
-              
+
               // Progress bar (empty for now)
               Container(
                 height: 6,
@@ -657,26 +857,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 // Progress bar would go here
               ),
-              
+
               const SizedBox(height: 4),
-              
+
               // Status text
               Text(
                 AppLocalizations.of(context).notStarted,
                 style: context.bodySmall,
               ),
-              
+
               const SizedBox(height: DS.spacingM),
-              
+
               // Practice Questions button
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const InterviewQuestionsScreen(
-                        category: 'Data Science',
-                      ),
+                      builder:
+                          (context) => const InterviewQuestionsScreen(
+                            category: 'Data Science',
+                          ),
                     ),
                   );
                 },
@@ -696,17 +897,17 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        
+
         const SizedBox(height: DS.spacingL),
-        
+
         // Question Sets from Job Descriptions
         Text(
           AppLocalizations.of(context).otherCategories,
           style: context.titleMedium,
         ),
-        
+
         const SizedBox(height: DS.spacingM),
-        
+
         // Show question sets if available, otherwise show topic categories
         questionSets.isEmpty
             ? _buildTopicCategories()
@@ -714,18 +915,21 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
-  
+
   // Method to build a grid of question sets
   Widget _buildQuestionSetGrid(List<QuestionSet> questionSets) {
     return Column(
       children: [
         // Question sets grid - Updated to match Browse by Topic grid layout
         GridView.builder(
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 2.5,  // Match the topic cards aspect ratio
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount:
+                MediaQuery.of(context).size.width >= 1024
+                    ? 3
+                    : (MediaQuery.of(context).size.width >= 640 ? 2 : 1),
+            childAspectRatio: 2.5, // Match the topic cards aspect ratio
+            crossAxisSpacing: context.isPhone ? 8 : 16,
+            mainAxisSpacing: context.isPhone ? 8 : 16,
           ),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -747,13 +951,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => QuestionSetDetailScreen(setId: set.id),
+                      builder:
+                          (context) => QuestionSetDetailScreen(setId: set.id),
                     ),
                   );
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(context.isPhone ? 12 : 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -784,7 +989,7 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         ),
-        
+
         // Add a button to create a new question set from a job description
         const SizedBox(height: 16),
         SizedBox(
@@ -794,7 +999,9 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const JobDescriptionQuestionGeneratorScreen(),
+                  builder:
+                      (context) =>
+                          const JobDescriptionQuestionGeneratorScreen(),
                 ),
               );
             },
@@ -807,7 +1014,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        
+
         // After question sets, show topic categories
         const SizedBox(height: 32),
         Text(
@@ -819,11 +1026,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
-  
+
   // Method for displaying topic categories
   Widget _buildTopicCategories() {
     final interviewService = Provider.of<InterviewService>(context);
-    
+
     // Get predefined categories
     List<Map<String, dynamic>> defaultCategories = [
       {'title': 'Data Analysis', 'count': 18},
@@ -833,11 +1040,11 @@ class _HomeScreenState extends State<HomeScreen> {
       {'title': 'Python', 'count': 14},
       {'title': 'Data Visualization', 'count': 8},
     ];
-    
+
     // Get all unique subtopics
     List<String> allSubtopics = interviewService.getAllUniqueSubtopics();
     debugPrint('All unique subtopics: ${allSubtopics.join(", ")}');
-    
+
     // Filter out subtopics that are already represented by default categories
     List<String> standardSubtopics = [
       'Data Cleaning & Preprocessing',
@@ -845,53 +1052,64 @@ class _HomeScreenState extends State<HomeScreen> {
       'Machine Learning Algorithms',
       'SQL & Database',
       'Python Fundamentals',
-      'Data Visualization'
+      'Data Visualization',
     ];
-    
+
     // Find custom subtopics (those not in standardSubtopics)
-    List<String> customSubtopics = allSubtopics
-        .where((subtopic) => !standardSubtopics.contains(subtopic))
-        .toList();
-    
-    debugPrint('Found ${customSubtopics.length} custom subtopics: ${customSubtopics.join(", ")}');
+    List<String> customSubtopics =
+        allSubtopics
+            .where((subtopic) => !standardSubtopics.contains(subtopic))
+            .toList();
+
+    debugPrint(
+      'Found ${customSubtopics.length} custom subtopics: ${customSubtopics.join(", ")}',
+    );
 
     // Create category items for custom subtopics
-    List<Map<String, dynamic>> customCategories = customSubtopics
-        .map((subtopic) => {
-          'title': subtopic,
-          'count': interviewService.getQuestionCountForSubtopic(subtopic)
-        })
-        .toList();
-    
-    debugPrint('Created ${customCategories.length} custom category cards to display');
-    
+    List<Map<String, dynamic>> customCategories =
+        customSubtopics
+            .map(
+              (subtopic) => {
+                'title': subtopic,
+                'count': interviewService.getQuestionCountForSubtopic(subtopic),
+              },
+            )
+            .toList();
+
+    debugPrint(
+      'Created ${customCategories.length} custom category cards to display',
+    );
+
     // Combine default and custom categories
     List<Map<String, dynamic>> allCategories = [
       ...defaultCategories,
       ...customCategories,
     ];
-    
+
     // Filter out categories with zero questions
-    allCategories = allCategories.where((category) => category['count'] > 0).toList();
-    
-    debugPrint('Found ${allCategories.length} categories to display after filtering');
-    
+    allCategories =
+        allCategories.where((category) => category['count'] > 0).toList();
+
+    debugPrint(
+      'Found ${allCategories.length} categories to display after filtering',
+    );
+
     return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount:
+            MediaQuery.of(context).size.width >= 1024
+                ? 3
+                : (MediaQuery.of(context).size.width >= 640 ? 2 : 1),
         childAspectRatio: 2.5,
-        crossAxisSpacing: DS.spacingS,
-        mainAxisSpacing: DS.spacingS,
+        crossAxisSpacing: context.isPhone ? DS.spacingXs : DS.spacingS,
+        mainAxisSpacing: context.isPhone ? DS.spacingXs : DS.spacingS,
       ),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: allCategories.length,
       itemBuilder: (context, index) {
         final category = allCategories[index];
-        return _buildCategoryChip(
-          category['title'], 
-          category['count'],
-        );
+        return _buildCategoryChip(category['title'], category['count']);
       },
     );
   }
@@ -904,15 +1122,13 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => InterviewQuestionsScreen(
-              category: title,
-            ),
+            builder: (context) => InterviewQuestionsScreen(category: title),
           ),
         );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacingS,
+        padding: EdgeInsets.symmetric(
+          horizontal: context.isPhone ? DS.spacingXs : DS.spacingS,
           vertical: DS.spacing2xs,
         ),
         decoration: BoxDecoration(
@@ -925,9 +1141,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(
               title,
-              style: context.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+              style: context.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
             ),
             Text(
               AppLocalizations.of(context).questionCount(count),
@@ -938,7 +1152,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
+
   Widget _buildRecentTab() {
     // No longer need to create a new BlocProvider here,
     // since we're using the global one from main.dart
@@ -947,15 +1161,22 @@ class _HomeScreenState extends State<HomeScreen> {
         // Force a refresh of recent items when the tab is selected
         WidgetsBinding.instance.addPostFrameCallback((_) {
           // Get flashcard service to sync completion status
-          final flashcardService = Provider.of<FlashcardService>(context, listen: false);
-          final recentViewService = Provider.of<RecentViewService>(context, listen: false);
-          
+          final flashcardService = Provider.of<FlashcardService>(
+            context,
+            listen: false,
+          );
+          final recentViewService = Provider.of<RecentViewService>(
+            context,
+            listen: false,
+          );
+
           // DEBUG: Create a test recent view item if none exist
-          if (flashcardService.sets.isNotEmpty && flashcardService.sets.first.flashcards.isNotEmpty) {
+          if (flashcardService.sets.isNotEmpty &&
+              flashcardService.sets.first.flashcards.isNotEmpty) {
             debugPrint('⭐ CREATING TEST RECENT ITEM FOR DEBUGGING ⭐');
             final testSet = flashcardService.sets.first;
             final testCard = testSet.flashcards.first;
-            
+
             // Record this as a recent view
             context.read<RecentViewBloc>().add(
               RecordFlashcardView(
@@ -965,19 +1186,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           }
-          
+
           // First load recent views
           context.read<RecentViewBloc>().add(const LoadRecentViews());
-          
+
           // Then sync flashcard progress to keep completion status updated
           recentViewService.syncFlashcardProgress(flashcardService.sets);
         });
-        
+
         return const RecentTabContent();
       },
     );
   }
-  
+
   Widget _buildEmptyState(String title, String subtitle) {
     return Center(
       child: Column(
@@ -989,15 +1210,9 @@ class _HomeScreenState extends State<HomeScreen> {
             color: context.onSurfaceVariantColor,
           ),
           const SizedBox(height: DS.spacingM),
-          Text(
-            title,
-            style: context.titleLarge,
-          ),
+          Text(title, style: context.titleLarge),
           const SizedBox(height: DS.spacingS),
-          Text(
-            subtitle,
-            style: context.bodyMedium,
-          ),
+          Text(subtitle, style: context.bodyMedium),
           const SizedBox(height: DS.spacingL),
           ElevatedButton(
             onPressed: () {
@@ -1010,6 +1225,78 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             style: DS.primaryButtonStyle,
             child: Text(AppLocalizations.of(context).createDeck),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to build filter button
+  Widget _buildFilterButton(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 120), // Prevent overflow
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: context.colorScheme.outline,
+        ),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.filter_list,
+            size: 16,
+            color: context.onSurfaceVariantColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            AppLocalizations.of(context).filter,
+            style: context.bodySmall,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to build sort button
+  Widget _buildSortButton(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 180), // Prevent overflow
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: context.colorScheme.outline,
+        ),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.access_time,
+            size: 16,
+            color: context.onSurfaceVariantColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            AppLocalizations.of(context).lastUpdated,
+            style: context.bodySmall,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.keyboard_arrow_down,
+            size: 16,
+            color: context.onSurfaceVariantColor,
           ),
         ],
       ),

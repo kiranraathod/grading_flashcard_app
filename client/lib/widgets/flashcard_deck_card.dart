@@ -33,8 +33,29 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: Container(
-        decoration: BoxDecoration(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // More precise breakpoints based on card width rather than screen width
+          final isVerySmall = constraints.maxWidth < 200;
+          final isSmall = constraints.maxWidth < 280;
+          final isMedium = constraints.maxWidth < 350;
+          
+          // Adaptive sizing based on available width - make more aggressive
+          final contentPadding = isVerySmall ? 4.0 : (isSmall ? 6.0 : (isMedium ? 8.0 : 12.0)); // Reduced from previous values
+          final titleStyle = isVerySmall ? 
+                            context.bodySmall?.copyWith(fontWeight: FontWeight.bold) :
+                            (isSmall ? 
+                              context.bodyMedium?.copyWith(fontWeight: FontWeight.bold) :
+                              (isMedium ? 
+                                context.bodyLarge?.copyWith(fontWeight: FontWeight.bold) :
+                                context.titleMedium));
+          
+          return Container(
+            width: constraints.maxWidth, // Explicitly set width to match parent constraint
+            height: 201, // Increased by 1 pixel to fix overflow error
+            clipBehavior: Clip.antiAlias, // Ensure nothing overflows
+            margin: EdgeInsets.zero, // No margins to maximize space usage
+            decoration: BoxDecoration(
           color: context.surfaceColor,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
@@ -72,7 +93,7 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                 topRight: Radius.circular(8),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(contentPadding),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -82,10 +103,12 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                       children: [
                         // Category badge
                         Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
+                          margin: EdgeInsets.only(bottom: 
+                            isVerySmall ? 2 : (isSmall ? 3 : (isMedium ? 4 : 8))
+                          ),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isVerySmall ? 3 : (isSmall ? 4 : (isMedium ? 6 : 8)),
+                            vertical: isVerySmall ? 1 : 2,
                           ),
                           decoration: BoxDecoration(
                             color: context.surfaceColor,
@@ -93,13 +116,19 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                           ),
                           child: Text(
                             widget.category,
-                            style: context.bodySmall,
+                            style: isVerySmall ? 
+                              context.bodySmall?.copyWith(fontSize: 9) : 
+                              (isSmall ? 
+                                context.bodySmall?.copyWith(fontSize: 10) : 
+                                context.bodySmall),
                           ),
                         ),
                         // Title
                         Text(
                           widget.title,
-                          style: context.titleMedium,
+                          style: titleStyle,
+                          maxLines: isVerySmall ? 1 : 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -129,9 +158,10 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
             
             // Card info section
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(contentPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Card count (always show)
                   Row(
@@ -141,7 +171,8 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                         widget.isStudyDeck
                             ? AppLocalizations.of(context).cardsCount(widget.cardCount)
                             : AppLocalizations.of(context).questionCount(widget.cardCount),
-                        style: context.bodySmall,
+                        style: isVerySmall ? 
+                          context.bodySmall?.copyWith(fontSize: 9) : context.bodySmall,
                       ),
                       if (!widget.isStudyDeck)
                         Text(
@@ -152,31 +183,16 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                   ),
                   
                   // Always show progress bar, but with zero width for 0%
-                  const SizedBox(height: 8),
-                  Container(
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: context.isDarkMode
+                  SizedBox(height: isVerySmall ? 4 : (isSmall ? 6 : 8)),
+                  SizedBox(
+                    height: isVerySmall ? 4.0 : 6.0,
+                    child: LinearProgressIndicator(
+                      value: widget.progressPercent > 0 ? widget.progressPercent / 100 : 0.001,
+                      backgroundColor: context.isDarkMode
                           ? context.surfaceVariantColor.withValues(alpha: 0.3)
                           : context.surfaceVariantColor,
+                      valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
                       borderRadius: BorderRadius.circular(3),
-                      border: context.isDarkMode ? Border.all(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        width: 0.5,
-                      ) : null,
-                    ),
-                    child: Row(
-                      children: [
-                        // Progress bar - visible even at 0%
-                        Container(
-                          width: (MediaQuery.of(context).size.width / 4 - 32) * 
-                              (widget.progressPercent > 0 ? widget.progressPercent / 100 : 0.001),
-                          decoration: BoxDecoration(
-                            color: context.primaryColor,  // This will now use grey
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                   
@@ -186,21 +202,35 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                     widget.progressPercent > 0 
                         ? AppLocalizations.of(context).progressPercent(widget.progressPercent)
                         : AppLocalizations.of(context).notStarted,
-                    style: context.bodySmall?.copyWith(
-                      color: widget.progressPercent > 0
-                          ? context.primaryColor
-                          : context.onSurfaceVariantColor,
-                      fontWeight: widget.progressPercent > 0
-                          ? FontWeight.w500
-                          : FontWeight.normal,
-                    ),
+                    style: (isVerySmall ? 
+                      context.bodySmall?.copyWith(
+                        fontSize: 9,
+                        color: widget.progressPercent > 0
+                            ? context.primaryColor
+                            : context.onSurfaceVariantColor,
+                        fontWeight: widget.progressPercent > 0
+                            ? FontWeight.w500
+                            : FontWeight.normal,
+                      ) : 
+                      context.bodySmall?.copyWith(
+                        color: widget.progressPercent > 0
+                            ? context.primaryColor
+                            : context.onSurfaceVariantColor,
+                        fontWeight: widget.progressPercent > 0
+                            ? FontWeight.w500
+                            : FontWeight.normal,
+                      )),
                   ),
                 ],
               ),
             ),
             
-            // Spacer to push the button to the bottom
-            const Spacer(),
+            // Spacer to push the button to the bottom with minimum height
+            Expanded(
+              child: SizedBox(
+                height: 10, // Reduced minimum height for more compact layout
+              ),
+            ),
             
             // Action button
             Container(
@@ -214,7 +244,9 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                 onPressed: widget.onTap,
                 style: TextButton.styleFrom(
                   foregroundColor: context.onSurfaceVariantColor,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(
+                    vertical: 6  // Further reduced padding for maximum compactness
+                  ),
                   shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.only(
                       bottomLeft: Radius.circular(8),
@@ -223,12 +255,16 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 16),
+                  padding: EdgeInsets.only(
+                    left: isVerySmall ? 6 : (isSmall ? 8 : (isMedium ? 12 : 16))
+                  ),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
                       widget.isStudyDeck ? AppLocalizations.of(context).startLearning : AppLocalizations.of(context).practiceQuestions,
-                      style: context.bodySmall,
+                      style: isVerySmall ? 
+                        context.bodySmall?.copyWith(fontSize: 10) : 
+                        context.bodySmall,
                     ),
                   ),
                 ),
@@ -236,6 +272,8 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
             ),
           ],
         ),
+      );
+        }
       ),
     );
   }
