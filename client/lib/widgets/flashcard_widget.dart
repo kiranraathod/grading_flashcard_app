@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'dart:math' as math;
 import '../models/flashcard.dart';
 import '../utils/design_system.dart';
@@ -96,13 +97,13 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
             Text(
               widget.flashcard.question.isNotEmpty 
                   ? widget.flashcard.question 
-                  : 'No question available. Please edit this flashcard.',
+                  : AppLocalizations.of(context).noQuestionAvailable,
               style: TextStyle(fontSize: DS.bodyLarge.fontSize! + 4, fontWeight: FontWeight.bold), // 20px
               textAlign: TextAlign.center,
             ),
             DSSpacing.verticalL,
             Text(
-              'Tap to reveal answer',
+              AppLocalizations.of(context).tapToRevealAnswer,
               style: TextStyle(fontSize: DS.bodyMedium.fontSize, color: Colors.grey),
             ),
             // Add a hint icon to encourage user interaction
@@ -139,7 +140,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Answer',
+              AppLocalizations.of(context).answerLabel,
               style: TextStyle(
                 fontSize: DS.bodyLarge.fontSize,
                 fontWeight: FontWeight.bold,
@@ -150,13 +151,13 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
             Text(
               widget.flashcard.answer.isNotEmpty
                   ? widget.flashcard.answer
-                  : 'No answer available. Please edit this flashcard.',
+                  : AppLocalizations.of(context).noAnswerAvailable,
               style: TextStyle(fontSize: DS.bodyLarge.fontSize! + 4), // 20px
               textAlign: TextAlign.center,
             ),
             DSSpacing.verticalL,
             Text(
-              'Tap to see question',
+              AppLocalizations.of(context).tapToSeeQuestion,
               style: TextStyle(fontSize: DS.bodyMedium.fontSize, color: Colors.grey),
             ),
             // Add a hint icon to encourage user interaction

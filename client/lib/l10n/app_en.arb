@@ -608,5 +608,86 @@
   "serverConnectionError": "Cannot connect to server. Using offline mode.",
   "@serverConnectionError": {
     "description": "Message displayed when server is unreachable"
+  },
+
+  "technicalKnowledge": "Technical Knowledge",
+  "@technicalKnowledge": {
+    "description": "Category name for technical interview questions"
+  },
+  "appliedSkills": "Applied Skills",
+  "@appliedSkills": {
+    "description": "Category name for applied skills interview questions"
+  },
+  "caseStudies": "Case Studies",
+  "@caseStudies": {
+    "description": "Category name for case study interview questions"
+  },
+  "behavioralQuestions": "Behavioral Questions",
+  "@behavioralQuestions": {
+    "description": "Category name for behavioral interview questions"
+  },
+  "jobSpecific": "Job-Specific",
+  "@jobSpecific": {
+    "description": "Category name for job-specific interview questions"
+  },
+  "other": "Other",
+  "@other": {
+    "description": "Generic category name for other types of questions"
+  },
+
+  "entryLevel": "Entry Level",
+  "@entryLevel": {
+    "description": "Entry difficulty level for questions"
+  },
+  "midLevel": "Mid Level",
+  "@midLevel": {
+    "description": "Mid difficulty level for questions"
+  },
+  "seniorLevel": "Senior Level",
+  "@seniorLevel": {
+    "description": "Senior difficulty level for questions"
+  },
+  "unspecified": "Unspecified",
+  "@unspecified": {
+    "description": "Unspecified difficulty level for questions"
+  },
+
+  "practiceButton": "Practice",
+  "@practiceButton": {
+    "description": "Button text to practice a question"
+  },
+  "viewAnswerButton": "View Answer",
+  "@viewAnswerButton": {
+    "description": "Button text to view an answer"
+  },
+
+  "noQuestionAvailable": "No question available. Please edit this flashcard.",
+  "@noQuestionAvailable": {
+    "description": "Message when flashcard has no question"
+  },
+  "tapToRevealAnswer": "Tap to reveal answer",
+  "@tapToRevealAnswer": {
+    "description": "Instruction text on flashcard front"
+  },
+  "answerLabel": "Answer",
+  "@answerLabel": {
+    "description": "Label for the answer section"
+  },
+  "noAnswerAvailable": "No answer available. Please edit this flashcard.",
+  "@noAnswerAvailable": {
+    "description": "Message when flashcard has no answer"
+  },
+  "tapToSeeQuestion": "Tap to see question",
+  "@tapToSeeQuestion": {
+    "description": "Instruction text on flashcard back"
+  },
+
+  "termLabel": "Term",
+  "@termLabel": {
+    "description": "Label for term input field"
+  },
+  "definitionLabel": "Definition",
+  "@definitionLabel": {
+    "description": "Label for definition input field"
   }
 }

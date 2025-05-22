@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../models/interview_question.dart';
 import '../../utils/design_system.dart';
 import '../../utils/theme_utils.dart';
@@ -37,35 +38,37 @@ class PracticeQuestionCard extends StatelessWidget {
   }
   
   // Helper method to get category name
-  String _getCategoryName() {
+  String _getCategoryName(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     switch (question.category) {
       case 'technical':
-        return 'Technical Knowledge';
+        return localizations.technicalKnowledge;
       case 'applied':
-        return 'Applied Skills';
+        return localizations.appliedSkills;
       case 'case':
-        return 'Case Studies';
+        return localizations.caseStudies;
       case 'behavioral':
-        return 'Behavioral Questions';
+        return localizations.behavioralQuestions;
       case 'job':
-        return 'Job-Specific';
+        return localizations.jobSpecific;
       default:
-        return 'Other';
+        return localizations.other;
     }
   }
   
   // Helper method to get difficulty style
   (Color, String) _getDifficultyStyle(BuildContext context) {
     final isDarkMode = context.isDarkMode;
+    final localizations = AppLocalizations.of(context);
     switch (question.difficulty) {
       case 'entry':
-        return (isDarkMode ? const Color(0xFF1A6352).withValues(alpha: 0.8) : Colors.green.shade100, 'Entry Level');
+        return (isDarkMode ? const Color(0xFF1A6352).withValues(alpha: 0.8) : Colors.green.shade100, localizations.entryLevel);
       case 'mid':
-        return (isDarkMode ? const Color(0xFFA66119).withValues(alpha: 0.8) : Colors.amber.shade100, 'Mid Level');
+        return (isDarkMode ? const Color(0xFFA66119).withValues(alpha: 0.8) : Colors.amber.shade100, localizations.midLevel);
       case 'senior':
-        return (isDarkMode ? const Color(0xFFB72424).withValues(alpha: 0.8) : Colors.red.shade100, 'Senior Level');
+        return (isDarkMode ? const Color(0xFFB72424).withValues(alpha: 0.8) : Colors.red.shade100, localizations.seniorLevel);
       default:
-        return (isDarkMode ? const Color(0xFF555B67).withValues(alpha: 0.8) : Colors.grey.shade100, 'Unspecified');
+        return (isDarkMode ? const Color(0xFF555B67).withValues(alpha: 0.8) : Colors.grey.shade100, localizations.unspecified);
     }
   }
   
@@ -170,7 +173,7 @@ class PracticeQuestionCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(DS.borderRadiusMedium + 4), // ~16px
                           ),
                           child: Text(
-                            _getCategoryName(),
+                            _getCategoryName(context),
                             style: TextStyle(
                               fontSize: DS.bodySmall.fontSize, // 12px
                               fontWeight: FontWeight.w500,
@@ -229,7 +232,7 @@ class PracticeQuestionCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: DS.spacing2xs),
                                 Text(
-                                  'Completed',
+                                  AppLocalizations.of(context).completedStatus,
                                   style: TextStyle(
                                     fontSize: DS.bodySmall.fontSize, // 12px
                                     fontWeight: FontWeight.w500,
@@ -258,7 +261,7 @@ class PracticeQuestionCard extends StatelessWidget {
                             color: context.isDarkMode ? Colors.white : null,
                           ),
                           label: Text(
-                            'Practice',
+                            AppLocalizations.of(context).practiceButton,
                             style: TextStyle(
                               fontSize: DS.bodyMedium.fontSize, // 14px
                               fontWeight: FontWeight.w500,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/design_system.dart';
 import '../utils/spacing_components.dart';
 
@@ -56,13 +57,13 @@ class _FlashcardTermWidgetState extends State<FlashcardTermWidget> {
       child: Column(
         children: [
           _buildInputField(
-            label: 'Term',
+            label: AppLocalizations.of(context).termLabel,
             controller: _termController,
             hasImageOption: true,
           ),
           DSSpacing.verticalL,
           _buildInputField(
-            label: 'Definition',
+            label: AppLocalizations.of(context).definitionLabel,
             controller: _definitionController,
             hasImageOption: true,
           ),
