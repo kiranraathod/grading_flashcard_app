@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/theme_utils.dart';
+import '../utils/design_system.dart';
 import '../screens/settings_screen.dart';
 import '../widgets/theme_toggle.dart';
 import '../screens/search/search_results_screen.dart';
@@ -44,8 +45,8 @@ class _AppHeaderState extends State<AppHeader> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: DS.buttonHeightXl,
+      padding: const EdgeInsets.symmetric(horizontal: DS.spacingM),
       decoration: BoxDecoration(
         color: context.surfaceColor,
         border: Border(
@@ -62,13 +63,13 @@ class _AppHeaderState extends State<AppHeader> {
               Icon(
                 Icons.book_outlined,
                 color: context.primaryColor,
-                size: 20,
+                size: DS.iconSizeS,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: DS.spacingXs),
               Text(
                 AppLocalizations.of(context).appTitle,
                 style: context.titleLarge?.copyWith(
-                  fontSize: 18,
+                  fontSize: DS.isSmallScreen(context) ? 16 : 18,
                   fontWeight: FontWeight.w500,
                   color: context.onSurfaceColor,
                 ),
@@ -76,18 +77,18 @@ class _AppHeaderState extends State<AppHeader> {
             ],
           ),
           
-          const SizedBox(width: 24),
+          const SizedBox(width: DS.spacingL),
           
           // Search bar
           Expanded(
             child: Container(
-              height: 36,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              height: DS.inputHeightL - 12, // 36px total
+              padding: const EdgeInsets.symmetric(horizontal: DS.spacingS),
               decoration: BoxDecoration(
                 color: context.isDarkMode 
                     ? const Color(0xFF2C2C2E)
                     : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(DS.borderRadiusFull),
                 border: Border.all(
                   color: Colors.transparent,
                   width: 0.5,
@@ -104,9 +105,9 @@ class _AppHeaderState extends State<AppHeader> {
                       color: context.isDarkMode 
                           ? Colors.white.withValues(alpha: 0.7)
                           : context.onSurfaceVariantColor,
-                      size: 18,
+                      size: DS.iconSizeXs + 2, // 18px total
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: DS.spacingXs),
                     Expanded(
                       child: TextField(
                         controller: _searchController,
@@ -131,7 +132,7 @@ class _AppHeaderState extends State<AppHeader> {
                                 icon: Icon(
                                   Icons.clear,
                                   color: context.onSurfaceVariantColor,
-                                  size: 16,
+                                  size: DS.iconSizeXs,
                                 ),
                                 onPressed: () {
                                   _searchController.clear();
@@ -157,7 +158,7 @@ class _AppHeaderState extends State<AppHeader> {
             ),
           ),
           
-          const SizedBox(width: 24),
+          const SizedBox(width: DS.spacingL),
           
           // Action buttons
           Row(
@@ -168,39 +169,39 @@ class _AppHeaderState extends State<AppHeader> {
                 icon: Icon(
                   Icons.emoji_events_outlined,
                   color: context.onSurfaceVariantColor,
-                  size: 20,
+                  size: DS.iconSizeS,
                 ),
                 tooltip: AppLocalizations.of(context).achievements,
               ),
               
-              const SizedBox(width: 8),
+              const SizedBox(width: DS.spacingXs),
               
               // Dark mode toggle - This is the fix for the missing dark icon
               const ThemeToggleButton(),
               
-              const SizedBox(width: 16),
+              const SizedBox(width: DS.spacingM),
               
               // Profile dropdown
               PopupMenuButton<String>(
-                offset: const Offset(0, 40),
+                offset: const Offset(0, DS.avatarSizeM),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                 ),
                 icon: Row(
                   children: [
                     CircleAvatar(
-                      radius: 14,
+                      radius: DS.avatarSizeXs * 0.58, // ~14px radius
                       backgroundColor: context.primaryColor,
                       child: Icon(
                         Icons.person,
                         color: context.onPrimaryColor,
-                        size: 16,
+                        size: DS.iconSizeXs,
                       ),
                     ),
                     Icon(
                       Icons.keyboard_arrow_down,
                       color: context.onSurfaceVariantColor,
-                      size: 14,
+                      size: DS.iconSizeXs - 2, // 14px total
                     ),
                   ],
                 ),
@@ -209,8 +210,8 @@ class _AppHeaderState extends State<AppHeader> {
                     value: 'profile',
                     child: Row(
                       children: [
-                        const Icon(Icons.person_outline, size: 18),
-                        const SizedBox(width: 8),
+                        Icon(Icons.person_outline, size: DS.iconSizeXs + 2), // 18px total
+                        const SizedBox(width: DS.spacingXs),
                         Text(AppLocalizations.of(context).profile),
                       ],
                     ),
@@ -219,8 +220,8 @@ class _AppHeaderState extends State<AppHeader> {
                     value: 'settings',
                     child: Row(
                       children: [
-                        const Icon(Icons.settings_outlined, size: 18),
-                        const SizedBox(width: 8),
+                        Icon(Icons.settings_outlined, size: DS.iconSizeXs + 2), // 18px total
+                        const SizedBox(width: DS.spacingXs),
                         Text(AppLocalizations.of(context).settings),
                       ],
                     ),
@@ -230,8 +231,8 @@ class _AppHeaderState extends State<AppHeader> {
                     value: 'logout',
                     child: Row(
                       children: [
-                        const Icon(Icons.logout_outlined, size: 18),
-                        const SizedBox(width: 8),
+                        Icon(Icons.logout_outlined, size: DS.iconSizeXs + 2), // 18px total
+                        const SizedBox(width: DS.spacingXs),
                         Text(AppLocalizations.of(context).logout),
                       ],
                     ),

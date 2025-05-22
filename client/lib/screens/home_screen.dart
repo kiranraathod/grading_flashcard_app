@@ -163,8 +163,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               return Column(
                                 children: [
                                   Container(
-                                    width: 40,
-                                    height: 40,
+                                    width: DS.avatarSizeM,
+                                    height: DS.avatarSizeM,
                                     decoration: BoxDecoration(
                                       color: bgColor,
                                       shape: BoxShape.circle,
@@ -174,14 +174,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Text(
                                         _getDayAbbreviation(context, index),
                                         style: TextStyle(
-                                          fontSize: 14,
+                                          fontSize: DS.isSmallScreen(context) ? 12 : 14,
                                           fontWeight: FontWeight.bold,
                                           color: textColor,
                                         ),
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: DS.spacing2xs),
                                   Text(
                                     isToday
                                         ? AppLocalizations.of(context).today
@@ -195,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             }),
                           ),
 
-                          const SizedBox(height: 24),
+                          const SizedBox(height: DS.spacingL),
 
                           // Progress bar with dynamic calculation
                           Builder(
@@ -232,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: DS.spacingXs),
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(2),
                                     child: LinearProgressIndicator(
@@ -242,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       valueColor: AlwaysStoppedAnimation<Color>(
                                         context.primaryColor,
                                       ),
-                                      minHeight: 8,
+                                      minHeight: DS.spacingXs,
                                     ),
                                   ),
                                 ],
@@ -256,8 +256,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Tabs styled to match React code
                     Container(
-                      margin: EdgeInsets.only(
-                        bottom: 24,
+                      margin: const EdgeInsets.only(
+                        bottom: DS.spacingL,
                       ), // mt-6 in Tailwind is 1.5rem (24px)
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start, // Align everything to the left
@@ -285,8 +285,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   },
                                   child: Container(
                                     padding: EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
+                                      horizontal: DS.spacingM,
+                                      vertical: DS.spacingXs,
                                     ),
                                     decoration: BoxDecoration(
                                       color:
@@ -346,9 +346,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         });
                                       },
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 8,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: DS.spacingM,
+                                          vertical: DS.spacingXs,
                                         ),
                                         decoration: BoxDecoration(
                                           color:
@@ -435,8 +435,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   },
                                   child: Container(
                                     padding: EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
+                                      horizontal: DS.spacingM,
+                                      vertical: DS.spacingXs,
                                     ),
                                     decoration: BoxDecoration(
                                       color:
@@ -503,7 +503,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     _buildFilterButton(context),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: DS.spacingXs),
                                     _buildSortButton(context),
                                   ],
                                 );
@@ -514,7 +514,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     _buildFilterButton(context),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: DS.spacingXs),
                                     _buildSortButton(context),
                                   ],
                                 );
@@ -650,22 +650,27 @@ class _HomeScreenState extends State<HomeScreen> {
     final effectiveScreenWidth = fullScreenWidth - parentPadding;
     
     // Ultra-minimal horizontal padding to maximize content width
-    final horizontalPadding = 1.0;  // Further reduced from 2.0
-    // Ultra-minimal spacing between cards to maximize usable space
-    final cardSpacing = 3.0;  // Further reduced from 4.0
+    final horizontalPadding = DS.spacing2xs * 0.25;  // Optimized for card layout (1.0px)
+    // Ultra-minimal spacing between cards to maximize usable space  
+    final cardSpacing = DS.spacing2xs * 0.75;  // Optimized for card layout (3.0px)
     
     // Calculate the optimal number of columns based on EFFECTIVE available width
     int calculateOptimalColumns() {
-      if (effectiveScreenWidth >= 700) {
-        return 4;      // 4 columns for medium-large screens (reduced from 750)
+      // Use optimized breakpoints for card layout (maintains current behavior)
+      const cardBreakpoint4Col = 700.0;  // Optimized for 4-column layout
+      const cardBreakpoint3Col = 500.0;  // Optimized for 3-column layout  
+      const cardBreakpoint2Col = 320.0;  // Optimized for 2-column layout
+      
+      if (effectiveScreenWidth >= cardBreakpoint4Col) {
+        return 4;      // 4 columns for medium-large screens
       }
-      if (effectiveScreenWidth >= 500) {
-        return 3;      // 3 columns for medium screens (reduced from 550)
+      if (effectiveScreenWidth >= cardBreakpoint3Col) {
+        return 3;      // 3 columns for medium screens
       }
-      if (effectiveScreenWidth >= 320) {
-        return 2;      // 2 columns for small screens (reduced from 350)
+      if (effectiveScreenWidth >= cardBreakpoint2Col) {
+        return 2;      // 2 columns for small screens
       }
-      return 1;                              // 1 column for very small screens
+      return 1;        // 1 column for very small screens
     }
     
     // Get the optimal number of columns for current width
@@ -991,7 +996,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
 
         // Add a button to create a new question set from a job description
-        const SizedBox(height: 16),
+        const SizedBox(height: DS.spacingM),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -1010,18 +1015,18 @@ class _HomeScreenState extends State<HomeScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: context.primaryColor,
               side: BorderSide(color: context.primaryColor),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: DS.spacingS),
             ),
           ),
         ),
 
         // After question sets, show topic categories
-        const SizedBox(height: 32),
+        const SizedBox(height: DS.spacing2xl),
         Text(
           AppLocalizations.of(context).browseByTopic,
           style: context.titleMedium,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DS.spacingM),
         _buildTopicCategories(),
       ],
     );
@@ -1206,7 +1211,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Icon(
             Icons.library_books_outlined,
-            size: 64,
+            size: DS.iconSize2xl + 16, // 64px total
             color: context.onSurfaceVariantColor,
           ),
           const SizedBox(height: DS.spacingM),
@@ -1234,26 +1239,26 @@ class _HomeScreenState extends State<HomeScreen> {
   // Helper method to build filter button
   Widget _buildFilterButton(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 120), // Prevent overflow
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 6,
+      constraints: BoxConstraints(maxWidth: context.isPhone ? 100 : 120), // Responsive constraint
+      padding: EdgeInsets.symmetric(
+        horizontal: DS.spacingS,
+        vertical: DS.spacing2xs + 2, // 6px total
       ),
       decoration: BoxDecoration(
         border: Border.all(
           color: context.colorScheme.outline,
         ),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(DS.borderRadiusXs),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.filter_list,
-            size: 16,
+            size: DS.iconSizeM,
             color: context.onSurfaceVariantColor,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: DS.spacing2xs),
           Text(
             AppLocalizations.of(context).filter,
             style: context.bodySmall,
@@ -1267,35 +1272,35 @@ class _HomeScreenState extends State<HomeScreen> {
   // Helper method to build sort button
   Widget _buildSortButton(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 180), // Prevent overflow
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 6,
+      constraints: BoxConstraints(maxWidth: context.isPhone ? 160 : 180), // Responsive constraint
+      padding: EdgeInsets.symmetric(
+        horizontal: DS.spacingS,
+        vertical: DS.spacing2xs + 2, // 6px total
       ),
       decoration: BoxDecoration(
         border: Border.all(
           color: context.colorScheme.outline,
         ),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(DS.borderRadiusXs),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.access_time,
-            size: 16,
+            size: DS.iconSizeM,
             color: context.onSurfaceVariantColor,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: DS.spacing2xs),
           Text(
             AppLocalizations.of(context).lastUpdated,
             style: context.bodySmall,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: DS.spacing2xs),
           Icon(
             Icons.keyboard_arrow_down,
-            size: 16,
+            size: DS.iconSizeM,
             color: context.onSurfaceVariantColor,
           ),
         ],
