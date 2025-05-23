@@ -86,8 +86,8 @@ class _AppHeaderState extends State<AppHeader> {
               padding: const EdgeInsets.symmetric(horizontal: DS.spacingS),
               decoration: BoxDecoration(
                 color: context.isDarkMode 
-                    ? const Color(0xFF2C2C2E)
-                    : Colors.grey.shade100,
+                    ? context.surfaceVariantColor
+                    : context.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(DS.borderRadiusFull),
                 border: Border.all(
                   color: Colors.transparent,
@@ -102,9 +102,7 @@ class _AppHeaderState extends State<AppHeader> {
                   children: [
                     Icon(
                       Icons.search,
-                      color: context.isDarkMode 
-                          ? Colors.white.withValues(alpha: 0.7)
-                          : context.onSurfaceVariantColor,
+                      color: context.onSurfaceVariantColor,
                       size: DS.iconSizeXs + 2, // 18px total
                     ),
                     const SizedBox(width: DS.spacingXs),
@@ -119,9 +117,7 @@ class _AppHeaderState extends State<AppHeader> {
                         decoration: InputDecoration(
                           hintText: AppLocalizations.of(context).search,
                           hintStyle: TextStyle(
-                            color: context.isDarkMode 
-                                ? Colors.white.withValues(alpha: 0.5)
-                                : context.onSurfaceVariantColor,
+                            color: context.onSurfaceVariantColor,
                             fontSize: 16,
                           ),
                           border: InputBorder.none,

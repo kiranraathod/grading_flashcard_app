@@ -67,9 +67,9 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
             width: context.isDarkMode ? 1.2 : 1.0,
           ),
           boxShadow: _isHovered ? (
-            context.isDarkMode ? DS.getShadow(DS.elevationM, color: const Color(0x99000000)) : context.cardShadow
+            context.isDarkMode ? DS.getShadow(DS.elevationM, color: context.shadowColor) : context.cardShadow
           ) : (
-            context.isDarkMode ? DS.getShadow(DS.elevationS, color: const Color(0x66000000)) : null
+            context.isDarkMode ? DS.getShadow(DS.elevationS, color: context.shadowColor) : null
           ),
         ),
         child: Column(

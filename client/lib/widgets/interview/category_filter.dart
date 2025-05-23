@@ -84,12 +84,12 @@ class CategoryFilter extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isActive 
                         ? (category['color'] as Color)
-                        : (isDarkMode ? const Color(0xFF2C2C2E) : Colors.white),
+                        : context.surfaceColor,
                     borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                     border: Border.all(
                       color: isActive 
                           ? (category['activeColor'] as Color)
-                          : (isDarkMode ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade200),
+                          : context.outlineColor,
                       width: isActive ? 2 : 1,
                     ),
                   ),
@@ -99,8 +99,8 @@ class CategoryFilter extends StatelessWidget {
                         category['icon'] as IconData,
                         size: 16,
                         color: isActive 
-                            ? (isDarkMode ? Colors.white : Colors.blue.shade700)
-                            : (isDarkMode ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade700),
+                            ? (category['activeColor'] as Color)
+                            : ThemedColors.getTextSecondary(context),
                       ),
                       const SizedBox(width: DS.spacingXs),
                       Text(
@@ -109,8 +109,8 @@ class CategoryFilter extends StatelessWidget {
                           fontSize: 14,
                           fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
                           color: isActive 
-                              ? (isDarkMode ? Colors.white : Colors.blue.shade700)
-                              : (isDarkMode ? Colors.white.withValues(alpha: 0.7) : Colors.grey.shade700),
+                              ? (category['activeColor'] as Color)
+                              : ThemedColors.getTextSecondary(context),
                         ),
                       ),
                     ],

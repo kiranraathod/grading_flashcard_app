@@ -3,6 +3,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../models/interview_question.dart';
 import '../../utils/design_system.dart';
 import '../../utils/theme_utils.dart';
+import '../../utils/colors.dart';
 
 /// Practice Question Card that follows the same design as InterviewQuestionCardImproved
 /// to be used in the Practice screen
@@ -23,17 +24,17 @@ class PracticeQuestionCard extends StatelessWidget {
     final isDarkMode = context.isDarkMode;
     switch (question.category) {
       case 'technical':
-        return isDarkMode ? const Color(0xFF2D4BA7).withValues(alpha: 0.8) : Colors.blue.shade100;
+        return AppColors.getCategoryColor('technical', isDarkMode: isDarkMode).withValues(alpha: 0.1);
       case 'applied':
-        return isDarkMode ? const Color(0xFF1A6352).withValues(alpha: 0.8) : Colors.green.shade100;
+        return AppColors.getCategoryColor('behavioral', isDarkMode: isDarkMode).withValues(alpha: 0.1);
       case 'case':
-        return isDarkMode ? const Color(0xFF6D2FB2).withValues(alpha: 0.8) : Colors.purple.shade100;
+        return AppColors.getCategoryColor('leadership', isDarkMode: isDarkMode).withValues(alpha: 0.1);
       case 'behavioral':
-        return isDarkMode ? const Color(0xFFA66119).withValues(alpha: 0.8) : Colors.yellow.shade100;
+        return AppColors.getCategoryColor('situational', isDarkMode: isDarkMode).withValues(alpha: 0.1);
       case 'job':
-        return isDarkMode ? const Color(0xFFB72424).withValues(alpha: 0.8) : Colors.red.shade100;
+        return AppColors.getCategoryColor('general', isDarkMode: isDarkMode).withValues(alpha: 0.1);
       default:
-        return isDarkMode ? const Color(0xFF555B67).withValues(alpha: 0.8) : Colors.grey.shade100;
+        return AppColors.getCategoryColor('general', isDarkMode: isDarkMode).withValues(alpha: 0.1);
     }
   }
   
@@ -62,13 +63,13 @@ class PracticeQuestionCard extends StatelessWidget {
     final localizations = AppLocalizations.of(context);
     switch (question.difficulty) {
       case 'entry':
-        return (isDarkMode ? const Color(0xFF1A6352).withValues(alpha: 0.8) : Colors.green.shade100, localizations.entryLevel);
+        return (AppColors.getDifficultyColor('easy', isDarkMode: isDarkMode).withValues(alpha: 0.1), localizations.entryLevel);
       case 'mid':
-        return (isDarkMode ? const Color(0xFFA66119).withValues(alpha: 0.8) : Colors.amber.shade100, localizations.midLevel);
+        return (AppColors.getDifficultyColor('medium', isDarkMode: isDarkMode).withValues(alpha: 0.1), localizations.midLevel);
       case 'senior':
-        return (isDarkMode ? const Color(0xFFB72424).withValues(alpha: 0.8) : Colors.red.shade100, localizations.seniorLevel);
+        return (AppColors.getDifficultyColor('hard', isDarkMode: isDarkMode).withValues(alpha: 0.1), localizations.seniorLevel);
       default:
-        return (isDarkMode ? const Color(0xFF555B67).withValues(alpha: 0.8) : Colors.grey.shade100, localizations.unspecified);
+        return (AppColors.getTextSecondary(isDarkMode).withValues(alpha: 0.1), localizations.unspecified);
     }
   }
   

@@ -3,6 +3,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../models/interview_question.dart';
 import '../../utils/design_system.dart';
 import '../../utils/theme_utils.dart';
+import '../../utils/colors.dart';
 
 class InterviewQuestionCard extends StatelessWidget {
   final InterviewQuestion question;
@@ -27,17 +28,17 @@ class InterviewQuestionCard extends StatelessWidget {
     final isDarkMode = context.isDarkMode;
     switch (question.category) {
       case 'technical':
-        return isDarkMode ? const Color(0xFF2D4BA7).withValues(alpha: 0.8) : Colors.blue.shade100;
+        return AppColors.getCategoryColor('technical', isDarkMode: isDarkMode).withValues(alpha: 0.1);
       case 'applied':
-        return isDarkMode ? const Color(0xFF1A6352).withValues(alpha: 0.8) : Colors.green.shade100;
+        return AppColors.getCategoryColor('behavioral', isDarkMode: isDarkMode).withValues(alpha: 0.1);
       case 'case':
-        return isDarkMode ? const Color(0xFF6D2FB2).withValues(alpha: 0.8) : Colors.purple.shade100;
+        return AppColors.getCategoryColor('leadership', isDarkMode: isDarkMode).withValues(alpha: 0.1);
       case 'behavioral':
-        return isDarkMode ? const Color(0xFFA66119).withValues(alpha: 0.8) : Colors.yellow.shade100;
+        return AppColors.getCategoryColor('situational', isDarkMode: isDarkMode).withValues(alpha: 0.1);
       case 'job':
-        return isDarkMode ? const Color(0xFFB72424).withValues(alpha: 0.8) : Colors.red.shade100;
+        return AppColors.getCategoryColor('general', isDarkMode: isDarkMode).withValues(alpha: 0.1);
       default:
-        return isDarkMode ? const Color(0xFF555B67).withValues(alpha: 0.8) : Colors.grey.shade100;
+        return AppColors.getCategoryColor('general', isDarkMode: isDarkMode).withValues(alpha: 0.1);
     }
   }
   
@@ -66,13 +67,13 @@ class InterviewQuestionCard extends StatelessWidget {
     final localizations = AppLocalizations.of(context);
     switch (question.difficulty) {
       case 'entry':
-        return (isDarkMode ? const Color(0xFF1A6352).withValues(alpha: 0.8) : Colors.green.shade100, localizations.entryLevel);
+        return (AppColors.getDifficultyColor('easy', isDarkMode: isDarkMode).withValues(alpha: 0.1), localizations.entryLevel);
       case 'mid':
-        return (isDarkMode ? const Color(0xFFA66119).withValues(alpha: 0.8) : Colors.yellow.shade100, localizations.midLevel);
+        return (AppColors.getDifficultyColor('medium', isDarkMode: isDarkMode).withValues(alpha: 0.1), localizations.midLevel);
       case 'senior':
-        return (isDarkMode ? const Color(0xFFB72424).withValues(alpha: 0.8) : Colors.red.shade100, localizations.seniorLevel);
+        return (AppColors.getDifficultyColor('hard', isDarkMode: isDarkMode).withValues(alpha: 0.1), localizations.seniorLevel);
       default:
-        return (isDarkMode ? const Color(0xFF555B67).withValues(alpha: 0.8) : Colors.grey.shade100, localizations.unspecified);
+        return (AppColors.getTextSecondary(isDarkMode).withValues(alpha: 0.1), localizations.unspecified);
     }
   }
   
@@ -83,22 +84,12 @@ class InterviewQuestionCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: DS.spacingM),
       decoration: BoxDecoration(
-        color: context.isDarkMode ? const Color(0xFF2A2A30) : Colors.white,
+        color: context.surfaceColor,
         borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
         border: Border.all(
-          color: context.isDarkMode 
-              ? Colors.white.withValues(alpha: 0.2)  // Slightly brighter border
-              : Colors.grey.shade200,
+          color: context.outlineColor,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: context.isDarkMode 
-                ? Colors.black.withValues(alpha: 0.2)  // Softer shadow
-                : const Color.fromRGBO(0, 0, 0, 0.05),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
+        boxShadow: context.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,9 +118,7 @@ class InterviewQuestionCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: DS.bodyLarge.fontSize, // 16px from design system
                           fontWeight: FontWeight.w500,
-                          color: context.isDarkMode 
-                              ? Colors.white  // Full white for better readability
-                              : const Color(0xFF1F2937),
+                          color: ThemedColors.getTextPrimary(context),
                         ),
                       ),
                     ),
@@ -178,9 +167,7 @@ class InterviewQuestionCard extends StatelessWidget {
                       '• ${question.subtopic}',
                       style: TextStyle(
                         fontSize: DS.bodySmall.fontSize! + 1, // 13px (12+1)
-                        color: context.isDarkMode 
-                            ? Colors.white.withValues(alpha: 0.7)
-                            : context.onSurfaceVariantColor,
+                        color: ThemedColors.getTextSecondary(context),
                       ),
                     ),
                     
@@ -201,7 +188,7 @@ class InterviewQuestionCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: DS.bodySmall.fontSize, // 12px from design system
                           fontWeight: FontWeight.w500,
-                          color: context.isDarkMode ? Colors.white : Colors.grey.shade800,
+                          color: ThemedColors.getTextPrimary(context),
                         ),
                       ),
                     ),
@@ -238,9 +225,7 @@ class InterviewQuestionCard extends StatelessWidget {
                             Icon(
                               Icons.check_circle,
                               size: DS.iconSizeXs - 2, // 14px
-                              color: context.isDarkMode
-                                  ? const Color(0xFF34D399)
-                                  : Colors.green.shade700,
+                              color: context.successColor,
                             ),
                             const SizedBox(width: DS.spacing2xs),
                             Text(
@@ -248,9 +233,7 @@ class InterviewQuestionCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: DS.bodySmall.fontSize, // 12px
                                 fontWeight: FontWeight.w500,
-                                color: context.isDarkMode
-                                    ? const Color(0xFF34D399)
-                                    : Colors.green.shade700,
+                                color: context.successColor,
                               ),
                             ),
                           ],
@@ -262,14 +245,14 @@ class InterviewQuestionCard extends StatelessWidget {
                       icon: Icon(
                         Icons.play_circle_outline,
                         size: DS.iconSizeXs,
-                        color: context.isDarkMode ? Colors.white : null,
+                        color: context.primaryColor,
                       ),
                       label: Text(
                         AppLocalizations.of(context).practiceButton,
                         style: TextStyle(
                           fontSize: DS.bodyMedium.fontSize, // 14px
                           fontWeight: FontWeight.w500,
-                          color: context.isDarkMode ? Colors.white : null,
+                          color: context.primaryColor,
                         ),
                       ),
                       style: TextButton.styleFrom(
@@ -277,9 +260,7 @@ class InterviewQuestionCard extends StatelessWidget {
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         foregroundColor: context.primaryColor,
-                        backgroundColor: context.isDarkMode 
-                            ? context.primaryColor.withValues(alpha: 0.2)
-                            : Colors.blue.shade50,
+                        backgroundColor: context.primaryColor.withValues(alpha: 0.1),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(DS.borderRadiusMedium + 4), // ~16px
                         ),
@@ -297,17 +278,13 @@ class InterviewQuestionCard extends StatelessWidget {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         elevation: 0,
                         backgroundColor: context.isDarkMode 
-                            ? const Color(0xFF4ADE80).withValues(alpha: 0.15)  // Light emerald background in dark mode
-                            : const Color(0xFF10B981).withValues(alpha: 0.1),  // Light emerald background in light mode
-                        foregroundColor: context.isDarkMode 
-                            ? const Color(0xFF6EE7B7)  // Very bright emerald for max contrast
-                            : const Color(0xFF10B981),  // Original emerald in light mode
+                            ? context.successColor.withValues(alpha: 0.15)
+                            : context.successColor.withValues(alpha: 0.1),
+                        foregroundColor: context.successColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                           side: BorderSide(
-                            color: context.isDarkMode 
-                                ? const Color(0xFF4ADE80).withValues(alpha: 0.5)
-                                : const Color(0xFF10B981).withValues(alpha: 0.3),
+                            color: context.successColor.withValues(alpha: 0.4),
                             width: 1,
                           ),
                         ),
@@ -318,9 +295,7 @@ class InterviewQuestionCard extends StatelessWidget {
                           fontSize: DS.bodyLarge.fontSize,  // 16px from design system
                           fontWeight: FontWeight.w700,  // Bold for better readability
                           letterSpacing: 0.3,  // Slightly increased letter spacing
-                          color: context.isDarkMode 
-                              ? const Color(0xFF6EE7B7)  // Very bright emerald for max contrast
-                              : const Color(0xFF10B981),  // Original emerald in light mode
+                          color: context.successColor,
                         ),
                       ),
                     ),
@@ -335,9 +310,7 @@ class InterviewQuestionCard extends StatelessWidget {
                           icon: Icon(
                             Icons.share,
                             size: DS.iconSizeXs + 2, // 18px
-                            color: context.isDarkMode 
-                                ? Colors.white.withValues(alpha: 0.7)
-                                : Colors.grey.shade500,
+                            color: ThemedColors.getTextSecondary(context),
                           ),
                           constraints: const BoxConstraints(),
                           padding: EdgeInsets.zero,
@@ -351,9 +324,7 @@ class InterviewQuestionCard extends StatelessWidget {
                           icon: Icon(
                             Icons.edit,
                             size: DS.iconSizeXs + 2, // 18px
-                            color: context.isDarkMode 
-                                ? Colors.white.withValues(alpha: 0.7)
-                                : Colors.grey.shade500,
+                            color: ThemedColors.getTextSecondary(context),
                           ),
                           constraints: const BoxConstraints(),
                           padding: EdgeInsets.zero,
