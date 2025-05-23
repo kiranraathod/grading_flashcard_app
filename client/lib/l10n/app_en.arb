@@ -689,5 +689,224 @@
   "definitionLabel": "Definition",
   "@definitionLabel": {
     "description": "Label for definition input field"
+  },
+  
+  "errorTitle": "Error",
+  "@errorTitle": {
+    "description": "Generic error dialog title"
+  },
+  "ok": "OK",
+  "@ok": {
+    "description": "OK button text"
+  },
+  "dismiss": "Dismiss",
+  "@dismiss": {
+    "description": "Dismiss button text for snackbars"
+  },
+  
+  "deleteFlashcardSet": "Delete Flashcard Set",
+  "@deleteFlashcardSet": {
+    "description": "Title for delete flashcard set dialog"
+  },
+  "deleteConfirmation": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+  "@deleteConfirmation": {
+    "description": "Confirmation message for deleting flashcard set",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "My Flashcard Set"
+      }
+    }
+  },
+  "cancel": "CANCEL",
+  "@cancel": {
+    "description": "Cancel button text"
+  },
+  "delete": "DELETE",
+  "@delete": {
+    "description": "Delete button text"
+  },
+  "setDeletedMessage": "{title} has been deleted",
+  "@setDeletedMessage": {
+    "description": "Snackbar message when flashcard set is deleted",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "My Flashcard Set"
+      }
+    }
+  },
+  "editFlashcardSet": "Edit Flashcard Set",
+  "@editFlashcardSet": {
+    "description": "Menu option to edit flashcard set"
+  },
+  "moreOptions": "More options",
+  "@moreOptions": {
+    "description": "Tooltip for more options menu"
+  },
+  "termsCount": "{count} terms",
+  "@termsCount": {
+    "description": "Display number of terms in flashcard set",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  
+  "createNewQuestion": "Create New Question",
+  "@createNewQuestion": {
+    "description": "Option to create new interview question"
+  },
+  "generateFromJobDescription": "Generate from Job Description",
+  "@generateFromJobDescription": {
+    "description": "Option to generate questions from job description"
+  },
+  "importQuestions": "Import Questions",
+  "@importQuestions": {
+    "description": "Option to import interview questions"
+  },
+  "importFunctionalityPlaceholder": "Import functionality would be implemented here",
+  "@importFunctionalityPlaceholder": {
+    "description": "Placeholder message for import functionality"
+  },
+  "addNewQuestions": "Add new questions",
+  "@addNewQuestions": {
+    "description": "Tooltip for adding new questions"
+  },
+  
+  "darkMode": "Dark Mode",
+  "@darkMode": {
+    "description": "Label for dark mode"
+  },
+  "lightMode": "Light Mode",
+  "@lightMode": {
+    "description": "Label for light mode"
+  },
+  "switchToLightTheme": "Switch to light theme",
+  "@switchToLightTheme": {
+    "description": "Accessibility label for switching to light theme"
+  },
+  "switchToDarkTheme": "Switch to dark theme",
+  "@switchToDarkTheme": {
+    "description": "Accessibility label for switching to dark theme"
+  },
+  "switchToLightMode": "Switch to Light Mode",
+  "@switchToLightMode": {
+    "description": "Tooltip for switching to light mode"
+  },
+  "switchToDarkMode": "Switch to Dark Mode",
+  "@switchToDarkMode": {
+    "description": "Tooltip for switching to dark mode"
+  },
+  
+  "answerTitle": "Answer",
+  "@answerTitle": {
+    "description": "Title for answer section"
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Close button text"
+  },
+  "markAsIncomplete": "Mark as Incomplete",
+  "@markAsIncomplete": {
+    "description": "Button to mark question as incomplete"
+  },
+  "markAsCompleteButton": "Mark as Complete",
+  "@markAsCompleteButton": {
+    "description": "Button to mark question as complete"
+  },
+  
+  "improvementSuggestionsTitle": "Improvement Suggestions",
+  "@improvementSuggestionsTitle": {
+    "description": "Default title for improvement suggestions widget"
+  },
+  
+  "errorLoadingRecentItems": "Error loading recent items: {message}",
+  "@errorLoadingRecentItems": {
+    "description": "Error message when loading recent items fails",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Network error"
+      }
+    }
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry button text"
+  },
+  "tryAgain": "Try Again",
+  "@tryAgain": {
+    "description": "Try again button text"
+  },
+  "unexpectedState": "Unexpected State",
+  "@unexpectedState": {
+    "description": "Title for unexpected state error"
+  },
+  "errorLoadingRecentItemsTitle": "Error Loading Recent Items",
+  "@errorLoadingRecentItemsTitle": {
+    "description": "Title for error loading recent items"
+  },
+  "totalItems": "Total Items",
+  "@totalItems": {
+    "description": "Label for total items statistic"
+  },
+  "flashcards": "Flashcards",
+  "@flashcards": {
+    "description": "Label for flashcards"
+  },
+  "lastStudied": "Last Studied",
+  "@lastStudied": {
+    "description": "Label for last studied statistic"
+  },
+  "all": "All",
+  "@all": {
+    "description": "Filter option for all items"
+  },
+  "resumeStudy": "Resume Study",
+  "@resumeStudy": {
+    "description": "Button to resume studying"
+  },
+  "practice": "Practice",
+  "@practice": {
+    "description": "Button to practice"
+  },
+  "view": "View",
+  "@view": {
+    "description": "Button to view item"
+  },
+  "completedBadge": "Completed",
+  "@completedBadge": {
+    "description": "Badge for completed items"
+  },
+  "flashcard": "Flashcard",
+  "@flashcard": {
+    "description": "Label for flashcard type"
+  },
+  "interviewQuestion": "Interview Question",
+  "@interviewQuestion": {
+    "description": "Label for interview question type"
+  },
+  "noRecentlyViewedItems": "No Recently Viewed Items",
+  "@noRecentlyViewedItems": {
+    "description": "Title for empty recent items state"
+  },
+  "startStudyingMessage": "Start studying flashcards or practicing interview questions",
+  "@startStudyingMessage": {
+    "description": "Message for empty recent items state"
+  },
+  "studyFlashcards": "Study Flashcards",
+  "@studyFlashcards": {
+    "description": "Button to study flashcards"
+  },
+  "practiceInterviews": "Practice Interviews",
+  "@practiceInterviews": {
+    "description": "Button to practice interviews"
+  },
+  "flashcardSetNotFound": "Flashcard set not found",
+  "@flashcardSetNotFound": {
+    "description": "Error message when flashcard set is not found"
   }
 }

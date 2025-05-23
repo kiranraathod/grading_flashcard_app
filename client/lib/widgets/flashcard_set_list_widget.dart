@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../models/flashcard_set.dart';
 import '../screens/study_screen.dart';
 import '../screens/create_flashcard_screen.dart';
@@ -28,12 +29,12 @@ class FlashcardSetListWidget extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Flashcard Set'),
-        content: Text('Are you sure you want to delete "${set.title}"? This action cannot be undone.'),
+        title: Text(AppLocalizations.of(context).deleteFlashcardSet),
+        content: Text(AppLocalizations.of(context).deleteConfirmation(set.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('CANCEL'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           TextButton(
             onPressed: () {
@@ -41,10 +42,10 @@ class FlashcardSetListWidget extends StatelessWidget {
               flashcardService.deleteFlashcardSet(set.id);
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${set.title} has been deleted')),
+                SnackBar(content: Text(AppLocalizations.of(context).setDeletedMessage(set.title))),
               );
             },
-            child: const Text('DELETE', style: TextStyle(color: Colors.red)),
+            child: Text(AppLocalizations.of(context).delete, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -63,7 +64,7 @@ class FlashcardSetListWidget extends StatelessWidget {
         children: [
           ListTile(
             leading: const Icon(Icons.edit, color: Colors.blue),
-            title: const Text('Edit Flashcard Set'),
+            title: Text(AppLocalizations.of(context).editFlashcardSet),
             onTap: () {
               Navigator.pop(context);
               _editSet(context, set);
@@ -71,7 +72,7 @@ class FlashcardSetListWidget extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.delete, color: Colors.red),
-            title: const Text('Delete Flashcard Set'),
+            title: Text(AppLocalizations.of(context).deleteFlashcardSet),
             onTap: () {
               Navigator.pop(context);
               _deleteSet(context, set);
@@ -135,7 +136,7 @@ class FlashcardSetListWidget extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${set.termCount} terms',
+                              AppLocalizations.of(context).termsCount(set.termCount),
                               style: TextStyle(
                                 color: Colors.grey.shade600,
                               ),
@@ -162,7 +163,7 @@ class FlashcardSetListWidget extends StatelessWidget {
                       ),
                       IconButton(
                         icon: const Icon(Icons.more_vert),
-                        tooltip: 'More options',
+                        tooltip: AppLocalizations.of(context).moreOptions,
                         onPressed: () => _showOptions(context, set),
                       ),
                     ],

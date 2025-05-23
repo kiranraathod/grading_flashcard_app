@@ -62,6 +62,67 @@ extension AppLocalizationsExtension on AppLocalizations {
   // Connectivity banner strings
   String get offlineMessage => 'You are currently offline. Some features may be limited.';
   String get serverConnectionError => 'Cannot connect to server. Using offline mode.';
+  
+  // Error handling strings
+  String get errorTitle => 'Error';
+  String get ok => 'OK';
+  String get dismiss => 'Dismiss';
+  
+  // Flashcard set management strings
+  String get deleteFlashcardSet => 'Delete Flashcard Set';
+  String deleteConfirmation(String title) => 'Are you sure you want to delete "$title"? This action cannot be undone.';
+  String get cancel => 'CANCEL';
+  String get delete => 'DELETE';
+  String setDeletedMessage(String title) => '$title has been deleted';
+  String get editFlashcardSet => 'Edit Flashcard Set';
+  String get moreOptions => 'More options';
+  String termsCount(int count) => '$count terms';
+  
+  // Interview questions strings
+  String get createNewQuestion => 'Create New Question';
+  String get generateFromJobDescription => 'Generate from Job Description';
+  String get importQuestions => 'Import Questions';
+  String get importFunctionalityPlaceholder => 'Import functionality would be implemented here';
+  String get addNewQuestions => 'Add new questions';
+  
+  // Theme toggle strings
+  String get darkMode => 'Dark Mode';
+  String get lightMode => 'Light Mode';
+  String get switchToLightTheme => 'Switch to light theme';
+  String get switchToDarkTheme => 'Switch to dark theme';
+  String get switchToLightMode => 'Switch to Light Mode';
+  String get switchToDarkMode => 'Switch to Dark Mode';
+  
+  // Answer view strings
+  String get answerTitle => 'Answer';
+  String get close => 'Close';
+  String get markAsIncomplete => 'Mark as Incomplete';
+  String get markAsCompleteButton => 'Mark as Complete';
+  
+  // Suggestions widget strings
+  String get improvementSuggestionsTitle => 'Improvement Suggestions';
+  
+  // Recent items strings
+  String errorLoadingRecentItems(String message) => 'Error loading recent items: $message';
+  String get retry => 'Retry';
+  String get tryAgain => 'Try Again';
+  String get unexpectedState => 'Unexpected State';
+  String get errorLoadingRecentItemsTitle => 'Error Loading Recent Items';
+  String get totalItems => 'Total Items';
+  String get flashcards => 'Flashcards';
+  String get lastStudied => 'Last Studied';
+  String get all => 'All';
+  String get resumeStudy => 'Resume Study';
+  String get practice => 'Practice';
+  String get view => 'View';
+  String get completedBadge => 'Completed';
+  String get flashcard => 'Flashcard';
+  String get interviewQuestion => 'Interview Question';
+  String get noRecentlyViewedItems => 'No Recently Viewed Items';
+  String get startStudyingMessage => 'Start studying flashcards or practicing interview questions';
+  String get studyFlashcards => 'Study Flashcards';
+  String get practiceInterviews => 'Practice Interviews';
+  String get flashcardSetNotFound => 'Flashcard set not found';
 }
 
 // Helper class for localization access - alternative to extension methods
@@ -130,6 +191,67 @@ class L10nExt {
   // Connectivity banner strings
   String get offlineMessage => _l10n.offlineMessage;
   String get serverConnectionError => _l10n.serverConnectionError;
+  
+  // Error handling strings
+  String get errorTitle => _l10n.errorTitle;
+  String get ok => _l10n.ok;
+  String get dismiss => _l10n.dismiss;
+  
+  // Flashcard set management strings
+  String get deleteFlashcardSet => _l10n.deleteFlashcardSet;
+  String deleteConfirmation(String title) => _l10n.deleteConfirmation(title);
+  String get cancel => _l10n.cancel;
+  String get delete => _l10n.delete;
+  String setDeletedMessage(String title) => _l10n.setDeletedMessage(title);
+  String get editFlashcardSet => _l10n.editFlashcardSet;
+  String get moreOptions => _l10n.moreOptions;
+  String termsCount(int count) => _l10n.termsCount(count);
+  
+  // Interview questions strings
+  String get createNewQuestion => _l10n.createNewQuestion;
+  String get generateFromJobDescription => _l10n.generateFromJobDescription;
+  String get importQuestions => _l10n.importQuestions;
+  String get importFunctionalityPlaceholder => _l10n.importFunctionalityPlaceholder;
+  String get addNewQuestions => _l10n.addNewQuestions;
+  
+  // Theme toggle strings
+  String get darkMode => _l10n.darkMode;
+  String get lightMode => _l10n.lightMode;
+  String get switchToLightTheme => _l10n.switchToLightTheme;
+  String get switchToDarkTheme => _l10n.switchToDarkTheme;
+  String get switchToLightMode => _l10n.switchToLightMode;
+  String get switchToDarkMode => _l10n.switchToDarkMode;
+  
+  // Answer view strings
+  String get answerTitle => _l10n.answerTitle;
+  String get close => _l10n.close;
+  String get markAsIncomplete => _l10n.markAsIncomplete;
+  String get markAsCompleteButton => _l10n.markAsCompleteButton;
+  
+  // Suggestions widget strings
+  String get improvementSuggestionsTitle => _l10n.improvementSuggestionsTitle;
+  
+  // Recent items strings
+  String errorLoadingRecentItems(String message) => _l10n.errorLoadingRecentItems(message);
+  String get retry => _l10n.retry;
+  String get tryAgain => _l10n.tryAgain;
+  String get unexpectedState => _l10n.unexpectedState;
+  String get errorLoadingRecentItemsTitle => _l10n.errorLoadingRecentItemsTitle;
+  String get totalItems => _l10n.totalItems;
+  String get flashcards => _l10n.flashcards;
+  String get lastStudied => _l10n.lastStudied;
+  String get all => _l10n.all;
+  String get resumeStudy => _l10n.resumeStudy;
+  String get practice => _l10n.practice;
+  String get view => _l10n.view;
+  String get completedBadge => _l10n.completedBadge;
+  String get flashcard => _l10n.flashcard;
+  String get interviewQuestion => _l10n.interviewQuestion;
+  String get noRecentlyViewedItems => _l10n.noRecentlyViewedItems;
+  String get startStudyingMessage => _l10n.startStudyingMessage;
+  String get studyFlashcards => _l10n.studyFlashcards;
+  String get practiceInterviews => _l10n.practiceInterviews;
+  String get flashcardSetNotFound => _l10n.flashcardSetNotFound;
   
   // Factory to create from context
   static L10nExt of(BuildContext context) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../models/interview_question.dart';
 import '../../utils/design_system.dart';
 import '../../utils/colors.dart';
@@ -8,20 +9,20 @@ class AnswerView extends StatelessWidget {
   final InterviewQuestion question;
   final VoidCallback onMarkComplete;
   final VoidCallback onClose;
-  
+
   const AnswerView({
     super.key,
     required this.question,
     required this.onMarkComplete,
     required this.onClose,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     // Since we don't have actual answers in our model yet,
     // we'll just generate a mock answer
     final String mockAnswer = _generateMockAnswer(question);
-    
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.8,
@@ -43,9 +44,10 @@ class AnswerView extends StatelessWidget {
               vertical: DS.spacingS,
             ),
             decoration: BoxDecoration(
-              color: context.isDarkMode 
-                  ? context.primaryColor.withValues(alpha: 0.2)
-                  : AppColors.primary.withValues(alpha: 0.1),
+              color:
+                  context.isDarkMode
+                      ? context.primaryColor.withValues(alpha: 0.2)
+                      : AppColors.primary.withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(DS.borderRadiusSmall),
                 topRight: Radius.circular(DS.borderRadiusSmall),
@@ -56,15 +58,21 @@ class AnswerView extends StatelessWidget {
                 Icon(
                   Icons.question_answer,
                   size: 20,
-                  color: context.isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                  color:
+                      context.isDarkMode
+                          ? AppColors.primaryDark
+                          : AppColors.primary,
                 ),
                 const SizedBox(width: DS.spacingXs),
                 Text(
-                  'Answer',
+                  AppLocalizations.of(context).answerTitle,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: context.isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                    color:
+                        context.isDarkMode
+                            ? AppColors.primaryDark
+                            : AppColors.primary,
                   ),
                 ),
                 const Spacer(),
@@ -73,7 +81,10 @@ class AnswerView extends StatelessWidget {
                   icon: Icon(
                     Icons.close,
                     size: 20,
-                    color: context.isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                    color:
+                        context.isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
                   ),
                   constraints: const BoxConstraints(),
                   padding: EdgeInsets.zero,
@@ -81,32 +92,37 @@ class AnswerView extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Question
           Container(
             padding: const EdgeInsets.all(DS.spacingM),
             decoration: BoxDecoration(
-              color: context.isDarkMode 
-                  ? Colors.grey.shade900.withValues(alpha: 0.7)
-                  : Colors.grey.shade50,
+              color:
+                  context.isDarkMode
+                      ? Colors.grey.shade900.withValues(alpha: 0.7)
+                      : Colors.grey.shade50,
             ),
             child: Text(
               question.text,
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
-                color: context.isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                color:
+                    context.isDarkMode
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimary,
               ),
             ),
           ),
-          
+
           Divider(
             height: 1,
-            color: context.isDarkMode 
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.grey.shade300,
+            color:
+                context.isDarkMode
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.grey.shade300,
           ),
-          
+
           // Answer
           Flexible(
             child: SingleChildScrollView(
@@ -116,19 +132,23 @@ class AnswerView extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.5,
-                  color: context.isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                  color:
+                      context.isDarkMode
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
                 ),
               ),
             ),
           ),
-          
+
           Divider(
             height: 1,
-            color: context.isDarkMode 
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.grey.shade300,
+            color:
+                context.isDarkMode
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.grey.shade300,
           ),
-          
+
           // Actions
           Padding(
             padding: const EdgeInsets.all(DS.spacingM),
@@ -138,22 +158,31 @@ class AnswerView extends StatelessWidget {
                 OutlinedButton(
                   onPressed: onClose,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: context.isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+                    foregroundColor:
+                        context.isDarkMode
+                            ? Colors.grey.shade400
+                            : Colors.grey.shade700,
                     side: BorderSide(
-                      color: context.isDarkMode ? Colors.grey.shade600 : Colors.grey.shade300,
+                      color:
+                          context.isDarkMode
+                              ? Colors.grey.shade600
+                              : Colors.grey.shade300,
                     ),
                     padding: const EdgeInsets.symmetric(
                       horizontal: DS.spacingM,
                       vertical: DS.spacingS,
                     ),
                   ),
-                  child: const Text('Close'),
+                  child: Text(AppLocalizations.of(context).close),
                 ),
                 const SizedBox(width: DS.spacingS),
                 ElevatedButton(
                   onPressed: onMarkComplete,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: context.isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                    backgroundColor:
+                        context.isDarkMode
+                            ? AppColors.primaryDark
+                            : AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: DS.spacingM,
@@ -162,8 +191,8 @@ class AnswerView extends StatelessWidget {
                   ),
                   child: Text(
                     question.isCompleted
-                        ? 'Mark as Incomplete'
-                        : 'Mark as Complete',
+                        ? AppLocalizations.of(context).markAsIncomplete
+                        : AppLocalizations.of(context).markAsCompleteButton,
                   ),
                 ),
               ],
@@ -173,7 +202,7 @@ class AnswerView extends StatelessWidget {
       ),
     );
   }
-  
+
   // Generate a mock answer based on the question
   String _generateMockAnswer(InterviewQuestion question) {
     switch (question.id) {
@@ -182,7 +211,7 @@ class AnswerView extends StatelessWidget {
             '1. Bias refers to the error introduced by approximating a real-world problem with a simplified model. High bias models tend to underfit the data, missing relevant patterns. Examples of high-bias models include linear regression when the true relationship is non-linear.\n\n'
             '2. Variance refers to the model\'s sensitivity to fluctuations in the training data. High variance models tend to overfit, learning the noise in the training data rather than the underlying pattern. Complex models like deep neural networks can exhibit high variance if not properly regularized.\n\n'
             'The bias-variance tradeoff is fundamental in machine learning - as you decrease bias, variance typically increases and vice versa. The optimal model finds the right balance for a given problem.';
-            
+
       case '2':
         return 'Handling missing data in a dataset requires a systematic approach:\n\n'
             '1. Identify missing data patterns: Determine if data is missing completely at random (MCAR), missing at random (MAR), or missing not at random (MNAR).\n\n'
@@ -192,7 +221,7 @@ class AnswerView extends StatelessWidget {
             '   - For categorical data: Mode imputation, dummy variable for missingness, or prediction-based imputation\n'
             '   - Advanced techniques: Multiple imputation or algorithms that handle missing values (e.g., XGBoost)\n\n'
             '4. Document your approach and validate: Always document your missing data handling strategy and evaluate its impact on model performance.';
-            
+
       case '3':
         return 'When explaining complex technical findings to non-technical stakeholders, I follow these steps:\n\n'
             '1. Understand the audience\'s background and interests: Tailor the explanation to their knowledge level and focus on what matters to them.\n\n'
@@ -202,7 +231,7 @@ class AnswerView extends StatelessWidget {
             '5. Create a narrative: Structure the presentation as a story with a clear flow, focusing on the problem, approach, and solution.\n\n'
             '6. Provide different levels of detail: Prepare a high-level summary with the option to dive deeper into specific areas based on interest.\n\n'
             '7. Check for understanding: Pause regularly to ensure the audience is following and address any questions or misconceptions.';
-            
+
       case '4':
         return 'For evaluating classification models with imbalanced data, standard metrics like accuracy can be misleading. Instead, use:\n\n'
             '1. Confusion Matrix: Provides a complete picture of true positives, false positives, true negatives, and false negatives.\n\n'
@@ -214,7 +243,7 @@ class AnswerView extends StatelessWidget {
             '7. Balanced Accuracy: Average of sensitivity and specificity, accounting for class imbalance.\n\n'
             '8. Cohen\'s Kappa: Measures agreement between predicted and actual classifications, accounting for chance.\n\n'
             'The choice of metric depends on the specific problem and the relative cost of false positives versus false negatives.';
-            
+
       case '5':
         return 'SQL query to find the top 5 customers by transaction value in the past month:\n\n'
             '```sql\n'
@@ -241,7 +270,7 @@ class AnswerView extends StatelessWidget {
             '3. Groups by customer and calculates the sum of transaction amounts\n'
             '4. Orders by the total value in descending order\n'
             '5. Limits to the top 5 results';
-            
+
       case '6':
         return 'Designing a recommendation system for an e-commerce platform involves multiple components:\n\n'
             '**Features to use:**\n\n'
@@ -282,7 +311,7 @@ class AnswerView extends StatelessWidget {
             '- Diversity and serendipity in recommendations\n'
             '- A/B testing framework for continuous improvement\n'
             '- Ethical considerations and explainability';
-            
+
       default:
         return 'This is a sample answer for the interview question. A complete answer would include key concepts, examples, and practical applications related to the question. For technical questions, explanations would include theory, implementation details, and common pitfalls. For behavioral questions, structured responses using the STAR method (Situation, Task, Action, Result) are recommended.';
     }

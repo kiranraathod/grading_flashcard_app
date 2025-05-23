@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../utils/theme_provider.dart';
 import '../utils/colors.dart';
@@ -7,10 +8,7 @@ import '../utils/colors.dart';
 class ThemeToggle extends StatelessWidget {
   final bool showLabel;
 
-  const ThemeToggle({
-    super.key,
-    this.showLabel = true,
-  });
+  const ThemeToggle({super.key, this.showLabel = true});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +20,9 @@ class ThemeToggle extends StatelessWidget {
       children: [
         if (showLabel)
           Text(
-            isDarkMode ? 'Dark Mode' : 'Light Mode',
+            isDarkMode
+                ? AppLocalizations.of(context).darkMode
+                : AppLocalizations.of(context).lightMode,
             style: TextStyle(
               fontSize: 14,
               color: isDarkMode ? Colors.white : AppColors.textPrimary,
@@ -31,14 +31,15 @@ class ThemeToggle extends StatelessWidget {
         const SizedBox(width: 8),
         Semantics(
           button: true,
-          label: isDarkMode 
-              ? 'Switch to light theme' 
-              : 'Switch to dark theme',
+          label:
+              isDarkMode
+                  ? AppLocalizations.of(context).switchToLightTheme
+                  : AppLocalizations.of(context).switchToDarkTheme,
           child: InkWell(
             onTap: () {
               // Play sound feedback (optional)
               HapticFeedback.lightImpact();
-              
+
               themeProvider.toggleTheme();
             },
             borderRadius: BorderRadius.circular(20),
@@ -48,20 +49,33 @@ class ThemeToggle extends StatelessWidget {
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                color: isDarkMode
-                    ? AppColors.primaryDark.withValues(red: AppColors.primaryDark.r.toDouble(), green: AppColors.primaryDark.g.toDouble(), blue: AppColors.primaryDark.b.toDouble(), alpha: 102.0)
-                    : AppColors.primary.withValues(red: AppColors.primary.r.toDouble(), green: AppColors.primary.g.toDouble(), blue: AppColors.primary.b.toDouble(), alpha: 102.0),
+                color:
+                    isDarkMode
+                        ? AppColors.primaryDark.withValues(
+                          red: AppColors.primaryDark.r.toDouble(),
+                          green: AppColors.primaryDark.g.toDouble(),
+                          blue: AppColors.primaryDark.b.toDouble(),
+                          alpha: 102.0,
+                        )
+                        : AppColors.primary.withValues(
+                          red: AppColors.primary.r.toDouble(),
+                          green: AppColors.primary.g.toDouble(),
+                          blue: AppColors.primary.b.toDouble(),
+                          alpha: 102.0,
+                        ),
               ),
               child: AnimatedAlign(
                 duration: const Duration(milliseconds: 150),
                 curve: Curves.easeOutQuart,
-                alignment: isDarkMode ? Alignment.centerRight : Alignment.centerLeft,
+                alignment:
+                    isDarkMode ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                    color:
+                        isDarkMode ? AppColors.primaryDark : AppColors.primary,
                   ),
                   child: Center(
                     child: AnimatedSwitcher(
@@ -91,39 +105,47 @@ class ThemeToggleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return RepaintBoundary(  // Add RepaintBoundary to prevent unnecessary repaints
+    return RepaintBoundary(
+      // Add RepaintBoundary to prevent unnecessary repaints
       child: Semantics(
         button: true,
-        label: themeProvider.isDarkMode 
-            ? 'Switch to light theme' 
-            : 'Switch to dark theme',
+        label:
+            themeProvider.isDarkMode
+                ? AppLocalizations.of(context).switchToLightTheme
+                : AppLocalizations.of(context).switchToDarkTheme,
         child: IconButton(
           icon: AnimatedSwitcher(
             duration: const Duration(milliseconds: 150),
             switchInCurve: Curves.easeOutQuart,
             switchOutCurve: Curves.easeInQuart,
             transitionBuilder: (Widget child, Animation<double> animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: child,
-              );
+              return FadeTransition(opacity: animation, child: child);
             },
             child: Icon(
               themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
               key: ValueKey<bool>(themeProvider.isDarkMode),
-              color: themeProvider.isDarkMode ? Colors.white : AppColors.textPrimary,
+              color:
+                  themeProvider.isDarkMode
+                      ? Colors.white
+                      : AppColors.textPrimary,
             ),
           ),
           onPressed: () {
             // Haptic feedback for better user experience
             HapticFeedback.selectionClick(); // Changed to selection click for subtler feedback
-            
+
             // Log theme change event (if you have analytics set up)
-            _logThemeChange(themeProvider.isDarkMode, !themeProvider.isDarkMode);
-            
+            _logThemeChange(
+              themeProvider.isDarkMode,
+              !themeProvider.isDarkMode,
+            );
+
             themeProvider.toggleTheme();
           },
-          tooltip: themeProvider.isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+          tooltip:
+              themeProvider.isDarkMode
+                  ? AppLocalizations.of(context).switchToLightMode
+                  : AppLocalizations.of(context).switchToDarkMode,
         ),
       ),
     );
@@ -140,8 +162,10 @@ class ThemeToggleButton extends StatelessWidget {
     //     'method': 'header_button',
     //   },
     // );
-    
+
     // If you're using another analytics service, implement accordingly
-    debugPrint('Theme changed from ${fromDarkMode ? 'dark' : 'light'} to ${toDarkMode ? 'dark' : 'light'}');
+    debugPrint(
+      'Theme changed from ${fromDarkMode ? 'dark' : 'light'} to ${toDarkMode ? 'dark' : 'light'}',
+    );
   }
 }

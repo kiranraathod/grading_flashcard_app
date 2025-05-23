@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/theme_utils.dart';
 
 class SuggestionsWidget extends StatelessWidget {
   final List<String> suggestions;
-  final String title;
+  final String? title;
 
-  const SuggestionsWidget({
-    super.key, 
-    required this.suggestions,
-    this.title = 'Improvement Suggestions',
-  });
+  const SuggestionsWidget({super.key, required this.suggestions, this.title});
 
   @override
   Widget build(BuildContext context) {
+    final displayTitle =
+        title ?? AppLocalizations.of(context).improvementSuggestionsTitle;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -22,16 +21,16 @@ class SuggestionsWidget extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  title.contains('Trouble') 
-                      ? Icons.warning_amber_outlined 
+                  displayTitle.contains('Trouble')
+                      ? Icons.warning_amber_outlined
                       : Icons.lightbulb_outline,
-                  color: title.contains('Trouble') ? Colors.orange : Colors.amber,
+                  color:
+                      displayTitle.contains('Trouble')
+                          ? Colors.orange
+                          : Colors.amber,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: context.titleMedium,
-                ),
+                Text(displayTitle, style: context.titleMedium),
               ],
             ),
             const SizedBox(height: 16),
@@ -51,8 +50,9 @@ class SuggestionsWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            Icons.arrow_right, 
-            color: title.contains('Trouble') ? Colors.orange : Colors.blue,
+            Icons.arrow_right,
+            color:
+                (title ?? '').contains('Trouble') ? Colors.orange : Colors.blue,
           ),
           const SizedBox(width: 8),
           Expanded(child: Text(suggestion)),

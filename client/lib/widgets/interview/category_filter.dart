@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/design_system.dart';
 import '../../utils/theme_utils.dart';
+import '../../utils/colors.dart';
 
 class CategoryFilter extends StatelessWidget {
   final String activeCategory;
@@ -16,49 +17,49 @@ class CategoryFilter extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = context.isDarkMode;
     
-    // Define all categories with icons and colors
+    // Define all categories with icons and theme-aware colors
     final categories = [
       {
         'id': 'all', 
         'name': 'All', 
         'icon': Icons.refresh, 
-        'color': isDarkMode ? const Color(0xFF1E3A8A) : Colors.blue.shade100,
-        'activeColor': isDarkMode ? const Color(0xFF93C5FD) : Colors.blue.shade500,
+        'color': isDarkMode ? AppColors.categoryTechnicalDark.withValues(alpha: 0.2) : AppColors.categoryTechnical.withValues(alpha: 0.1),
+        'activeColor': AppColors.getCategoryColor('technical', isDarkMode: isDarkMode),
       },
       {
         'id': 'technical', 
         'name': 'Technical Knowledge', 
         'icon': Icons.bar_chart, 
-        'color': isDarkMode ? const Color(0xFF1E3A8A) : Colors.blue.shade100,
-        'activeColor': isDarkMode ? const Color(0xFF93C5FD) : Colors.blue.shade500,
+        'color': isDarkMode ? AppColors.categoryTechnicalDark.withValues(alpha: 0.2) : AppColors.categoryTechnical.withValues(alpha: 0.1),
+        'activeColor': AppColors.getCategoryColor('technical', isDarkMode: isDarkMode),
       },
       {
         'id': 'applied', 
         'name': 'Applied Skills', 
         'icon': Icons.build, 
-        'color': isDarkMode ? const Color(0xFF064E3B) : Colors.green.shade100,
-        'activeColor': isDarkMode ? const Color(0xFF6EE7B7) : Colors.green.shade500,
+        'color': isDarkMode ? AppColors.categoryBehavioralDark.withValues(alpha: 0.2) : AppColors.categoryBehavioral.withValues(alpha: 0.1),
+        'activeColor': AppColors.getCategoryColor('behavioral', isDarkMode: isDarkMode),
       },
       {
         'id': 'case', 
         'name': 'Case Studies', 
         'icon': Icons.trending_up, 
-        'color': isDarkMode ? const Color(0xFF4C1D95) : Colors.purple.shade100,
-        'activeColor': isDarkMode ? const Color(0xFFC4B5FD) : Colors.purple.shade500,
+        'color': isDarkMode ? AppColors.categoryLeadershipDark.withValues(alpha: 0.2) : AppColors.categoryLeadership.withValues(alpha: 0.1),
+        'activeColor': AppColors.getCategoryColor('leadership', isDarkMode: isDarkMode),
       },
       {
         'id': 'behavioral', 
         'name': 'Behavioral Questions', 
         'icon': Icons.psychology, 
-        'color': isDarkMode ? const Color(0xFF854D0E) : Colors.yellow.shade100,
-        'activeColor': isDarkMode ? const Color(0xFFFDE68A) : Colors.yellow.shade500,
+        'color': isDarkMode ? AppColors.categorySituationalDark.withValues(alpha: 0.2) : AppColors.categorySituational.withValues(alpha: 0.1),
+        'activeColor': AppColors.getCategoryColor('situational', isDarkMode: isDarkMode),
       },
       {
         'id': 'job', 
         'name': 'Job-Specific', 
         'icon': Icons.work, 
-        'color': isDarkMode ? const Color(0xFF991B1B) : Colors.red.shade100,
-        'activeColor': isDarkMode ? const Color(0xFFFCA5A5) : Colors.red.shade500,
+        'color': isDarkMode ? AppColors.categoryGeneralDark.withValues(alpha: 0.2) : AppColors.categoryGeneral.withValues(alpha: 0.1),
+        'activeColor': AppColors.getCategoryColor('general', isDarkMode: isDarkMode),
       },
     ];
     

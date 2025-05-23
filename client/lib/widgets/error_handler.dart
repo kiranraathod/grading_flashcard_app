@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../models/app_error.dart';
 import '../services/error_service.dart';
 import '../utils/colors.dart';
@@ -51,7 +52,7 @@ class ErrorHandler extends StatelessWidget {
       context: context,
       barrierDismissible: error.severity != ErrorSeverity.critical,
       builder: (context) => AlertDialog(
-        title: Text('Error', style: DS.headingMedium),
+        title: Text(AppLocalizations.of(context).errorTitle, style: DS.headingMedium),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,7 +68,7 @@ class ErrorHandler extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: Text(AppLocalizations.of(context).ok),
           ),
         ],
       ),
@@ -104,7 +105,7 @@ class ErrorHandler extends StatelessWidget {
             : AppColors.warning,
         duration: Duration(seconds: error.severity == ErrorSeverity.error ? 5 : 3),
         action: SnackBarAction(
-          label: 'Dismiss',
+          label: AppLocalizations.of(context).dismiss,
           textColor: textColor,
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
