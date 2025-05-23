@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/app_localizations_extension.dart';
 import '../utils/design_system.dart';
+import '../utils/theme_utils.dart';
 
 class CreateDeckCard extends StatelessWidget {
   final VoidCallback onTap;
@@ -23,9 +24,12 @@ class CreateDeckCard extends StatelessWidget {
             height: DS.cardHeight, // Use design system card height (201px)
             margin: EdgeInsets.zero, // No margins to maximize space usage
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.surfaceColor,
               borderRadius: DS.borderLarge,
-              border: Border.all(color: Colors.grey.shade300, width: 2),
+              border: Border.all(
+                color: context.colorScheme.outline,
+                width: 2,
+              ),
             ),
             child: Center(
               child: Column(
@@ -34,14 +38,13 @@ class CreateDeckCard extends StatelessWidget {
                   Icon(
                     Icons.add, 
                     size: isVerySmall ? DS.iconSizeL : (isSmall ? DS.iconSizeL + 4 : DS.buttonHeightS), // 32-36px range
-                    color: Colors.grey.shade400
+                    color: context.onSurfaceVariantColor,
                   ),
                   SizedBox(height: isVerySmall ? DS.spacing2xs : DS.spacingXs),
                   Text(
                     L10nExt.of(context).createNewDeck,
-                    style: TextStyle(
-                      fontSize: isVerySmall ? DS.bodySmall.fontSize : 14, 
-                      color: Colors.grey.shade500
+                    style: (isVerySmall ? context.bodySmall : context.bodyMedium)?.copyWith(
+                      color: context.onSurfaceVariantColor,
                     ),
                   ),
                 ],

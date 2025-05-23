@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/theme_utils.dart';
 
 class SuggestionsWidget extends StatelessWidget {
   final List<String> suggestions;
@@ -29,7 +30,7 @@ class SuggestionsWidget extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  style: context.titleMedium,
                 ),
               ],
             ),

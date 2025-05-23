@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'colors.dart';
 import 'responsive_helpers.dart';
+import 'theme_utils.dart';
 
 /// A comprehensive design system with spacing, sizing, elevation, and responsive breakpoints
 /// 
@@ -59,55 +60,103 @@ class DS {
   static const Duration durationMedium = Duration(milliseconds: 300);
   static const Duration durationSlow = Duration(milliseconds: 500);
   
-  // MARK: - Typography
-  /// Text styles with consistent sizing and spacing
+  // MARK: - Typography (Backward Compatible)
+  /// Theme-aware text style constants that work without context
+  /// For better theming, prefer context.titleLarge, context.bodyMedium, etc.
+  
+  /// Heading styles - use context.headlineLarge, headlineMedium, headlineSmall instead
   static const TextStyle headingLarge = TextStyle(
     fontSize: 24.0,
     fontWeight: FontWeight.bold,
     height: 1.2,
-    color: AppColors.textPrimary,
+    color: Colors.black87, // Will be overridden by theme
   );
   
   static const TextStyle headingMedium = TextStyle(
     fontSize: 20.0,
     fontWeight: FontWeight.bold,
     height: 1.2,
-    color: AppColors.textPrimary,
+    color: Colors.black87, // Will be overridden by theme
   );
   
   static const TextStyle headingSmall = TextStyle(
     fontSize: 18.0,
     fontWeight: FontWeight.bold,
     height: 1.2,
-    color: AppColors.textPrimary,
+    color: Colors.black87, // Will be overridden by theme
   );
   
+  /// Body styles - use context.bodyLarge, bodyMedium, bodySmall instead
   static const TextStyle bodyLarge = TextStyle(
     fontSize: 16.0,
     fontWeight: FontWeight.normal,
     height: 1.5,
-    color: AppColors.textPrimary,
+    color: Colors.black87, // Will be overridden by theme
   );
   
   static const TextStyle bodyMedium = TextStyle(
     fontSize: 14.0,
     fontWeight: FontWeight.normal,
     height: 1.5,
-    color: AppColors.textPrimary,
+    color: Colors.black87, // Will be overridden by theme
   );
   
   static const TextStyle bodySmall = TextStyle(
     fontSize: 12.0,
     fontWeight: FontWeight.normal,
     height: 1.5,
-    color: AppColors.textSecondary,
+    color: Colors.black54, // Will be overridden by theme
   );
   
   static const TextStyle badgeText = TextStyle(
     fontSize: 12.0,
     fontWeight: FontWeight.w500,
     height: 1.5,
-    color: AppColors.textSecondary,
+    color: Colors.black54, // Will be overridden by theme
+  );
+  
+  // MARK: - Theme-Aware Typography Methods
+  /// Get theme-aware heading styles - PREFERRED over static const styles above
+  static TextStyle themedHeadingLarge(BuildContext context) => TextStyle(
+    fontSize: 24.0,
+    fontWeight: FontWeight.bold,
+    height: 1.2,
+    color: Theme.of(context).colorScheme.onSurface,
+  );
+  
+  static TextStyle themedHeadingMedium(BuildContext context) => TextStyle(
+    fontSize: 20.0,
+    fontWeight: FontWeight.bold,
+    height: 1.2,
+    color: Theme.of(context).colorScheme.onSurface,
+  );
+  
+  static TextStyle themedHeadingSmall(BuildContext context) => TextStyle(
+    fontSize: 18.0,
+    fontWeight: FontWeight.bold,
+    height: 1.2,
+    color: Theme.of(context).colorScheme.onSurface,
+  );
+  
+  static TextStyle themedBodyLarge(BuildContext context) => TextStyle(
+    fontSize: 16.0,  
+    fontWeight: FontWeight.normal,
+    height: 1.5,
+    color: Theme.of(context).colorScheme.onSurface,
+  );
+  
+  static TextStyle themedBodyMedium(BuildContext context) => TextStyle(
+    fontSize: 14.0,
+    fontWeight: FontWeight.normal,
+    height: 1.5,
+    color: Theme.of(context).colorScheme.onSurface,
+  );
+  
+  static TextStyle themedBodySmall(BuildContext context) => TextStyle(
+    fontSize: 12.0,
+    fontWeight: FontWeight.normal,
+    height: 1.5,
+    color: Theme.of(context).colorScheme.onSurfaceVariant,
   );
   
   // MARK: - Borders & Radii
@@ -326,6 +375,86 @@ class DS {
     padding: const EdgeInsets.symmetric(horizontal: spacingM, vertical: spacingS),
     shape: RoundedRectangleBorder(borderRadius: borderMedium),
   );
+  
+  // MARK: - Responsive Typography Scaling
+  /// Get responsive text scale factor based on screen size and device type
+  static double getTextScaleFactor(BuildContext context) {
+    final deviceType = ResponsiveHelpers.getDeviceType(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Base scale factors by device type
+    switch (deviceType) {
+      case DeviceType.phone:
+        if (screenWidth < DS.breakpointXs) return 0.9; // Very small phones
+        return 1.0; // Normal phones
+      case DeviceType.tablet:
+        return 1.1; // Slightly larger for tablets
+      case DeviceType.desktop:
+        return 1.0; // Standard for desktop
+      case DeviceType.tv:
+        return 1.2; // Larger for TV viewing distance
+    }
+  }
+  
+  /// Apply responsive text scaling to a TextStyle
+  static TextStyle scaleTextStyle(BuildContext context, TextStyle style) {
+    final scaleFactor = getTextScaleFactor(context);
+    return style.copyWith(
+      fontSize: (style.fontSize ?? 14.0) * scaleFactor,
+    );
+  }
+  
+  /// Get responsive typography styles that scale with device type
+  /// Prefer using context.titleLarge, context.bodyMedium, etc. instead
+  static TextStyle responsiveHeadingLarge(BuildContext context) => 
+    scaleTextStyle(context, themedHeadingLarge(context));
+    
+  static TextStyle responsiveHeadingMedium(BuildContext context) => 
+    scaleTextStyle(context, themedHeadingMedium(context));
+    
+  static TextStyle responsiveHeadingSmall(BuildContext context) => 
+    scaleTextStyle(context, themedHeadingSmall(context));
+    
+  static TextStyle responsiveBodyLarge(BuildContext context) => 
+    scaleTextStyle(context, themedBodyLarge(context));
+    
+  static TextStyle responsiveBodyMedium(BuildContext context) => 
+    scaleTextStyle(context, themedBodyMedium(context));
+    
+  static TextStyle responsiveBodySmall(BuildContext context) => 
+    scaleTextStyle(context, themedBodySmall(context));
+  
+  // MARK: - Typography Accessibility
+  /// WCAG 2.1 AA minimum font sizes for accessibility compliance
+  static const double minFontSizeAA = 12.0; // Minimum for AA compliance
+  static const double minFontSizeAAA = 14.0; // Recommended for AAA compliance
+  static const double minTouchTargetSize = 44.0; // Minimum touch target size
+  
+  /// Verify if a text size meets WCAG accessibility standards
+  static bool isAccessibleFontSize(double fontSize, {bool strictAAA = false}) {
+    return strictAAA ? fontSize >= minFontSizeAAA : fontSize >= minFontSizeAA;
+  }
+  
+  /// Get accessibility-compliant text style that ensures minimum font sizes
+  static TextStyle ensureAccessibleFontSize(TextStyle style, {bool strictAAA = false}) {
+    final minSize = strictAAA ? minFontSizeAAA : minFontSizeAA;
+    final currentSize = style.fontSize ?? 14.0;
+    
+    if (currentSize < minSize) {
+      return style.copyWith(fontSize: minSize);
+    }
+    return style;
+  }
+  
+  /// Get accessible typography with proper contrast and sizing
+  static TextStyle accessibleHeadingLarge(BuildContext context) => 
+    ensureAccessibleFontSize(themedHeadingLarge(context));
+    
+  static TextStyle accessibleBodyMedium(BuildContext context) => 
+    ensureAccessibleFontSize(themedBodyMedium(context));
+    
+  static TextStyle accessibleBodySmall(BuildContext context) => 
+    ensureAccessibleFontSize(themedBodySmall(context));
 }
 
 /// Extension methods for convenient access to design system values

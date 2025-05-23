@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../utils/theme_utils.dart';
+import '../utils/design_system.dart';
 
 class SearchBarWidget extends StatelessWidget {
   const SearchBarWidget({super.key});
@@ -7,35 +9,37 @@ class SearchBarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 56,
+      height: DS.buttonHeightXl,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(25),
-            spreadRadius: 1,
-            blurRadius: 2,
-            offset: const Offset(0, 1),
-          ),
-        ],
+        color: context.surfaceColor,
+        borderRadius: BorderRadius.circular(DS.borderRadiusFull),
+        border: Border.all(
+          color: context.colorScheme.outline,
+          width: 1.0,
+        ),
+        boxShadow: context.cardShadow,
       ),
       child: TextField(
         decoration: InputDecoration(
           hintText: AppLocalizations.of(context).search,
           hintStyle: TextStyle(
-            color: Colors.grey.shade400,
+            color: context.onSurfaceVariantColor,
             fontSize: 16,
           ),
           prefixIcon: Icon(
             Icons.search,
-            color: Colors.grey.shade700,
+            color: context.onSurfaceVariantColor,
+            size: DS.iconSizeS,
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
+            horizontal: DS.spacingM,
+            vertical: DS.spacingM,
           ),
+        ),
+        style: TextStyle(
+          color: context.onSurfaceColor,
+          fontSize: 16,
         ),
       ),
     );

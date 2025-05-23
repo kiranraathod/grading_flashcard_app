@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
 import '../utils/design_system.dart';
+import '../utils/theme_utils.dart';
 
 class StreakCalendarWidget extends StatelessWidget {
   final int streakDays;
@@ -23,9 +24,9 @@ class StreakCalendarWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(DS.spacingL),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.surfaceColor,
         borderRadius: DS.borderLarge,
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: context.colorScheme.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,14 +41,13 @@ class StreakCalendarWidget extends StatelessWidget {
                 children: [
                   Text(
                     'Your Learning Streak',
-                    style: DS.headingSmall,
+                    style: context.headlineSmall,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Keep studying daily to build your streak!',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
+                    style: context.bodyMedium?.copyWith(
+                      color: context.onSurfaceVariantColor,
                     ),
                   ),
                 ],
@@ -60,10 +60,10 @@ class StreakCalendarWidget extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Color.fromRGBO(16, 185, 129, 0.1), // AppColors.primary with 0.1 opacity
+                  color: context.primaryColor.withValues(alpha: 0.1),
                   borderRadius: DS.borderMedium,
                   border: Border.all(
-                    color: Color.fromRGBO(16, 185, 129, 0.2), // AppColors.primary with 0.2 opacity
+                    color: context.primaryColor.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Row(
@@ -71,13 +71,13 @@ class StreakCalendarWidget extends StatelessWidget {
                     Icon(
                       Icons.emoji_events,
                       size: 16,
-                      color: AppColors.primary,
+                      color: context.primaryColor,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '$streakDays Day Streak',
-                      style: DS.bodySmall.copyWith(
-                        color: AppColors.primary,
+                      style: context.bodySmall?.copyWith(
+                        color: context.primaryColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

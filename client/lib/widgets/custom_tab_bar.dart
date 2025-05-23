@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../utils/colors.dart';
 import '../utils/design_system.dart';
+import '../utils/theme_utils.dart';
 
 class CustomTabBar extends StatelessWidget {
   final List<String> tabs;
@@ -18,7 +18,7 @@ class CustomTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: context.surfaceVariantColor,
         borderRadius: DS.borderMedium,
       ),
       child: Row(
@@ -33,24 +33,15 @@ class CustomTabBar extends StatelessWidget {
                 vertical: DS.spacingS,
               ),
               decoration: BoxDecoration(
-                color: isActive ? Colors.white : Colors.transparent,
+                color: isActive ? context.surfaceColor : Colors.transparent,
                 borderRadius: DS.borderMedium,
-                boxShadow: isActive
-                    ? [
-                        BoxShadow(
-                          color: Color.fromRGBO(128, 128, 128, 0.1), // Grey with 0.1 opacity
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : null,
+                boxShadow: isActive ? context.cardShadow : null,
               ),
               child: Text(
                 tab,
-                style: TextStyle(
-                  fontSize: 14,
+                style: context.bodyMedium?.copyWith(
                   fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                  color: isActive ? AppColors.primary : Colors.grey.shade600,
+                  color: isActive ? context.primaryColor : context.onSurfaceVariantColor,
                 ),
               ),
             ),
