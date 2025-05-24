@@ -14,8 +14,6 @@ class DifficultyFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = context.isDarkMode;
-
     // Define difficulty levels
     final difficulties = [
       {'id': 'all', 'name': 'All'},
