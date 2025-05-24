@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/speech_to_text_service.dart';
 import '../utils/colors.dart';
+import '../utils/theme_utils.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class AnswerInputWidget extends StatefulWidget {
@@ -81,20 +82,19 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             margin: const EdgeInsets.only(bottom: 8),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: context.surfaceVariantColor,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.blue.shade100),
+              border: Border.all(color: context.outlineColor),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: Colors.blue.shade700, size: 16),
+                Icon(Icons.info_outline, color: context.infoColor, size: 16),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     AppLocalizations.of(context).submitToTrackProgress,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.blue.shade700,
+                    style: context.bodySmall?.copyWith(
+                      color: context.onSurfaceVariantColor,
                     ),
                   ),
                 ),
@@ -122,8 +122,8 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
                   icon: Icon(
                     _isListening ? Icons.mic : Icons.mic_none,
                     color: _isListening 
-                        ? Colors.red 
-                        : (widget.isDisabled ? Colors.grey : null),
+                        ? context.errorColor 
+                        : (widget.isDisabled ? context.onSurfaceVariantColor : context.primaryColor),
                   ),
                   onPressed: widget.isDisabled 
                       ? null 
@@ -141,7 +141,7 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: context.onPrimaryColor,
             ),
             icon: const Icon(Icons.send),
             label: Text(AppLocalizations.of(context).submitAnswerUpdateProgress),

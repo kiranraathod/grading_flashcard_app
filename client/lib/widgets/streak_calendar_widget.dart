@@ -97,12 +97,12 @@ class StreakCalendarWidget extends StatelessWidget {
                 bool isToday = index == 1; // Mock: Monday is today
                 bool isPast = index < 1; // Days before today
                 
-                Color bgColor = Colors.grey.shade100;
-                Color textColor = Colors.grey.shade400;
+                Color bgColor = context.surfaceVariantColor;
+                Color textColor = context.onSurfaceVariantColor;
                 Border? border;
                 
                 if (isToday) {
-                  bgColor = Color.fromRGBO(16, 185, 129, 0.1); // AppColors.primary with 0.1 opacity
+                  bgColor = context.primaryColor.withValues(alpha: 0.1);
                   textColor = AppColors.primary;
                   border = Border.all(
                     color: AppColors.primary,
@@ -110,7 +110,7 @@ class StreakCalendarWidget extends StatelessWidget {
                   );
                 } else if (isPast) {
                   bgColor = AppColors.primary;
-                  textColor = Colors.white;
+                  textColor = context.onPrimaryColor;
                 }
                 
                 return Column(
@@ -139,7 +139,7 @@ class StreakCalendarWidget extends StatelessWidget {
                       isToday ? 'Today' : '',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: context.onSurfaceVariantColor,
                       ),
                     ),
                   ],
@@ -160,7 +160,7 @@ class StreakCalendarWidget extends StatelessWidget {
                       'Weekly Goal: $daysCompleted/$weeklyGoal days',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: context.onSurfaceVariantColor,
                       ),
                     ),
                     Text(
@@ -177,7 +177,7 @@ class StreakCalendarWidget extends StatelessWidget {
                 Container(
                   height: 8,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: context.surfaceVariantColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Row(

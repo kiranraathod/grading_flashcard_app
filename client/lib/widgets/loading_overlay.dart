@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
+import '../utils/theme_utils.dart';
 
 class LoadingOverlay extends StatelessWidget {
   final String message;
@@ -12,7 +13,7 @@ class LoadingOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withValues(red: 0, green: 0, blue: 0, alpha: 128),
+      color: context.shadowColor.withValues(alpha: 0.5),
       child: Center(
         child: Card(
           elevation: 4,
@@ -30,8 +31,7 @@ class LoadingOverlay extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   message,
-                  style: const TextStyle(
-                    fontSize: 16,
+                  style: context.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
                 ),

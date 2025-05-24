@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
+import '../utils/theme_utils.dart';
 
 class CustomFloatingActionButton extends StatelessWidget {
   final VoidCallback onPressed;
@@ -18,7 +19,7 @@ class CustomFloatingActionButton extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Color.fromRGBO(16, 185, 129, 0.3), // AppColors.primary with 0.3 opacity
+            color: context.primaryColor.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -27,7 +28,7 @@ class CustomFloatingActionButton extends StatelessWidget {
       child: FloatingActionButton(
         onPressed: onPressed,
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: context.onPrimaryColor,
         elevation: 0,
         child: Icon(icon, size: 24),
       ),

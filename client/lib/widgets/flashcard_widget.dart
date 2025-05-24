@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import '../models/flashcard.dart';
 import '../utils/design_system.dart';
 import '../utils/spacing_components.dart';
+import '../utils/theme_utils.dart';
 
 class FlashcardWidget extends StatefulWidget {
   final Flashcard flashcard;
@@ -104,7 +105,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
             DSSpacing.verticalL,
             Text(
               AppLocalizations.of(context).tapToRevealAnswer,
-              style: TextStyle(fontSize: DS.bodyMedium.fontSize, color: Colors.grey),
+              style: TextStyle(fontSize: DS.bodyMedium.fontSize, color: context.onSurfaceVariantColor),
             ),
             // Add a hint icon to encourage user interaction
             Container(
@@ -113,11 +114,11 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
               height: DS.avatarSizeM,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.grey.shade200,
+                color: context.surfaceVariantColor,
               ),
               child: Icon(
                 Icons.touch_app,
-                color: Colors.grey.shade600,
+                color: context.onSurfaceVariantColor,
                 size: DS.iconSizeS,
               ),
             ),
@@ -144,7 +145,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
               style: TextStyle(
                 fontSize: DS.bodyLarge.fontSize,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey,
+                color: context.onSurfaceVariantColor,
               ),
             ),
             DSSpacing.verticalL,
@@ -158,7 +159,7 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
             DSSpacing.verticalL,
             Text(
               AppLocalizations.of(context).tapToSeeQuestion,
-              style: TextStyle(fontSize: DS.bodyMedium.fontSize, color: Colors.grey),
+              style: TextStyle(fontSize: DS.bodyMedium.fontSize, color: context.onSurfaceVariantColor),
             ),
             // Add a hint icon to encourage user interaction
             Container(
@@ -167,11 +168,11 @@ class _FlashcardWidgetState extends State<FlashcardWidget>
               height: DS.avatarSizeM,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.grey.shade200,
+                color: context.surfaceVariantColor,
               ),
               child: Icon(
                 Icons.flip,
-                color: Colors.grey.shade600,
+                color: context.onSurfaceVariantColor,
                 size: DS.iconSizeS,
               ),
             ),

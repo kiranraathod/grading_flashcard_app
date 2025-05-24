@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/design_system.dart';
 import '../utils/spacing_components.dart';
+import '../utils/theme_utils.dart';
 
 class FlashcardTermWidget extends StatefulWidget {
   final String initialTerm;
@@ -87,7 +88,7 @@ class _FlashcardTermWidgetState extends State<FlashcardTermWidget> {
             margin: EdgeInsets.only(right: DS.spacingM),
             decoration: BoxDecoration(
               border: Border.all(
-                color: Colors.grey.shade300,
+                color: context.outlineColor,
                 width: 2,
                 style: BorderStyle.solid,
               ),
@@ -95,7 +96,7 @@ class _FlashcardTermWidgetState extends State<FlashcardTermWidget> {
             ),
             child: Icon(
               Icons.image,
-              color: Colors.grey.shade400,
+              color: context.onSurfaceVariantColor,
             ),
           ),
         Expanded(
@@ -104,7 +105,7 @@ class _FlashcardTermWidgetState extends State<FlashcardTermWidget> {
             decoration: InputDecoration(
               hintText: label,
               filled: true,
-              fillColor: Colors.white,
+              fillColor: context.surfaceColor,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(DS.borderRadiusLarge),
                 borderSide: BorderSide.none,

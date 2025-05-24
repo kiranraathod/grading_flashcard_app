@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/design_system.dart';
+import '../utils/theme_utils.dart';
 
 class FilterDropdownButton extends StatelessWidget {
   final String label;
@@ -38,19 +39,18 @@ class FilterDropdownButton extends StatelessWidget {
           vertical: DS.spacingXs,
         ),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: context.outlineColor),
           borderRadius: DS.borderMedium,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: Colors.grey.shade600),
+            Icon(icon, size: 16, color: context.onSurfaceVariantColor),
             const SizedBox(width: 8),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade700,
+              style: context.bodyMedium?.copyWith(
+                color: context.onSurfaceVariantColor,
               ),
             ),
             if (showChevron) ...[
@@ -58,7 +58,7 @@ class FilterDropdownButton extends StatelessWidget {
               Icon(
                 Icons.keyboard_arrow_down,
                 size: 16,
-                color: Colors.grey.shade600,
+                color: context.onSurfaceVariantColor,
               ),
             ],
           ],

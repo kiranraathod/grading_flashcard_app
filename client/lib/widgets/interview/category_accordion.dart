@@ -27,12 +27,10 @@ class CategoryAccordion extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: DS.spacingS),
       decoration: BoxDecoration(
-        color: context.isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        color: context.surfaceColor,
         borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
         border: Border.all(
-          color: context.isDarkMode 
-              ? Colors.white.withValues(red: 255.0, green: 255.0, blue: 255.0, alpha: 25.0)
-              : Colors.grey.shade200,
+          color: context.outlineColor,
         ),
       ),
       child: Column(
@@ -55,7 +53,7 @@ class CategoryAccordion extends StatelessWidget {
                     child: Icon(
                       categoryIcon,
                       size: 16,
-                      color: context.isDarkMode ? Colors.white : Colors.grey.shade700,
+                      color: context.onPrimaryColor,
                     ),
                   ),
                   
