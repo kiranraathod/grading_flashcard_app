@@ -1,0 +1,4 @@
+# Test requirements for Default Data API tests
+pytest>=6.0.0
+httpx>=0.20.0
+requests>=2.25.0

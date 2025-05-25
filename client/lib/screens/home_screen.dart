@@ -24,6 +24,7 @@ import '../models/question_set.dart';
 import '../services/flashcard_service.dart';
 import '../services/interview_service.dart';
 import '../services/recent_view_service.dart';
+import '../services/default_data_service.dart';
 import '../widgets/interview/arrow_painter.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -36,6 +37,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _activeTab = 'Decks';
+  final DefaultDataService _defaultDataService = DefaultDataService();
 
   // Data for streak calendar
   final int _weeklyGoal = 7;
@@ -176,7 +178,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Text(
                                         _getDayAbbreviation(context, index),
                                         style: TextStyle(
-                                          fontSize: DS.isSmallScreen(context) ? 12 : 14,
+                                          fontSize:
+                                              DS.isSmallScreen(context)
+                                                  ? 12
+                                                  : 14,
                                           fontWeight: FontWeight.bold,
                                           color: textColor,
                                         ),
@@ -262,7 +267,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         bottom: DS.spacingL,
                       ), // mt-6 in Tailwind is 1.5rem (24px)
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start, // Align everything to the left
+                        crossAxisAlignment:
+                            CrossAxisAlignment
+                                .start, // Align everything to the left
                         children: [
                           // Tabs and filters in a single row with space between
                           Row(
@@ -276,75 +283,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
-                                  mainAxisSize: MainAxisSize.min, // Don't expand beyond needed
+                                  mainAxisSize:
+                                      MainAxisSize
+                                          .min, // Don't expand beyond needed
                                   children: [
-                                // Decks tab
-                                InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      _activeTab = 'Decks';
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: DS.spacingM,
-                                      vertical: DS.spacingXs,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          _activeTab == 'Decks'
-                                              ? context.surfaceColor
-                                              : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border:
-                                          _activeTab == 'Decks' &&
-                                                  context.isDarkMode
-                                              ? Border.all(
-                                                color: context.primaryColor
-                                                    .withValues(alpha: 0.2),
-                                                width: 1,
-                                              )
-                                              : null,
-                                      boxShadow:
-                                          _activeTab == 'Decks'
-                                              ? [
-                                                BoxShadow(
-                                                  color:
-                                                      context.isDarkMode
-                                                          ? context.primaryColor
-                                                              .withValues(
-                                                                alpha: 0.1,
-                                                              )
-                                                          : Colors.grey
-                                                              .withOpacityFix(
-                                                                0.1,
-                                                              ),
-                                                  blurRadius: 4,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ]
-                                              : null,
-                                    ),
-                                    child: Text(
-                                      AppLocalizations.of(context).decksTab,
-                                      style: context.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.w500,
-                                        color:
-                                            _activeTab == 'Decks'
-                                                ? context.primaryColor
-                                                : context.onSurfaceVariantColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Interview Questions tab with arrow
-                                Stack(
-                                  children: [
+                                    // Decks tab
                                     InkWell(
                                       onTap: () {
                                         setState(() {
-                                          _activeTab = 'Interview Questions';
+                                          _activeTab = 'Decks';
                                         });
                                       },
                                       child: Container(
@@ -354,16 +301,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color:
-                                              _activeTab ==
-                                                      'Interview Questions'
+                                              _activeTab == 'Decks'
                                                   ? context.surfaceColor
                                                   : Colors.transparent,
                                           borderRadius: BorderRadius.circular(
                                             8,
                                           ),
                                           border:
-                                              _activeTab ==
-                                                          'Interview Questions' &&
+                                              _activeTab == 'Decks' &&
                                                       context.isDarkMode
                                                   ? Border.all(
                                                     color: context.primaryColor
@@ -372,8 +317,168 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   )
                                                   : null,
                                           boxShadow:
-                                              _activeTab ==
-                                                      'Interview Questions'
+                                              _activeTab == 'Decks'
+                                                  ? [
+                                                    BoxShadow(
+                                                      color:
+                                                          context.isDarkMode
+                                                              ? context
+                                                                  .primaryColor
+                                                                  .withValues(
+                                                                    alpha: 0.1,
+                                                                  )
+                                                              : Colors.grey
+                                                                  .withOpacityFix(
+                                                                    0.1,
+                                                                  ),
+                                                      blurRadius: 4,
+                                                      offset: const Offset(
+                                                        0,
+                                                        2,
+                                                      ),
+                                                    ),
+                                                  ]
+                                                  : null,
+                                        ),
+                                        child: Text(
+                                          AppLocalizations.of(context).decksTab,
+                                          style: context.bodyMedium?.copyWith(
+                                            fontWeight: FontWeight.w500,
+                                            color:
+                                                _activeTab == 'Decks'
+                                                    ? context.primaryColor
+                                                    : context
+                                                        .onSurfaceVariantColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Interview Questions tab with arrow
+                                    Stack(
+                                      children: [
+                                        InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              _activeTab =
+                                                  'Interview Questions';
+                                            });
+                                          },
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: DS.spacingM,
+                                              vertical: DS.spacingXs,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  _activeTab ==
+                                                          'Interview Questions'
+                                                      ? context.surfaceColor
+                                                      : Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border:
+                                                  _activeTab ==
+                                                              'Interview Questions' &&
+                                                          context.isDarkMode
+                                                      ? Border.all(
+                                                        color: context
+                                                            .primaryColor
+                                                            .withValues(
+                                                              alpha: 0.2,
+                                                            ),
+                                                        width: 1,
+                                                      )
+                                                      : null,
+                                              boxShadow:
+                                                  _activeTab ==
+                                                          'Interview Questions'
+                                                      ? [
+                                                        BoxShadow(
+                                                          color:
+                                                              context.isDarkMode
+                                                                  ? context
+                                                                      .primaryColor
+                                                                      .withValues(
+                                                                        alpha:
+                                                                            0.1,
+                                                                      )
+                                                                  : Colors.grey
+                                                                      .withOpacityFix(
+                                                                        0.1,
+                                                                      ),
+                                                          blurRadius: 4,
+                                                          offset: const Offset(
+                                                            0,
+                                                            2,
+                                                          ),
+                                                        ),
+                                                      ]
+                                                      : null,
+                                            ),
+                                            child: Text(
+                                              AppLocalizations.of(
+                                                context,
+                                              ).interviewQuestionsTab,
+                                              style: context.bodyMedium?.copyWith(
+                                                fontWeight: FontWeight.w500,
+                                                color:
+                                                    _activeTab ==
+                                                            'Interview Questions'
+                                                        ? context.primaryColor
+                                                        : context
+                                                            .onSurfaceVariantColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        // Arrow indicator (only show when tab is active)
+                                        if (_activeTab == 'Interview Questions')
+                                          Positioned(
+                                            top: -15,
+                                            right: 20,
+                                            child: CustomPaint(
+                                              size: const Size(20, 15),
+                                              painter: ArrowPainter(
+                                                color: context.errorColor,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+
+                                    // Recent tab
+                                    InkWell(
+                                      onTap: () {
+                                        setState(() {
+                                          _activeTab = 'Recent';
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: DS.spacingM,
+                                          vertical: DS.spacingXs,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              _activeTab == 'Recent'
+                                                  ? context.surfaceColor
+                                                  : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border:
+                                              _activeTab == 'Recent' &&
+                                                      context.isDarkMode
+                                                  ? Border.all(
+                                                    color: context.primaryColor
+                                                        .withValues(alpha: 0.2),
+                                                    width: 1,
+                                                  )
+                                                  : null,
+                                          boxShadow:
+                                              _activeTab == 'Recent'
                                                   ? [
                                                     BoxShadow(
                                                       color:
@@ -399,12 +504,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         child: Text(
                                           AppLocalizations.of(
                                             context,
-                                          ).interviewQuestionsTab,
+                                          ).recentTab,
                                           style: context.bodyMedium?.copyWith(
                                             fontWeight: FontWeight.w500,
                                             color:
-                                                _activeTab ==
-                                                        'Interview Questions'
+                                                _activeTab == 'Recent'
                                                     ? context.primaryColor
                                                     : context
                                                         .onSurfaceVariantColor,
@@ -412,122 +516,50 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                       ),
                                     ),
-
-                                    // Arrow indicator (only show when tab is active)
-                                    if (_activeTab == 'Interview Questions')
-                                      Positioned(
-                                        top: -15,
-                                        right: 20,
-                                        child: CustomPaint(
-                                          size: const Size(20, 15),
-                                          painter: ArrowPainter(
-                                            color: context.errorColor,
-                                          ),
-                                        ),
-                                      ),
                                   ],
                                 ),
+                              ),
 
-                                // Recent tab
-                                InkWell(
-                                  onTap: () {
-                                    setState(() {
-                                      _activeTab = 'Recent';
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: DS.spacingM,
-                                      vertical: DS.spacingXs,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          _activeTab == 'Recent'
-                                              ? context.surfaceColor
-                                              : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border:
-                                          _activeTab == 'Recent' &&
-                                                  context.isDarkMode
-                                              ? Border.all(
-                                                color: context.primaryColor
-                                                    .withValues(alpha: 0.2),
-                                                width: 1,
-                                              )
-                                              : null,
-                                      boxShadow:
-                                          _activeTab == 'Recent'
-                                              ? [
-                                                BoxShadow(
-                                                  color:
-                                                      context.isDarkMode
-                                                          ? context.primaryColor
-                                                              .withValues(
-                                                                alpha: 0.1,
-                                                              )
-                                                          : Colors.grey
-                                                              .withOpacityFix(
-                                                                0.1,
-                                                              ),
-                                                  blurRadius: 4,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ]
-                                              : null,
-                                    ),
-                                    child: Text(
-                                      AppLocalizations.of(context).recentTab,
-                                      style: context.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.w500,
-                                        color:
-                                            _activeTab == 'Recent'
-                                                ? context.primaryColor
-                                                : context.onSurfaceVariantColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          
-                          // Filter and Sort controls aligned to the right
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              // Check if we have enough space for both filters side by side
-                              final availableWidth = constraints.maxWidth;
-                              final shouldStack = availableWidth < 300; // Threshold for stacking
-                              
-                              if (shouldStack) {
-                                // Stack vertically on narrow screens
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    _buildFilterButton(context),
-                                    DSSpacing.verticalS,
-                                    _buildSortButton(context),
-                                  ],
-                                );
-                              } else {
-                                // Display horizontally without flexible sizing to avoid constraints issues
-                                return Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    _buildFilterButton(context),
-                                    DSSpacing.horizontalS,
-                                    _buildSortButton(context),
-                                  ],
-                                );
-                              }
-                            },
+                              // Filter and Sort controls aligned to the right
+                              LayoutBuilder(
+                                builder: (context, constraints) {
+                                  // Check if we have enough space for both filters side by side
+                                  final availableWidth = constraints.maxWidth;
+                                  final shouldStack =
+                                      availableWidth <
+                                      300; // Threshold for stacking
+
+                                  if (shouldStack) {
+                                    // Stack vertically on narrow screens
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        _buildFilterButton(context),
+                                        DSSpacing.verticalS,
+                                        _buildSortButton(context),
+                                      ],
+                                    );
+                                  } else {
+                                    // Display horizontally without flexible sizing to avoid constraints issues
+                                    return Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        _buildFilterButton(context),
+                                        DSSpacing.horizontalS,
+                                        _buildSortButton(context),
+                                      ],
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
+                    ),
                     const SizedBox(height: DS.spacingL),
 
                     // Tab content
@@ -647,33 +679,41 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // CRITICAL FIX: Account for parent padding in width calculations
-    final parentPadding = DS.spacingL * 2; // SingleChildScrollView padding on both sides
-    final effectiveScreenWidth = context.getEffectiveWidth(horizontalPadding: parentPadding);
-    
+    final parentPadding =
+        DS.spacingL * 2; // SingleChildScrollView padding on both sides
+    final effectiveScreenWidth = context.getEffectiveWidth(
+      horizontalPadding: parentPadding,
+    );
+
     // Ultra-minimal horizontal padding to maximize content width
-    final horizontalPadding = DS.spacing2xs * 0.25;  // Optimized for card layout (1.0px)
-    // Ultra-minimal spacing between cards to maximize usable space  
-    final cardSpacing = DS.spacing2xs * 0.75;  // Optimized for card layout (3.0px)
-    
+    final horizontalPadding =
+        DS.spacing2xs * 0.25; // Optimized for card layout (1.0px)
+    // Ultra-minimal spacing between cards to maximize usable space
+    final cardSpacing =
+        DS.spacing2xs * 0.75; // Optimized for card layout (3.0px)
+
     // Calculate the optimal number of columns using design system breakpoints
     final optimalColumns = DS.getCardColumnCount(effectiveScreenWidth);
-    
+
     // Calculate optimal card width with controlled maximum size
     double getAdaptiveCardWidth() {
       // Calculate available width precisely using EFFECTIVE screen width
       final availableWidth = effectiveScreenWidth - (horizontalPadding * 2);
-      
+
       // For multi-column layouts, calculate exact width distribution
       final totalGapWidth = (optimalColumns - 1) * cardSpacing;
-      
+
       // Calculate card width with perfect distribution
       final remainingWidth = availableWidth - totalGapWidth;
       final calculatedCardWidth = remainingWidth / optimalColumns;
-      
+
       // Apply maximum card width constraint for better visual balance
       final maxCardWidth = 365.0; // Target card width for optimal appearance
-      final cardWidth = calculatedCardWidth > maxCardWidth ? maxCardWidth : calculatedCardWidth;
-      
+      final cardWidth =
+          calculatedCardWidth > maxCardWidth
+              ? maxCardWidth
+              : calculatedCardWidth;
+
       // Return controlled width for better visual balance
       return cardWidth;
     }
@@ -691,101 +731,116 @@ class _HomeScreenState extends State<HomeScreen> {
           shrinkWrap: true,
           padding: EdgeInsets.zero,
           physics: const NeverScrollableScrollPhysics(),
-        children: [
+          children: [
             // If the number of items doesn't match the column count exactly,
             // add spacer items to ensure proper distribution
-            Builder(builder: (context) {
-            final List<Widget> items = [
-              ...flashcardSets.map((set) => SizedBox(
-                width: getAdaptiveCardWidth(),
-                height: DS.cardHeight, // Use design system card height
-                child: FlashcardDeckCard(
-                  title: set.title,
-                  category: set.description.isNotEmpty ? set.description : 'Python',
-                  cardCount: set.flashcards.length,
-                  progressPercent: _calculateProgress(set),
-                  isStudyDeck: true,
-                  onTap: () async {
-                    // Store service reference before async operation to avoid BuildContext across async gaps
-                    final flashcardService = Provider.of<FlashcardService>(
-                      context,
-                      listen: false,
-                    );
-                    
-                    // Navigate to study screen with the actual flashcard set
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => StudyScreen(set: set),
+            Builder(
+              builder: (context) {
+                final List<Widget> items = [
+                  ...flashcardSets.map(
+                    (set) => SizedBox(
+                      width: getAdaptiveCardWidth(),
+                      height: DS.cardHeight, // Use design system card height
+                      child: FlashcardDeckCard(
+                        title: set.title,
+                        category:
+                            set.description.isNotEmpty
+                                ? set.description
+                                : 'Python',
+                        cardCount: set.flashcards.length,
+                        progressPercent: _calculateProgress(set),
+                        isStudyDeck: true,
+                        onTap: () async {
+                          // Store service reference before async operation to avoid BuildContext across async gaps
+                          final flashcardService =
+                              Provider.of<FlashcardService>(
+                                context,
+                                listen: false,
+                              );
+
+                          // Navigate to study screen with the actual flashcard set
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => StudyScreen(set: set),
+                            ),
+                          );
+
+                          // Check if the widget is still mounted after navigation
+                          if (!mounted) return;
+
+                          // Reload flashcard sets using stored service reference
+                          flashcardService
+                              .reloadSets(); // Use the public reload method
+
+                          // Extra safety - force state refresh
+                          setState(() {
+                            debugPrint(
+                              'Forcing home screen refresh after returning from study',
+                            );
+                          });
+                        },
                       ),
-                    );
-
-                    // Check if the widget is still mounted after navigation
-                    if (!mounted) return;
-
-                    // Reload flashcard sets using stored service reference
-                    flashcardService.reloadSets(); // Use the public reload method
-
-                    // Extra safety - force state refresh
-                    setState(() {
-                      debugPrint(
-                        'Forcing home screen refresh after returning from study',
-                      );
-                    });
-                  },
-                ),
-              )),
-              // Create Deck Card - also needs fixed width
-              SizedBox(
-                width: getAdaptiveCardWidth(),
-                height: DS.cardHeight, // Use design system card height
-                child: CreateDeckCard(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CreateFlashcardScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ];
-            
-            // No special handling needed for single-column - just use consistent width calculation
-            var updatedItems = List<Widget>.from(items);
-            
-            // Add placeholders when needed for multi-row layouts
-            if (optimalColumns > 1) {
-              final totalItems = flashcardSets.length + 1; // +1 for create deck card
-              final totalRows = (totalItems / optimalColumns).ceil();
-              final lastRowItems = totalItems % optimalColumns == 0 ? optimalColumns : totalItems % optimalColumns;
-              
-              // Only add placeholders when there's a partial last row
-              if (totalRows > 1 && lastRowItems != optimalColumns) {
-                final placeholdersNeeded = optimalColumns - lastRowItems;
-                for (int i = 0; i < placeholdersNeeded; i++) {
-                  updatedItems.add(SizedBox(
+                    ),
+                  ),
+                  // Create Deck Card - also needs fixed width
+                  SizedBox(
                     width: getAdaptiveCardWidth(),
-                    height: 0, // Zero height to not affect layout
-                  ));
+                    height: DS.cardHeight, // Use design system card height
+                    child: CreateDeckCard(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CreateFlashcardScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ];
+
+                // No special handling needed for single-column - just use consistent width calculation
+                var updatedItems = List<Widget>.from(items);
+
+                // Add placeholders when needed for multi-row layouts
+                if (optimalColumns > 1) {
+                  final totalItems =
+                      flashcardSets.length + 1; // +1 for create deck card
+                  final totalRows = (totalItems / optimalColumns).ceil();
+                  final lastRowItems =
+                      totalItems % optimalColumns == 0
+                          ? optimalColumns
+                          : totalItems % optimalColumns;
+
+                  // Only add placeholders when there's a partial last row
+                  if (totalRows > 1 && lastRowItems != optimalColumns) {
+                    final placeholdersNeeded = optimalColumns - lastRowItems;
+                    for (int i = 0; i < placeholdersNeeded; i++) {
+                      updatedItems.add(
+                        SizedBox(
+                          width: getAdaptiveCardWidth(),
+                          height: 0, // Zero height to not affect layout
+                        ),
+                      );
+                    }
+                  }
                 }
-              }
-            }
-            
-            return SizedBox(
-              // CRITICAL FIX: Use effective width for Wrap constraint
-              width: effectiveScreenWidth - (horizontalPadding * 2),
-              child: Wrap(
-                spacing: cardSpacing,
-                runSpacing: cardSpacing,
-                // Always use start alignment to ensure consistent spacing
-                alignment: WrapAlignment.start,
-                children: updatedItems,
-              ),
-            );
-          }),
-        ],
-      ),
+
+                return SizedBox(
+                  // CRITICAL FIX: Use effective width for Wrap constraint
+                  width: effectiveScreenWidth - (horizontalPadding * 2),
+                  child: Wrap(
+                    spacing: cardSpacing,
+                    runSpacing: cardSpacing,
+                    // Always use start alignment to ensure consistent spacing
+                    alignment: WrapAlignment.start,
+                    children: updatedItems,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -912,7 +967,7 @@ class _HomeScreenState extends State<HomeScreen> {
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: context.responsiveValue(
               xs: 1,
-              sm: 1, 
+              sm: 1,
               md: 2,
               lg: 3,
               xl: 3,
@@ -1017,94 +1072,138 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Load category counts from server with fallback to hardcoded values
+  Future<Map<String, int>> _loadCategoryCounts() async {
+    try {
+      return await _defaultDataService.loadCategoryCounts();
+    } catch (e) {
+      debugPrint(
+        'Failed to load category counts from server, using fallback: $e',
+      );
+      // Return fallback hardcoded values
+      return {
+        'Data Analysis': 18,
+        'Web Development': 15,
+        'Machine Learning': 22,
+        'SQL': 10,
+        'Python': 14,
+        'Statistics': 8,
+      };
+    }
+  }
+
   // Method for displaying topic categories
   Widget _buildTopicCategories() {
     final interviewService = Provider.of<InterviewService>(context);
 
-    // Get predefined categories
-    List<Map<String, dynamic>> defaultCategories = [
-      {'title': 'Data Analysis', 'count': 18},
-      {'title': 'Web Development', 'count': 15},
-      {'title': 'Machine Learning', 'count': 22},
-      {'title': 'SQL', 'count': 10},
-      {'title': 'Python', 'count': 14},
-      {'title': 'Data Visualization', 'count': 8},
-    ];
+    return FutureBuilder<Map<String, int>>(
+      future: _loadCategoryCounts(),
+      builder: (context, snapshot) {
+        List<Map<String, dynamic>> allCategories;
 
-    // Get all unique subtopics
-    List<String> allSubtopics = interviewService.getAllUniqueSubtopics();
-    debugPrint('All unique subtopics: ${allSubtopics.join(", ")}');
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
 
-    // Filter out subtopics that are already represented by default categories
-    List<String> standardSubtopics = [
-      'Data Cleaning & Preprocessing',
-      'Front-end Development',
-      'Machine Learning Algorithms',
-      'SQL & Database',
-      'Python Fundamentals',
-      'Data Visualization',
-    ];
+        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+          allCategories =
+              snapshot.data!.entries
+                  .map((entry) => {'title': entry.key, 'count': entry.value})
+                  .toList();
+        } else {
+          allCategories = [
+            {'title': 'Data Analysis', 'count': 18},
+            {'title': 'Web Development', 'count': 15},
+            {'title': 'Machine Learning', 'count': 22},
+            {'title': 'SQL', 'count': 10},
+            {'title': 'Python', 'count': 14},
+            {'title': 'Statistics', 'count': 8},
+          ];
+        }
 
-    // Find custom subtopics (those not in standardSubtopics)
-    List<String> customSubtopics =
-        allSubtopics
-            .where((subtopic) => !standardSubtopics.contains(subtopic))
-            .toList();
+        // Get all unique subtopics
+        List<String> allSubtopics = interviewService.getAllUniqueSubtopics();
+        debugPrint('All unique subtopics: ${allSubtopics.join(", ")}');
 
-    debugPrint(
-      'Found ${customSubtopics.length} custom subtopics: ${customSubtopics.join(", ")}',
-    );
+        // Filter out subtopics that are already represented by default categories
+        List<String> standardSubtopics = [
+          'Data Cleaning & Preprocessing',
+          'Front-end Development',
+          'Machine Learning Algorithms',
+          'SQL & Database',
+          'Python Fundamentals',
+          'Data Visualization',
+        ];
 
-    // Create category items for custom subtopics
-    List<Map<String, dynamic>> customCategories =
-        customSubtopics
-            .map(
-              (subtopic) => {
-                'title': subtopic,
-                'count': interviewService.getQuestionCountForSubtopic(subtopic),
-              },
-            )
-            .toList();
+        // Find custom subtopics (those not in standardSubtopics)
+        List<String> customSubtopics =
+            allSubtopics
+                .where((subtopic) => !standardSubtopics.contains(subtopic))
+                .toList();
 
-    debugPrint(
-      'Created ${customCategories.length} custom category cards to display',
-    );
+        debugPrint(
+          'Found ${customSubtopics.length} custom subtopics: ${customSubtopics.join(", ")}',
+        );
 
-    // Combine default and custom categories
-    List<Map<String, dynamic>> allCategories = [
-      ...defaultCategories,
-      ...customCategories,
-    ];
+        // Create category items for custom subtopics
+        List<Map<String, dynamic>> customCategories =
+            customSubtopics
+                .map(
+                  (subtopic) => {
+                    'title': subtopic,
+                    'count': interviewService.getQuestionCountForSubtopic(
+                      subtopic,
+                    ),
+                  },
+                )
+                .toList();
 
-    // Filter out categories with zero questions
-    allCategories =
-        allCategories.where((category) => category['count'] > 0).toList();
+        debugPrint(
+          'Created ${customCategories.length} custom category cards to display',
+        );
 
-    debugPrint(
-      'Found ${allCategories.length} categories to display after filtering',
-    );
+        // Combine server/default categories with custom categories
+        final finalCategories = <Map<String, dynamic>>[
+          ...allCategories,
+          ...customCategories,
+        ];
 
-    return GridView.builder(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: context.responsiveValue(
-          xs: 1,
-          sm: 1,
-          md: 2,
-          lg: 3,
-          xl: 3,
-        ),
-        childAspectRatio: 2.5,
-        crossAxisSpacing: context.orientationAwareSpacing,
-        mainAxisSpacing: context.orientationAwareSpacing,
-      ),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: allCategories.length,
-      itemBuilder: (context, index) {
-        final category = allCategories[index];
-        return _buildCategoryChip(category['title'], category['count']);
+        // Filter out categories with zero questions
+        final filteredCategories =
+            finalCategories.where((category) => category['count'] > 0).toList();
+
+        debugPrint(
+          'Found ${filteredCategories.length} categories to display after filtering',
+        );
+
+        return GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: context.responsiveValue(
+              xs: 1,
+              sm: 1,
+              md: 2,
+              lg: 3,
+              xl: 3,
+            ),
+            childAspectRatio: 2.5,
+            crossAxisSpacing: context.orientationAwareSpacing,
+            mainAxisSpacing: context.orientationAwareSpacing,
+          ),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: filteredCategories.length,
+          itemBuilder: (context, index) {
+            final category = filteredCategories[index];
+            return _buildCategoryChip(category['title'], category['count']);
+          },
+        );
       },
-    );
+    ); // Close FutureBuilder
   }
 
   // Helper method for category chips
@@ -1227,15 +1326,15 @@ class _HomeScreenState extends State<HomeScreen> {
   // Helper method to build filter button
   Widget _buildFilterButton(BuildContext context) {
     return Container(
-      constraints: BoxConstraints(maxWidth: context.isPhone ? 100 : 120), // Responsive constraint
+      constraints: BoxConstraints(
+        maxWidth: context.isPhone ? 100 : 120,
+      ), // Responsive constraint
       padding: EdgeInsets.symmetric(
         horizontal: DS.spacingS,
         vertical: DS.spacing2xs + 2, // 6px total
       ),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: context.colorScheme.outline,
-        ),
+        border: Border.all(color: context.colorScheme.outline),
         borderRadius: BorderRadius.circular(DS.borderRadiusXs),
       ),
       child: Row(
@@ -1260,15 +1359,15 @@ class _HomeScreenState extends State<HomeScreen> {
   // Helper method to build sort button
   Widget _buildSortButton(BuildContext context) {
     return Container(
-      constraints: BoxConstraints(maxWidth: context.isPhone ? 160 : 180), // Responsive constraint
+      constraints: BoxConstraints(
+        maxWidth: context.isPhone ? 160 : 180,
+      ), // Responsive constraint
       padding: EdgeInsets.symmetric(
         horizontal: DS.spacingS,
         vertical: DS.spacing2xs + 2, // 6px total
       ),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: context.colorScheme.outline,
-        ),
+        border: Border.all(color: context.colorScheme.outline),
         borderRadius: BorderRadius.circular(DS.borderRadiusXs),
       ),
       child: Row(

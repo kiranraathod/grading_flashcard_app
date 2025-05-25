@@ -34,7 +34,13 @@ class AppConfig {
     'interviewGradeBatch': '/api/interview-grade-batch',
     'jobDescriptionAnalyze': '/api/job-description/analyze',
     'jobDescriptionGenerate': '/api/job-description/generate-questions',
-    'ping': '/api/ping'
+    'ping': '/api/ping',
+    'defaultData': '/api/default-data/',
+    'defaultFlashcardSets': '/api/default-data/flashcard-sets',
+    'defaultInterviewQuestions': '/api/default-data/interview-questions',
+    'defaultCategories': '/api/default-data/categories',
+    'defaultCategoryCounts': '/api/default-data/category-counts',
+    'defaultDataHealth': '/api/default-data/health',
   };
   
   // API base URL configuration (moved from Constants)

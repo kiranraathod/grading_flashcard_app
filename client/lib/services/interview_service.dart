@@ -5,10 +5,12 @@ import '../models/interview_question.dart';
 import '../models/interview_answer.dart';
 import '../models/question_set.dart';
 import '../utils/category_mapper.dart';
+import 'default_data_service.dart';
 
 class InterviewService extends ChangeNotifier {
   List<InterviewQuestion> _questions = [];
   List<QuestionSet> _questionSets = [];
+  final DefaultDataService _defaultDataService = DefaultDataService();
   
   // Map to store user answers (questionId -> answer text)
   final Map<String, String> _userAnswers = {};
@@ -21,6 +23,51 @@ class InterviewService extends ChangeNotifier {
   
   // Getter for question sets
   List<QuestionSet> get questionSets => _questionSets;
+  
+  /// Load default questions from server
+  Future<void> _loadDefaultQuestions() async {
+    try {
+      debugPrint('Loading default interview questions from server...');
+      final defaultQuestions = await _defaultDataService.loadDefaultInterviewQuestions();
+      
+      if (defaultQuestions.isNotEmpty) {
+        _questions = defaultQuestions;
+        debugPrint('Loaded ${defaultQuestions.length} default interview questions from server');
+        
+        // Save to local storage for offline access
+        await _saveQuestionsToStorage();
+      } else {
+        debugPrint('No default questions loaded from server');
+        // Create minimal fallback questions
+        _questions = _createFallbackQuestions();
+      }
+    } catch (e) {
+      debugPrint('Error loading default questions from server: $e');
+      _questions = _createFallbackQuestions();
+    }
+  }
+
+  /// Create minimal fallback questions if server fails
+  List<InterviewQuestion> _createFallbackQuestions() {
+    return [
+      InterviewQuestion(
+        id: 'fallback-1',
+        text: 'Explain the difference between bias and variance in machine learning.',
+        category: 'technical',
+        subtopic: 'Machine Learning Algorithms',
+        difficulty: 'mid',
+        answer: 'Bias is error from oversimplification, variance is error from sensitivity to data.',
+      ),
+      InterviewQuestion(
+        id: 'fallback-2',
+        text: 'How would you handle missing data in a dataset?',
+        category: 'applied',
+        subtopic: 'Data Cleaning & Preprocessing',
+        difficulty: 'entry',
+        answer: 'Identify patterns, evaluate extent, choose imputation strategy, validate approach.',
+      ),
+    ];
+  }
   
   // Method to get all unique subtopics from questions
   List<String> getAllUniqueSubtopics() {
@@ -114,21 +161,21 @@ class InterviewService extends ChangeNotifier {
           final draftCount = _questions.where((q) => q.isDraft).length;
           debugPrint('Published questions: $publishedCount, Drafts: $draftCount');
         } else {
-          // Fallback to mock data if no questions were loaded
-          _questions = InterviewQuestion.getMockQuestions();
-          debugPrint('No questions found in storage, using mock data');
+          // Fallback to server data if no questions were loaded
+          await _loadDefaultQuestions();
+          debugPrint('No questions found in storage, loading from server');
         }
       } else {
-        // If no saved questions, initialize with mock data
-        _questions = InterviewQuestion.getMockQuestions();
-        debugPrint('No questions found in storage, using mock data');
+        // If no saved questions, initialize with server data
+        await _loadDefaultQuestions();
+        debugPrint('No questions found in storage, loading from server');
       }
       
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading questions from storage: $e');
-      // Fallback to mock data if there's an error
-      _questions = InterviewQuestion.getMockQuestions();
+      // Fallback to server data if there's an error
+      await _loadDefaultQuestions();
       notifyListeners();
     }
   }

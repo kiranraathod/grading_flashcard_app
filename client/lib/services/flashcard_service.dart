@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
+import 'default_data_service.dart';
 import 'dart:async';
 
 class FlashcardService extends ChangeNotifier {
   final List<FlashcardSet> _sets = [];
+  final DefaultDataService _defaultDataService = DefaultDataService();
   
   List<FlashcardSet> get sets => List.unmodifiable(_sets);
   
@@ -26,308 +28,66 @@ class FlashcardService extends ChangeNotifier {
           _sets.add(FlashcardSet.fromJson(data));
         }
       } else {
-        // Load demo data if no saved sets
-        _loadDemoData();
+        // Load default data from server if no saved sets
+        await _loadDefaultData();
       }
       
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading flashcard sets: $e');
-      // Load demo data if error
-      _loadDemoData();
+      // Load default data from server if error
+      await _loadDefaultData();
     }
   }
 
-  void _loadDemoData() {
+  Future<void> _loadDefaultData() async {
+    try {
+      debugPrint('Loading default flashcard sets from server...');
+      final defaultSets = await _defaultDataService.loadDefaultFlashcardSets();
+      
+      _sets.clear();
+      _sets.addAll(defaultSets);
+      
+      debugPrint('Loaded ${defaultSets.length} default flashcard sets from server');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading default data from server: $e');
+      // If server fails, create a minimal fallback set
+      _loadMinimalFallbackData();
+    }
+  }
+
+  void _loadMinimalFallbackData() {
+    debugPrint('Loading minimal fallback data...');
     _sets.clear();
     
-    // Add Python Basics flashcard set - 0% complete initially
+    // Create a minimal Python basics set as fallback
     _sets.add(
       FlashcardSet(
-        id: 'python-basics-001',
-        title: 'Python Basics',
-        description: 'Python',
+        id: 'fallback-python-001',
+        title: 'Python Basics (Offline)',
+        description: 'Basic Python concepts - offline mode',
         isDraft: false,
         rating: 4.5,
-        ratingCount: 12,
-        flashcards: [
-          Flashcard(
-            id: '1',
-            question: 'What is Python?',
-            answer: 'Python is a high-level, interpreted programming language known for its readability and versatility.',
-            isCompleted: false,  // Not completed initially
-          ),
-          Flashcard(
-            id: '2',
-            question: 'How do you comment a single line in Python?',
-            answer: 'Use the # symbol at the beginning of the line.',
-          ),
-          Flashcard(
-            id: '3',
-            question: 'How do you print text in Python?',
-            answer: 'print("Hello, World!")',
-          ),
-          Flashcard(
-            id: '4',
-            question: 'What are the primitive data types in Python?',
-            answer: 'Integers, floats, strings, booleans, and None.',
-          ),
-          Flashcard(
-            id: '5',
-            question: 'How do you define a variable in Python?',
-            answer: 'variable_name = value',
-          ),
-          Flashcard(
-            id: '6',
-            question: 'What is indentation used for in Python?',
-            answer: 'Indentation defines code blocks and is required for control structures like loops and conditionals.',
-          ),
-          Flashcard(
-            id: '7',
-            question: 'How do you create a multi-line string in Python?',
-            answer: 'Use triple quotes: """multi-line string"""',
-          ),
-          Flashcard(
-            id: '8',
-            question: 'What is the difference between == and is?',
-            answer: '== compares the values, while "is" compares the identity (memory location).',
-          ),
-          Flashcard(
-            id: '9',
-            question: 'How do you convert a string to an integer?',
-            answer: 'int("42")',
-          ),
-          Flashcard(
-            id: '10',
-            question: 'How do you get the length of a string?',
-            answer: 'len(my_string)',
-          ),
-          Flashcard(
-            id: '11',
-            question: 'What does the % operator do in Python?',
-            answer: 'It returns the remainder of a division (modulo operation).',
-          ),
-          Flashcard(
-            id: '12',
-            question: 'How do you check if a value is in a list?',
-            answer: 'value in my_list',
-          ),
-        ],
-      ),
-    );
-    
-    // Add Python Classes flashcard set - 0% complete initially
-    _sets.add(
-      FlashcardSet(
-        id: 'python-classes-001',
-        title: 'Python Classes',
-        description: 'Python',
-        isDraft: false,
-        rating: 4.2,
-        ratingCount: 8,
-        flashcards: [
-          Flashcard(
-            id: '1',
-            question: 'How do you define a class in Python?',
-            answer: 'class MyClass:',
-            isCompleted: false,  // Not completed initially
-          ),
-          Flashcard(
-            id: '2',
-            question: 'What is the __init__ method used for?',
-            answer: 'It\'s the constructor method that initializes a new instance of a class.',
-            isCompleted: false,  // Not completed initially
-          ),
-          Flashcard(
-            id: '3',
-            question: 'What does self refer to in a method?',
-            answer: 'It refers to the instance of the class that the method is being called on.',
-            isCompleted: false,  // Not completed initially
-          ),
-          Flashcard(
-            id: '4',
-            question: 'How do you create an instance of a class?',
-            answer: 'my_instance = MyClass()',
-          ),
-          Flashcard(
-            id: '5',
-            question: 'What is inheritance in Python?',
-            answer: 'It allows a class to inherit attributes and methods from another class.',
-          ),
-          Flashcard(
-            id: '6',
-            question: 'How do you define a subclass?',
-            answer: 'class SubClass(ParentClass):',
-          ),
-          Flashcard(
-            id: '7',
-            question: 'What is a class method?',
-            answer: 'A method that receives the class as an implicit first argument, decorated with @classmethod.',
-          ),
-          Flashcard(
-            id: '8',
-            question: 'What is a static method?',
-            answer: 'A method that doesn\'t receive an implicit first argument, decorated with @staticmethod.',
-          ),
-        ],
-      ),
-    );
-    
-    // Add Python Data Types flashcard set - 0% complete initially
-    _sets.add(
-      FlashcardSet(
-        id: 'python-data-types-001',
-        title: 'Python Data Types',
-        description: 'Python',
-        isDraft: false,
-        rating: 4.8,
-        ratingCount: 15,
-        flashcards: [
-          Flashcard(
-            id: '1',
-            question: 'What is a list in Python?',
-            answer: 'An ordered, mutable collection of elements: [1, 2, 3]',
-            isCompleted: false,  // Not completed initially
-          ),
-          Flashcard(
-            id: '2',
-            question: 'What is a tuple in Python?',
-            answer: 'An ordered, immutable collection of elements: (1, 2, 3)',
-            isCompleted: false,  // Not completed initially
-          ),
-          Flashcard(
-            id: '3',
-            question: 'What is a dictionary in Python?',
-            answer: 'An unordered collection of key-value pairs: {"key": "value"}',
-          ),
-          Flashcard(
-            id: '4',
-            question: 'What is a set in Python?',
-            answer: 'An unordered collection of unique elements: {1, 2, 3}',
-          ),
-          Flashcard(
-            id: '5',
-            question: 'How do you access an element in a list?',
-            answer: 'my_list[index]',
-          ),
-          Flashcard(
-            id: '6',
-            question: 'How do you add an item to a list?',
-            answer: 'my_list.append(item)',
-          ),
-          Flashcard(
-            id: '7',
-            question: 'How do you remove an item from a list?',
-            answer: 'my_list.remove(item) or del my_list[index]',
-          ),
-          Flashcard(
-            id: '8',
-            question: 'How do you access a value in a dictionary?',
-            answer: 'my_dict["key"] or my_dict.get("key")',
-          ),
-          Flashcard(
-            id: '9',
-            question: 'What is a list comprehension?',
-            answer: 'A concise way to create lists: [x for x in range(10)]',
-          ),
-          Flashcard(
-            id: '10',
-            question: 'How do you check the type of a variable?',
-            answer: 'type(variable)',
-          ),
-          Flashcard(
-            id: '11',
-            question: 'What is the difference between mutable and immutable data types?',
-            answer: 'Mutable data types can be modified after creation; immutable ones cannot.',
-          ),
-          Flashcard(
-            id: '12',
-            question: 'What is typecasting in Python?',
-            answer: 'Converting one data type to another, like int(), str(), float(), etc.',
-          ),
-          Flashcard(
-            id: '13',
-            question: 'How do you create an empty set?',
-            answer: 'empty_set = set()',
-          ),
-          Flashcard(
-            id: '14',
-            question: 'What does the sorted() function do?',
-            answer: 'Returns a new sorted list from an iterable.',
-          ),
-          Flashcard(
-            id: '15',
-            question: 'What is the None value in Python?',
-            answer: 'A special constant representing the absence of a value or a null value.',
-          ),
-        ],
-      ),
-    );
-    
-    // Add Python Functions flashcard set - 0% complete initially
-    _sets.add(
-      FlashcardSet(
-        id: 'python-functions-001',
-        title: 'Python Functions',
-        description: 'Python',
-        isDraft: false,
-        rating: 0.0,
         ratingCount: 0,
         flashcards: [
           Flashcard(
             id: '1',
-            question: 'How do you define a function in Python?',
-            answer: 'def function_name(parameters):',
-            isCompleted: false,  // Not completed initially
+            question: 'What is Python?',
+            answer: 'Python is a high-level, interpreted programming language.',
+            isCompleted: false,
           ),
           Flashcard(
             id: '2',
-            question: 'How do you return a value from a function?',
-            answer: 'return value',
-            isCompleted: false,  // Not completed initially
+            question: 'How do you print in Python?',
+            answer: 'print("Hello, World!")',
+            isCompleted: false,
           ),
           Flashcard(
             id: '3',
-            question: 'What are default parameter values?',
-            answer: 'Values assigned to parameters that are used if no argument is provided: def func(param=default):',
-            isCompleted: false,  // Not completed initially
-          ),
-          Flashcard(
-            id: '4',
-            question: 'What is a lambda function?',
-            answer: 'An anonymous function defined with the lambda keyword: lambda x: x*2',
-            isCompleted: false,  // Not completed initially
-          ),
-          Flashcard(
-            id: '5',
-            question: 'What is the *args parameter?',
-            answer: 'It allows a function to accept any number of positional arguments.',
-            isCompleted: false,  // Not completed initially
-          ),
-          Flashcard(
-            id: '6',
-            question: 'What is the **kwargs parameter?',
-            answer: 'It allows a function to accept any number of keyword arguments.',
-          ),
-          Flashcard(
-            id: '7',
-            question: 'What is a recursive function?',
-            answer: 'A function that calls itself.',
-          ),
-          Flashcard(
-            id: '8',
-            question: 'What is a higher-order function?',
-            answer: 'A function that takes another function as an argument or returns a function.',
-          ),
-          Flashcard(
-            id: '9',
-            question: 'What is the scope of a variable in a function?',
-            answer: 'The region of code where the variable is accessible.',
-          ),
-          Flashcard(
-            id: '10',
-            question: 'What is a closure in Python?',
-            answer: 'A function that remembers values from the enclosing lexical scope even when executed outside that scope.',
+            question: 'How do you comment in Python?',
+            answer: 'Use # for single line comments',
+            isCompleted: false,
           ),
         ],
       ),

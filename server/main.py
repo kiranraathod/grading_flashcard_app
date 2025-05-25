@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from src.routes.grading_routes import router as grading_router
 from src.routes.interview_routes import router as interview_router
 from src.routes.job_description_routes import router as job_description_router
+from src.routes.default_data_routes import router as default_data_router
 from src.utils.exceptions import BaseFlashcardAPIError
 from src.config.config import config
 
@@ -91,6 +92,7 @@ def create_app():
     app.include_router(grading_router, prefix="/api")
     app.include_router(interview_router, prefix="/api")
     app.include_router(job_description_router, prefix="")
+    app.include_router(default_data_router, prefix="")
     
     @app.get("/")
     def health_check():
