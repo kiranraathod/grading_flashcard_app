@@ -16,12 +16,51 @@ import 'services/speech_to_text_service.dart';
 import 'services/interview_service.dart';
 import 'services/recent_view_service.dart';
 import 'services/job_description_service.dart';
+import 'services/network_infrastructure_initializer.dart';
+import 'services/connectivity_service.dart';
+import 'services/sync_status_tracker.dart';
 import 'blocs/recent_view/recent_view_bloc.dart';
 import 'blocs/search/search_bloc.dart';
 import 'widgets/error_handler.dart';
 
-void main() {
+void main() async {
+  // Ensure Flutter is initialized
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize enhanced network infrastructure
+  await _initializeNetworkInfrastructure();
+  
   runApp(const MyApp());
+}
+
+/// Initialize the enhanced network infrastructure
+Future<void> _initializeNetworkInfrastructure() async {
+  try {
+    debugPrint('🚀 Initializing Enhanced Network Infrastructure...');
+    
+    final networkInitializer = NetworkInfrastructureInitializer();
+    final success = await networkInitializer.initialize();
+    
+    if (success) {
+      debugPrint('✅ Network infrastructure initialized successfully');
+      
+      // Log infrastructure status
+      final status = networkInitializer.getInfrastructureStatus();
+      debugPrint('📊 Network Infrastructure Status:');
+      status.forEach((key, value) {
+        debugPrint('   $key: $value');
+      });
+    } else {
+      debugPrint('⚠️ Network infrastructure initialization completed with errors:');
+      for (final error in networkInitializer.initializationErrors) {
+        debugPrint('   ❌ $error');
+      }
+    }
+  } catch (e, stackTrace) {
+    debugPrint('💥 Critical error during network infrastructure initialization: $e');
+    debugPrint('Stack trace: $stackTrace');
+    // Continue with app startup even if network initialization fails
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -94,6 +133,10 @@ class MyApp extends StatelessWidget {
           ],
           child: MultiProvider(
             providers: [
+              // Enhanced Network Services
+              ChangeNotifierProvider(create: (_) => ConnectivityService()),
+              ChangeNotifierProvider(create: (_) => SyncStatusTracker()),
+              
               // Services as Providers (for backward compatibility)
               ChangeNotifierProvider(create: (_) => flashcardService),
               ChangeNotifierProvider(create: (_) => userService),
