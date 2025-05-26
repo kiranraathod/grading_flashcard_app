@@ -5,6 +5,7 @@ class InterviewQuestion {
   final String subtopic;
   final String difficulty; // entry, mid, senior
   final String? answer; // Answer content
+  final String? categoryId; // ✅ ADDED: Server-aligned category ID (data_analysis, machine_learning, etc.)
   bool isStarred;
   bool isCompleted;
   bool isDraft; // Whether this is a draft or published question
@@ -16,6 +17,7 @@ class InterviewQuestion {
     required this.subtopic,
     required this.difficulty,
     this.answer,
+    this.categoryId, // ✅ ADDED: Optional category_id field
     this.isStarred = false,
     this.isCompleted = false,
     this.isDraft = false,
@@ -28,6 +30,7 @@ class InterviewQuestion {
     String? subtopic,
     String? difficulty,
     String? answer,
+    String? categoryId, // ✅ ADDED: Include categoryId in copyWith
     bool? isStarred,
     bool? isCompleted,
     bool? isDraft,
@@ -39,6 +42,7 @@ class InterviewQuestion {
       subtopic: subtopic ?? this.subtopic,
       difficulty: difficulty ?? this.difficulty,
       answer: answer ?? this.answer,
+      categoryId: categoryId ?? this.categoryId, // ✅ ADDED: Copy categoryId
       isStarred: isStarred ?? this.isStarred,
       isCompleted: isCompleted ?? this.isCompleted,
       isDraft: isDraft ?? this.isDraft,
@@ -54,6 +58,7 @@ class InterviewQuestion {
       subtopic: json['subtopic'] as String,
       difficulty: json['difficulty'] as String,
       answer: json['answer'] as String?,
+      categoryId: json['category_id'] as String?, // ✅ ADDED: Parse category_id from server
       isStarred: json['is_starred'] as bool? ?? false,
       isCompleted: json['is_completed'] as bool? ?? false,
       isDraft: json['is_draft'] as bool? ?? false,
@@ -69,6 +74,7 @@ class InterviewQuestion {
       'subtopic': subtopic,
       'difficulty': difficulty,
       'answer': answer,
+      'category_id': categoryId, // ✅ ADDED: Include category_id in JSON
       'is_starred': isStarred,
       'is_completed': isCompleted,
       'is_draft': isDraft,

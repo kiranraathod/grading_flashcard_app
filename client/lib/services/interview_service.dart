@@ -68,6 +68,121 @@ class InterviewService extends ChangeNotifier {
       ),
     ];
   }
+
+  /// Synchronize with server-generated categories for enhanced integration
+  Future<void> synchronizeWithServerCategories() async {
+    try {
+      debugPrint('Synchronizing interview questions with server categories...');
+      
+      // Load fresh data from server to get latest categories
+      final serverCategories = await _defaultDataService.loadDefaultCategories();
+      final serverCategoryCounts = await _defaultDataService.loadCategoryCounts();
+      
+      if (serverCategories.isNotEmpty) {
+        debugPrint('Server provides ${serverCategories.length} categories');
+        
+        // Validate our questions against server categories
+        _validateQuestionCategoryMapping(serverCategories, serverCategoryCounts);
+        
+        // Update question metadata based on server categories if needed
+        await _updateQuestionMetadata(serverCategories);
+      }
+    } catch (e) {
+      debugPrint('Error synchronizing with server categories: $e');
+    }
+  }
+
+  /// Validate question-category mapping consistency
+  void _validateQuestionCategoryMapping(List<dynamic> serverCategories, Map<String, int>? serverCounts) {
+    debugPrint('Validating question-category mapping consistency...');
+    
+    final localCategoryCounts = <String, int>{};
+    
+    // Count questions by UI category locally
+    for (final question in questions) {
+      for (final serverCategory in serverCategories) {
+        final categoryName = serverCategory['name'] ?? '';
+        if (_isQuestionInCategory(question, categoryName)) {
+          localCategoryCounts[categoryName] = (localCategoryCounts[categoryName] ?? 0) + 1;
+        }
+      }
+    }
+    
+    // Compare with server counts
+    if (serverCounts != null) {
+      for (final entry in serverCounts.entries) {
+        final serverCount = entry.value;
+        final localCount = localCategoryCounts[entry.key] ?? 0;
+        
+        if (serverCount != localCount) {
+          debugPrint('Category count mismatch for ${entry.key}: server=$serverCount, local=$localCount');
+        }
+      }
+    }
+    
+    debugPrint('Question-category validation completed');
+  }
+
+  /// Check if a question belongs to a specific category
+  bool _isQuestionInCategory(InterviewQuestion question, String categoryName) {
+    // Use the same simplified logic as getQuestionsByCategory for consistency
+    
+    // Primary: Check if question has categoryId field (server-generated)
+    if (question.categoryId != null) {
+      final serverUICategory = CategoryMapper.mapInternalToUICategory(question.categoryId!);
+      if (serverUICategory == categoryName) {
+        return true;
+      }
+    }
+    
+    // Fallback: Use legacy category mapping for backward compatibility
+    final mappedCategory = CategoryMapper.getDefaultCategory(question.category);
+    if (mappedCategory == categoryName) {
+      return true;
+    }
+    
+    // Special: Handle specific subtopic patterns
+    return _isSpecialSubtopicMatch(categoryName, question);
+  }
+
+  /// Update question metadata based on server categories
+  Future<void> _updateQuestionMetadata(List<dynamic> serverCategories) async {
+    bool hasUpdates = false;
+    
+    for (int i = 0; i < _questions.length; i++) {
+      final question = _questions[i];
+      
+      // Check if question needs category metadata updates
+      final updatedQuestion = _enhanceQuestionWithServerData(question, serverCategories);
+      
+      if (updatedQuestion != null) {
+        _questions[i] = updatedQuestion;
+        hasUpdates = true;
+        debugPrint('Updated metadata for question: ${question.id}');
+      }
+    }
+    
+    if (hasUpdates) {
+      await _saveQuestionsToStorage();
+      notifyListeners();
+      debugPrint('Question metadata updated based on server categories');
+    }
+  }
+
+  /// Enhance question with server-provided category data
+  InterviewQuestion? _enhanceQuestionWithServerData(InterviewQuestion question, List<dynamic> serverCategories) {
+    // For now, we maintain existing question structure
+    // In future versions, this could add server-provided tags, difficulty adjustments, etc.
+    
+    // Example enhancement: validate difficulty levels against server standards
+    final validDifficulties = ['entry', 'mid', 'senior'];
+    if (!validDifficulties.contains(question.difficulty)) {
+      debugPrint('Question ${question.id} has invalid difficulty: ${question.difficulty}');
+      return question.copyWith(difficulty: 'entry'); // Default to entry level
+    }
+    
+    return null; // No changes needed for now
+  }
   
   // Method to get all unique subtopics from questions
   List<String> getAllUniqueSubtopics() {
@@ -145,6 +260,7 @@ class InterviewService extends ChangeNotifier {
             subtopic: item['subtopic'],
             difficulty: item['difficulty'],
             answer: item['answer'],
+            categoryId: item['categoryId'], // ✅ ADDED: Load categoryId from storage
             isStarred: item['isStarred'] ?? false,
             isCompleted: item['isCompleted'] ?? false,
             isDraft: isDraft,
@@ -193,6 +309,7 @@ class InterviewService extends ChangeNotifier {
           'subtopic': q.subtopic,
           'difficulty': q.difficulty,
           'answer': q.answer,
+          'categoryId': q.categoryId, // ✅ ADDED: Include categoryId in storage
           'isStarred': q.isStarred,
           'isCompleted': q.isCompleted,
           'isDraft': q.isDraft,
@@ -214,53 +331,64 @@ class InterviewService extends ChangeNotifier {
     }
   }
   
-  // Get questions by category
+  // ✅ SIMPLIFIED: Get questions by category with clean server-aligned logic
   List<InterviewQuestion> getQuestionsByCategory(String uiCategory) {
     if (uiCategory == 'all') {
       return questions;
     }
     
-    // Get all non-draft questions
-    final allQuestions = questions;
     debugPrint('Getting questions for UI category: $uiCategory');
-    debugPrint('Total published questions: ${allQuestions.length}');
     
-    // Filter questions based on the UI category
-    final filteredQuestions = allQuestions.where((q) {
-      // For SQL category, check if subtopic contains SQL
-      if (uiCategory == 'SQL') {
-        final matches = q.subtopic.toLowerCase().contains('sql');
-        if (matches) debugPrint('SQL match found: ${q.text}');
-        return matches;
+    final filteredQuestions = questions.where((question) {
+      // ✅ PRIMARY: Check if question has categoryId field (server-generated)
+      if (question.categoryId != null) {
+        final serverUICategory = CategoryMapper.mapInternalToUICategory(question.categoryId!);
+        if (serverUICategory == uiCategory) {
+          debugPrint('Server category match: ${question.text}');
+          return true;
+        }
       }
       
-      // For Data Visualization, check if subtopic contains visualization
-      if (uiCategory == 'Data Visualization') {
-        final matches = q.subtopic.toLowerCase().contains('visualization');
-        if (matches) debugPrint('Visualization match found: ${q.text}');
-        return matches;
+      // ✅ FALLBACK: Use legacy category mapping for backward compatibility
+      final mappedCategory = CategoryMapper.getDefaultCategory(question.category);
+      if (mappedCategory == uiCategory) {
+        debugPrint('Legacy category match: ${question.text}');
+        return true;
       }
       
-      // Get the internal category corresponding to the UI category
-      final String internalCategory = CategoryMapper.mapUIToInternalCategory(uiCategory);
-      
-      // BUGFIX: Check if either:
-      // 1. The question's internal category matches our expected internal category OR
-      // 2. The question's UI category (based on its internal category) matches our target UI category
-      final bool directMatch = q.category == internalCategory;
-      final bool reverseMappedMatch = CategoryMapper.getDefaultCategory(q.category) == uiCategory;
-      
-      final matches = directMatch || reverseMappedMatch;
-      
-      if (matches) {
-        debugPrint('Category match found: ${q.text} (${q.category} mapped to ${CategoryMapper.getDefaultCategory(q.category)})');
+      // ✅ SPECIAL: Handle specific subtopic patterns
+      if (_isSpecialSubtopicMatch(uiCategory, question)) {
+        debugPrint('Subtopic pattern match: ${question.text}');
+        return true;
       }
       
-      return matches;
+      return false;
     }).toList();
     
     debugPrint('Found ${filteredQuestions.length} questions for category $uiCategory');
     return filteredQuestions;
+  }
+
+  // ✅ SIMPLIFIED: Handle special subtopic patterns (much cleaner)
+  bool _isSpecialSubtopicMatch(String uiCategory, InterviewQuestion question) {
+    final subtopicLower = question.subtopic.toLowerCase();
+    
+    switch (uiCategory) {
+      case 'SQL':
+        return subtopicLower.contains('sql') || subtopicLower.contains('database');
+      case 'Python':
+        return subtopicLower.contains('python');
+      case 'Data Analysis':
+        return subtopicLower.contains('data') || subtopicLower.contains('analysis');
+      case 'Machine Learning':
+        return subtopicLower.contains('ml') || subtopicLower.contains('machine learning');
+      case 'Web Development':
+        return subtopicLower.contains('web') || subtopicLower.contains('api');
+      case 'Statistics':
+        return subtopicLower.contains('statistical') || subtopicLower.contains('statistics');
+      default:
+        return false;
+    }
   }
   
   // Get questions by subtopic
@@ -293,7 +421,7 @@ class InterviewService extends ChangeNotifier {
     return questions.where((q) => q.difficulty == difficulty).toList();
   }
   
-  // Get filtered questions
+  // ✅ FIXED: Get filtered questions using server-aligned logic
   List<InterviewQuestion> getFilteredQuestions({
     String category = 'all',
     String difficulty = 'all',
@@ -304,26 +432,30 @@ class InterviewService extends ChangeNotifier {
     final baseList = includeDrafts ? _questions : questions;
     
     return baseList.where((q) {
-      // Filter by category
+      // Filter by category using SAME logic as getQuestionsByCategory and server
       if (category != 'all') {
-        bool matchesCategory = false;
-        
-        // Special case for SQL and Data Visualization
-        if (category == 'SQL' && q.subtopic.toLowerCase().contains('sql')) {
-          matchesCategory = true;
-        } else if (category == 'Data Visualization' && q.subtopic.toLowerCase().contains('visualization')) {
-          matchesCategory = true;
-        } else {
-          // For other categories, map UI category to internal category
-          final String internalCategory = CategoryMapper.mapUIToInternalCategory(category);
-          
-          // BUGFIX: Check both direct match and reverse-mapped match
-          bool directMatch = (q.category == internalCategory);
-          bool reverseMappedMatch = (CategoryMapper.getDefaultCategory(q.category) == category);
-          matchesCategory = directMatch || reverseMappedMatch;
+        // ✅ PRIMARY: Check if question has categoryId field (server-generated)
+        if (q.categoryId != null) {
+          final serverUICategory = CategoryMapper.mapInternalToUICategory(q.categoryId!);
+          if (serverUICategory == category) {
+            return true; // ✅ FIXED: Return immediately if categoryId matches
+          }
         }
         
-        if (!matchesCategory) return false;
+        // ✅ FALLBACK: Use legacy category mapping ONLY for questions without categoryId
+        if (q.categoryId == null) {
+          final mappedCategory = CategoryMapper.getDefaultCategory(q.category);
+          if (mappedCategory == category) {
+            return true;
+          }
+          
+          // ✅ SPECIAL: Handle specific subtopic patterns for legacy questions
+          if (_isSpecialSubtopicMatch(category, q)) {
+            return true;
+          }
+        }
+        
+        return false; // ✅ FIXED: Explicit rejection if no matches
       }
       
       // Filter by difficulty

@@ -70,11 +70,81 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
       return [];
     }
     
-    return _interviewService!.getFilteredQuestions(
+    final filteredQuestions = _interviewService!.getFilteredQuestions(
       category: _activeCategory,
       difficulty: _activeDifficulty,
       searchQuery: _searchController.text,
     );
+    
+    // ✅ ADDED: Debug validation to verify count consistency
+    if (_activeCategory != 'all') {
+      debugPrint('=== COUNT VALIDATION FOR: $_activeCategory ===');
+      debugPrint('Filtered questions count: ${filteredQuestions.length}');
+      
+      // Show breakdown by matching logic
+      int categoryIdMatches = 0;
+      int legacyMatches = 0;
+      int subtopicMatches = 0;
+      
+      for (final q in filteredQuestions) {
+        bool categoryIdMatch = false;
+        bool legacyMatch = false;
+        bool subtopicMatch = false;
+        
+        if (q.categoryId != null) {
+          final serverUICategory = CategoryMapper.mapInternalToUICategory(q.categoryId!);
+          if (serverUICategory == _activeCategory) {
+            categoryIdMatch = true;
+            categoryIdMatches++;
+          }
+        }
+        
+        if (!categoryIdMatch) {
+          final mappedCategory = CategoryMapper.getDefaultCategory(q.category);
+          if (mappedCategory == _activeCategory) {
+            legacyMatch = true;
+            legacyMatches++;
+          }
+        }
+        
+        if (!categoryIdMatch && !legacyMatch) {
+          if (_isSpecialSubtopicMatch(_activeCategory, q)) {
+            subtopicMatch = true;
+            subtopicMatches++;
+          }
+        }
+        
+        debugPrint('${q.id}: categoryId=$categoryIdMatch, legacy=$legacyMatch, subtopic=$subtopicMatch');
+      }
+      
+      debugPrint('Breakdown - CategoryId: $categoryIdMatches, Legacy: $legacyMatches, Subtopic: $subtopicMatches');
+      debugPrint('Expected server count should match categoryId matches: $categoryIdMatches');
+      debugPrint('=== END VALIDATION ===');
+    }
+    
+    return filteredQuestions;
+  }
+  
+  // Helper method to check special subtopic matches (same as service)
+  bool _isSpecialSubtopicMatch(String uiCategory, InterviewQuestion question) {
+    final subtopicLower = question.subtopic.toLowerCase();
+    
+    switch (uiCategory) {
+      case 'SQL':
+        return subtopicLower.contains('sql') || subtopicLower.contains('database');
+      case 'Python':
+        return subtopicLower.contains('python');
+      case 'Data Analysis':
+        return subtopicLower.contains('data') || subtopicLower.contains('analysis');
+      case 'Machine Learning':
+        return subtopicLower.contains('ml') || subtopicLower.contains('machine learning');
+      case 'Web Development':
+        return subtopicLower.contains('web') || subtopicLower.contains('api');
+      case 'Statistics':
+        return subtopicLower.contains('statistical') || subtopicLower.contains('statistics');
+      default:
+        return false;
+    }
   }
   
   // Toggle category expansion in the accordion
@@ -114,7 +184,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
   // Helper method to get category name
   String _getCategoryName(String categoryId) {
     // Use CategoryMapper to get UI category name from internal category ID
-    return CategoryMapper.mapInternalToUICategory(categoryId, '');
+    return CategoryMapper.mapInternalToUICategory(categoryId);
   }
   
   // Helper method to get category icon

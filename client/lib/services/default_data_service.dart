@@ -126,9 +126,16 @@ class DefaultDataService extends ChangeNotifier {
 
   List<InterviewQuestion> _parseInterviewQuestions(List<dynamic> data) {
     return data.map((q) => InterviewQuestion(
-          id: q['id'], text: q['text'], category: q['category'], subtopic: q['subtopic'],
-          difficulty: q['difficulty'], answer: q['answer'], isStarred: q['is_starred'] ?? false,
-          isCompleted: q['is_completed'] ?? false, isDraft: q['is_draft'] ?? false,
+          id: q['id'], 
+          text: q['text'], 
+          category: q['category'], 
+          subtopic: q['subtopic'],
+          difficulty: q['difficulty'], 
+          answer: q['answer'], 
+          categoryId: q['category_id'], // ✅ ADDED: Parse category_id from server
+          isStarred: q['is_starred'] ?? false,
+          isCompleted: q['is_completed'] ?? false, 
+          isDraft: q['is_draft'] ?? false,
         )).toList();
   }
 

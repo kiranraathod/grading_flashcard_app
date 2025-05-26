@@ -1,38 +1,38 @@
 /// Utility class to map between internal category IDs and UI display categories
 class CategoryMapper {
-  // Maps internal category IDs to UI category names
+  // ✅ UPDATED: Maps internal category IDs to UI category names (aligned with server)
   static final Map<String, String> _internalToUICategory = {
-    'technical': 'Data Science',
-    'applied': 'Data Analysis',
+    // Server-aligned mappings
+    'data_analysis': 'Data Analysis',
+    'machine_learning': 'Machine Learning', 
+    'sql': 'SQL',
+    'python': 'Python',
+    'web_development': 'Web Development',
+    'statistics': 'Statistics',
+    // Legacy mappings for backward compatibility
+    'technical': 'Data Analysis',
+    'applied': 'Machine Learning',
     'behavioral': 'Python',
-    'case': 'Machine Learning',
+    'case': 'Statistics',
     'job': 'Web Development',
   };
 
-  // Maps UI category names to internal IDs
+  // ✅ UPDATED: Maps UI category names to internal IDs (aligned with server)
   static final Map<String, String> _uiToInternalCategory = {
+    'Data Analysis': 'data_analysis',
+    'Machine Learning': 'machine_learning',
+    'SQL': 'sql',
+    'Python': 'python',
+    'Web Development': 'web_development',
+    'Statistics': 'statistics',
+    // Legacy support
     'Data Science': 'technical',
-    'Data Analysis': 'applied',
-    'Python': 'behavioral', 
-    'Machine Learning': 'case',
-    'Web Development': 'job',
-    'SQL': 'technical',
     'Data Visualization': 'applied',
   };
 
-  // Map from internal category ID to UI category name
-  static String mapInternalToUICategory(String internalCategory, String subtopic) {
-    // Special case for SQL - if the subtopic contains SQL, map to SQL category
-    if (subtopic.toLowerCase().contains('sql')) {
-      return 'SQL';
-    }
-    
-    // Special case for Data Visualization
-    if (subtopic.toLowerCase().contains('visualization')) {
-      return 'Data Visualization';
-    }
-    
-    return _internalToUICategory[internalCategory] ?? 'Other';
+  // ✅ UPDATED: Map from internal category ID to UI category name (simplified)
+  static String mapInternalToUICategory(String internalCategory) {
+    return _internalToUICategory[internalCategory] ?? 'Data Analysis';
   }
 
   // Map from UI category name to internal category ID
@@ -40,12 +40,12 @@ class CategoryMapper {
     return _uiToInternalCategory[uiCategory] ?? 'technical';
   }
 
-  // Get the mapping for new questions based on category
+  // ✅ UPDATED: Get the mapping for new questions based on category
   static String getDefaultCategory(String internalCategory) {
-    return _internalToUICategory[internalCategory] ?? 'Data Science';
+    return _internalToUICategory[internalCategory] ?? 'Data Analysis';
   }
 
-  // Get subtopic based on UI category
+  // ✅ UPDATED: Get subtopic based on UI category
   static String getDefaultSubtopic(String uiCategory) {
     switch (uiCategory) {
       case 'SQL':
@@ -55,11 +55,11 @@ class CategoryMapper {
       case 'Data Analysis':
         return 'Data Cleaning & Preprocessing';
       case 'Machine Learning':
-        return 'Machine Learning Algorithms';
+        return 'ML Algorithms';
       case 'Web Development':
-        return 'Front-end Development';
-      case 'Data Visualization':
-        return 'Data Visualization';
+        return 'API Development';
+      case 'Statistics':
+        return 'Statistical Analysis';
       default:
         return 'General Knowledge';
     }

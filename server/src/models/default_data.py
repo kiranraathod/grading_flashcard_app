@@ -52,8 +52,7 @@ class DefaultCategoryResponse(BaseModel):
     """Response model for category with subtopics."""
     id: str = Field(..., description="Unique identifier for the category")
     name: str = Field(..., description="Display name of the category")
-    color: str = Field(..., description="Hex color code for the category")
-    icon: str = Field(..., description="Icon name for the category")
+    # REMOVED: color and icon fields - now handled client-side for better performance
     subtopics: List[str] = Field(..., description="List of subtopic names")
 
 class CategoryCountsResponse(BaseModel):

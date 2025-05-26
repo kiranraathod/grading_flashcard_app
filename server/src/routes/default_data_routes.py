@@ -5,8 +5,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
 import logging
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 
 from ..services.default_data_service import DefaultDataService
+from ..services.validation_service import CategoryValidationService, generate_improvement_recommendations
 from ..models.default_data import (
     DefaultFlashcardSetResponse,
     DefaultInterviewQuestionResponse,
@@ -167,3 +169,58 @@ async def default_data_health_check():
     except Exception as e:
         logger.error(f"Default data service health check failed: {str(e)}")
         raise HTTPException(status_code=503, detail="Default data service unavailable")
+
+
+@router.get("/validation", response_model=Dict[str, Any])
+async def validate_data_integrity(
+    service: DefaultDataService = Depends(get_default_data_service)
+):
+    """
+    Validate data integrity between categories and questions.
+    Returns comprehensive validation report with actionable insights.
+    """
+    try:
+        logger.info("Starting comprehensive data validation")
+        
+        # Get all data for validation
+        categories = await service.get_default_categories()
+        questions = await service.get_default_interview_questions()
+        
+        # Perform validation checks
+        category_validation = await CategoryValidationService.validate_category_data(categories)
+        mapping_validation = await CategoryValidationService.validate_question_category_mapping(questions, categories)
+        quality_validation = await CategoryValidationService.validate_question_quality(questions)
+        
+        # Generate improvement recommendations
+        recommendations = generate_improvement_recommendations(category_validation, mapping_validation)
+        
+        # Calculate overall validity
+        overall_valid = (category_validation.is_valid and 
+                        mapping_validation.is_valid and 
+                        quality_validation.is_valid)
+        
+        validation_report = {
+            'overall_valid': overall_valid,
+            'category_validation': category_validation.to_dict(),
+            'mapping_validation': mapping_validation.to_dict(),
+            'quality_validation': quality_validation.to_dict(),
+            'timestamp': datetime.now().isoformat(),
+            'recommendations': recommendations,
+            'summary': {
+                'total_categories': len(categories),
+                'total_questions': len(questions),
+                'total_errors': (len(category_validation.errors) + 
+                               len(mapping_validation.errors) + 
+                               len(quality_validation.errors)),
+                'total_warnings': (len(category_validation.warnings) + 
+                                 len(mapping_validation.warnings) + 
+                                 len(quality_validation.warnings))
+            }
+        }
+        
+        logger.info(f"Data validation completed: {'PASSED' if overall_valid else 'FAILED'}")
+        return validation_report
+        
+    except Exception as e:
+        logger.error(f"Error during data validation: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to validate data integrity")

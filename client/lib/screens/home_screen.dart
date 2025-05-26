@@ -25,6 +25,7 @@ import '../services/flashcard_service.dart';
 import '../services/interview_service.dart';
 import '../services/recent_view_service.dart';
 import '../services/default_data_service.dart';
+import '../utils/category_theme.dart';
 import '../widgets/interview/arrow_painter.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -1072,34 +1073,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Load category counts from server with fallback to hardcoded values
+  /// Load category counts from server with fallback to empty map
   Future<Map<String, int>> _loadCategoryCounts() async {
     try {
       return await _defaultDataService.loadCategoryCounts();
     } catch (e) {
       debugPrint(
-        'Failed to load category counts from server, using fallback: $e',
+        'Failed to load category counts from server: $e',
       );
-      // Return fallback hardcoded values
-      return {
-        'Data Analysis': 18,
-        'Web Development': 15,
-        'Machine Learning': 22,
-        'SQL': 10,
-        'Python': 14,
-        'Statistics': 8,
-      };
+      // Return empty map to let UI handle gracefully
+      return <String, int>{};
     }
   }
 
-  // Method for displaying topic categories
+  // Method for displaying topic categories - FIXED: Use only server categories
   Widget _buildTopicCategories() {
-    final interviewService = Provider.of<InterviewService>(context);
-
     return FutureBuilder<Map<String, int>>(
       future: _loadCategoryCounts(),
       builder: (context, snapshot) {
-        List<Map<String, dynamic>> allCategories;
+        List<Map<String, dynamic>> categories;
 
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -1111,75 +1103,33 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-          allCategories =
-              snapshot.data!.entries
-                  .map((entry) => {'title': entry.key, 'count': entry.value})
-                  .toList();
+          // ✅ SOLUTION: Use ONLY server-generated categories
+          categories = snapshot.data!.entries
+              .where((entry) => entry.value > 0) // Filter out empty categories
+              .map((entry) => {'title': entry.key, 'count': entry.value})
+              .toList();
+              
+          debugPrint('Using ${categories.length} server-generated categories');
         } else {
-          allCategories = [
-            {'title': 'Data Analysis', 'count': 18},
-            {'title': 'Web Development', 'count': 15},
-            {'title': 'Machine Learning', 'count': 22},
-            {'title': 'SQL', 'count': 10},
-            {'title': 'Python', 'count': 14},
-            {'title': 'Statistics', 'count': 8},
+          // ✅ SOLUTION: Clean fallback categories (no duplicates)
+          categories = [
+            {'title': 'Data Analysis', 'count': 0},
+            {'title': 'Machine Learning', 'count': 0},
+            {'title': 'SQL', 'count': 0},
+            {'title': 'Python', 'count': 0},
+            {'title': 'Web Development', 'count': 0},
+            {'title': 'Statistics', 'count': 0},
           ];
+          
+          debugPrint('Using fallback categories due to server issue');
         }
 
-        // Get all unique subtopics
-        List<String> allSubtopics = interviewService.getAllUniqueSubtopics();
-        debugPrint('All unique subtopics: ${allSubtopics.join(", ")}');
+        // ❌ REMOVED: No more subtopic-based category generation
+        // ❌ REMOVED: getAllUniqueSubtopics() logic
+        // ❌ REMOVED: customCategories creation
+        // ❌ REMOVED: finalCategories combination
 
-        // Filter out subtopics that are already represented by default categories
-        List<String> standardSubtopics = [
-          'Data Cleaning & Preprocessing',
-          'Front-end Development',
-          'Machine Learning Algorithms',
-          'SQL & Database',
-          'Python Fundamentals',
-          'Data Visualization',
-        ];
-
-        // Find custom subtopics (those not in standardSubtopics)
-        List<String> customSubtopics =
-            allSubtopics
-                .where((subtopic) => !standardSubtopics.contains(subtopic))
-                .toList();
-
-        debugPrint(
-          'Found ${customSubtopics.length} custom subtopics: ${customSubtopics.join(", ")}',
-        );
-
-        // Create category items for custom subtopics
-        List<Map<String, dynamic>> customCategories =
-            customSubtopics
-                .map(
-                  (subtopic) => {
-                    'title': subtopic,
-                    'count': interviewService.getQuestionCountForSubtopic(
-                      subtopic,
-                    ),
-                  },
-                )
-                .toList();
-
-        debugPrint(
-          'Created ${customCategories.length} custom category cards to display',
-        );
-
-        // Combine server/default categories with custom categories
-        final finalCategories = <Map<String, dynamic>>[
-          ...allCategories,
-          ...customCategories,
-        ];
-
-        // Filter out categories with zero questions
-        final filteredCategories =
-            finalCategories.where((category) => category['count'] > 0).toList();
-
-        debugPrint(
-          'Found ${filteredCategories.length} categories to display after filtering',
-        );
+        debugPrint('Displaying ${categories.length} consolidated category cards');
 
         return GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -1196,9 +1146,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: filteredCategories.length,
+          itemCount: categories.length,
           itemBuilder: (context, index) {
-            final category = filteredCategories[index];
+            final category = categories[index];
             return _buildCategoryChip(category['title'], category['count']);
           },
         );
@@ -1224,20 +1174,34 @@ class _HomeScreenState extends State<HomeScreen> {
           vertical: DS.spacing2xs,
         ),
         decoration: BoxDecoration(
-          color: context.surfaceColor,
+          color: CategoryTheme.getContextAwareColor(context, title),
           borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-          border: Border.all(color: context.colorScheme.outline),
+          border: Border.all(color: context.colorScheme.outline.withValues(alpha: 0.3)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Add category icon
+            Icon(
+              CategoryTheme.getIcon(title),
+              size: 24,
+              color: CategoryTheme.getContrastingTextColor(context, title),
+            ),
+            SizedBox(height: DS.spacing2xs),
             Text(
               title,
-              style: context.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+              style: context.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: CategoryTheme.getContrastingTextColor(context, title),
+              ),
+              textAlign: TextAlign.center,
             ),
             Text(
               AppLocalizations.of(context).questionCount(count),
-              style: context.bodySmall,
+              style: context.bodySmall?.copyWith(
+                color: CategoryTheme.getContrastingTextColor(context, title).withValues(alpha: 0.8),
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

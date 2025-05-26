@@ -61,39 +61,59 @@ class FlashcardService extends ChangeNotifier {
     debugPrint('Loading minimal fallback data...');
     _sets.clear();
     
-    // Create a minimal Python basics set as fallback
+    // Try to load from server with minimal dataset even if main load failed
+    _loadMinimalServerFallback();
+  }
+
+  Future<void> _loadMinimalServerFallback() async {
+    try {
+      debugPrint('Attempting to load minimal server fallback data...');
+      // Try to get at least one default set from server with minimal configuration
+      final defaultSets = await _defaultDataService.loadDefaultFlashcardSets();
+      
+      if (defaultSets.isNotEmpty) {
+        _sets.addAll(defaultSets);
+        debugPrint('Loaded ${defaultSets.length} minimal sets from server fallback');
+      } else {
+        // Only if server completely fails, create absolute minimal offline set
+        _createOfflineOnlyFallback();
+      }
+    } catch (e) {
+      debugPrint('Server fallback also failed: $e, creating offline-only fallback');
+      _createOfflineOnlyFallback();
+    }
+    
+    notifyListeners();
+  }
+
+  void _createOfflineOnlyFallback() {
+    // Create a truly minimal offline-only set as last resort
     _sets.add(
       FlashcardSet(
-        id: 'fallback-python-001',
-        title: 'Python Basics (Offline)',
-        description: 'Basic Python concepts - offline mode',
+        id: 'offline-minimal-001',
+        title: 'Offline Mode (Limited)',
+        description: 'Minimal content available in offline mode',
         isDraft: false,
-        rating: 4.5,
+        rating: 4.0,
         ratingCount: 0,
         flashcards: [
           Flashcard(
             id: '1',
-            question: 'What is Python?',
-            answer: 'Python is a high-level, interpreted programming language.',
+            question: 'What is data analysis?',
+            answer: 'Data analysis is the process of examining data to discover patterns and insights.',
             isCompleted: false,
           ),
           Flashcard(
             id: '2',
-            question: 'How do you print in Python?',
-            answer: 'print("Hello, World!")',
-            isCompleted: false,
-          ),
-          Flashcard(
-            id: '3',
-            question: 'How do you comment in Python?',
-            answer: 'Use # for single line comments',
+            question: 'What is machine learning?',
+            answer: 'Machine learning is a type of AI that enables computers to learn from data.',
             isCompleted: false,
           ),
         ],
       ),
     );
     
-    notifyListeners();
+    debugPrint('Created offline-only fallback with minimal content');
   }
 
   Future<void> _saveSets() async {
