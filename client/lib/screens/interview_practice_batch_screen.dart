@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/interview_question.dart';
+import '../models/interview_answer.dart';
 import '../services/interview_service.dart';
 import '../services/interview_api_service.dart';
 import '../utils/design_system.dart';
@@ -27,20 +28,11 @@ class _InterviewPracticeBatchScreenState extends State<InterviewPracticeBatchScr
   late InterviewService _interviewService;
   final InterviewApiService _apiService = InterviewApiService();
   bool _isLoading = false; // Changed to non-final for proper state management
-  List<InterviewQuestion> _completedQuestions = [];
   
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _interviewService = Provider.of<InterviewService>(context);
-    _updateCompletedQuestions();
-  }
-  
-  // Helper method to update the list of completed questions
-  void _updateCompletedQuestions() {
-    setState(() {
-      _completedQuestions = widget.questions.where((q) => q.isCompleted).toList();
-    });
   }
   
   @override
@@ -173,7 +165,7 @@ class _InterviewPracticeBatchScreenState extends State<InterviewPracticeBatchScr
                       ).then((_) {
                         // Refresh the screen when returning
                         setState(() {
-                          _updateCompletedQuestions();
+                          // Screen will refresh to show any updates
                         });
                       });
                     },
@@ -214,44 +206,43 @@ class _InterviewPracticeBatchScreenState extends State<InterviewPracticeBatchScr
   }
   
   void _startBatchGrading() async {
-    // Check if there are any completed questions
-    if (_completedQuestions.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please complete at least one question before submitting for batch grading'),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-      return;
-    }
-    
     setState(() {
       _isLoading = true;
     });
     
     try {
-      // Collect all the answers for completed questions
-      final answers = _interviewService.getAnswersForQuestionIds(
-        _completedQuestions.map((q) => q.id).toList()
-      );
+      // ✅ IMPROVED: Better answer collection with validation
+      final answers = <InterviewAnswer>[];
+      
+      for (final question in widget.questions) {
+        final userAnswer = _interviewService.getUserAnswer(question.id);
+        
+        if (userAnswer != null && userAnswer.trim().isNotEmpty) {
+          answers.add(InterviewAnswer(
+            questionId: question.id,
+            questionText: question.text,
+            userAnswer: userAnswer,
+            category: question.category,
+            difficulty: question.difficulty,
+          ));
+        }
+      }
       
       if (answers.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No answers found. Please try answering some questions first.'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
+        setState(() {
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please answer at least one question before submitting'),
+            duration: Duration(seconds: 3),
+          ),
+        );
         return;
       }
+      
+      debugPrint('Collecting ${answers.length} answers for batch grading');
       
       // Grade the answers
       final gradedAnswers = await _apiService.gradeBatchAnswers(answers);

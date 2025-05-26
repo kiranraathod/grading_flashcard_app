@@ -125,26 +125,15 @@ class _InterviewResultScreenState extends State<InterviewResultScreen> {
             
             SizedBox(height: DS.spacingL),
             
-            // Score card
+            // Score card - Updated to match batch results design
             Card(
-              elevation: 1,
+              elevation: 2,
               margin: EdgeInsets.zero,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                 side: BorderSide(
-                  color: Color.fromRGBO(
-                    _getScoreColor().r.toInt(),
-                    _getScoreColor().g.toInt(),
-                    _getScoreColor().b.toInt(),
-                    0.5,
-                  ),
+                  color: _getScoreColor().withValues(alpha: 0.3),
                 ),
-              ),
-              color: Color.fromRGBO(
-                _getScoreColor().r.toInt(),
-                _getScoreColor().g.toInt(),
-                _getScoreColor().b.toInt(),
-                0.2,
               ),
               child: Padding(
                 padding: EdgeInsets.all(DS.spacingM),
@@ -153,76 +142,66 @@ class _InterviewResultScreenState extends State<InterviewResultScreen> {
                   children: [
                     Row(
                       children: [
-                        // Score display as circular progress indicator
-                        SizedBox(
+                        // Score circle - matching batch results design
+                        Container(
                           width: 60,
                           height: 60,
-                          child: Stack(
-                            children: [
-                              CircularProgressIndicator(
-                                value: (widget.answer.score ?? 0) / 100,
-                                backgroundColor: Colors.grey.shade300,
-                                valueColor: AlwaysStoppedAnimation<Color>(_getScoreColor()),
-                                strokeWidth: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white, // ✅ Clean white background like batch results
+                            border: Border.all(color: _getScoreColor(), width: 2),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${widget.answer.score ?? 0}',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: _getScoreColor(),
                               ),
-                              Center(
-                                child: Text(
-                                  '${widget.answer.score ?? 0}',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: _getScoreColor(),
-                                  ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: DS.spacingM),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isSystemError ? 'System Error' : 'Your Score',
+                                style: DS.headingMedium,
+                              ),
+                              Text(
+                                _getScoreDescription(widget.answer.score ?? 0),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: _getScoreColor(),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        SizedBox(width: DS.spacingM),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isSystemError ? 'System Error' : 'Your Score',
-                              style: DS.headingSmall,
-                            ),
-                            Text(
-                              _getScoreDescription(widget.answer.score ?? 0),
-                              style: DS.bodySmall.copyWith(
-                                color: Color.fromRGBO(
-                                  _getScoreColor().r.toInt(),
-                                  _getScoreColor().g.toInt(),
-                                  _getScoreColor().b.toInt(),
-                                  0.8,
-                                ),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
                       ],
                     ),
                     SizedBox(height: DS.spacingM),
-                    Divider(
-                      color: Color.fromRGBO(
-                        _getScoreColor().r.toInt(),
-                        _getScoreColor().g.toInt(),
-                        _getScoreColor().b.toInt(),
-                        0.3,
-                      ),
-                    ),
+                    const Divider(),
                     SizedBox(height: DS.spacingM),
                     Text(
                       isSystemError ? 'Error Message:' : 'Feedback:',
-                      style: DS.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
                     ),
                     SizedBox(height: DS.spacingS),
                     Text(
                       widget.answer.feedback ?? 'No feedback available',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         height: 1.5,
-                        color: isSystemError ? Colors.red[700] : null,
+                        color: isSystemError ? Colors.red[700] : Colors.grey.shade700,
                       ),
                     ),
                   ],

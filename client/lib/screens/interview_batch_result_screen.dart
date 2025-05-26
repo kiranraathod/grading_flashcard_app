@@ -127,6 +127,10 @@ class InterviewBatchResultScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2), // ✅ Fixed: Use withValues instead of withOpacity
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(red: 0, green: 0, blue: 0, alpha: 13),
@@ -141,17 +145,19 @@ class InterviewBatchResultScreen extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 20, // ✅ Slightly larger for better visibility
               fontWeight: FontWeight.bold,
-              color: color,
+              color: _getDarkerColorForText(color), // ✅ Use darker color for better contrast
             ),
           ),
           const SizedBox(height: 4.0),
           Text(
             title,
+            textAlign: TextAlign.center, // ✅ Center align for better layout
             style: const TextStyle(
               fontSize: 12,
               color: Colors.grey,
+              fontWeight: FontWeight.w500, // ✅ Slightly bolder for readability
             ),
           ),
         ],
@@ -190,11 +196,7 @@ class InterviewBatchResultScreen extends StatelessWidget {
                   height: 50,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: scoreColor.withValues(
-                      red: scoreColor.r,
-                      green: scoreColor.g,
-                      blue: scoreColor.b,
-                      alpha: 38), // 0.15 * 255 ≈ 38
+                    color: Colors.white, // ✅ FIXED: Use white background for better contrast
                     border: Border.all(color: scoreColor, width: 2),
                   ),
                   child: Center(
@@ -407,11 +409,7 @@ class InterviewBatchResultScreen extends StatelessWidget {
                     height: 60,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _getColorForScore(answer.score ?? 0).withValues(
-                        red: _getColorForScore(answer.score ?? 0).r,
-                        green: _getColorForScore(answer.score ?? 0).g,
-                        blue: _getColorForScore(answer.score ?? 0).b,
-                        alpha: 38), // 0.15 * 255 ≈ 38
+                      color: Colors.white, // ✅ FIXED: Use white background for better contrast
                       border: Border.all(
                         color: _getColorForScore(answer.score ?? 0),
                         width: 2,
@@ -535,6 +533,36 @@ class InterviewBatchResultScreen extends StatelessWidget {
     if (score >= 70) return AppColors.gradeC;
     if (score >= 60) return AppColors.gradeD;
     return AppColors.gradeF;
+  }
+
+  // ✅ ENHANCED: Helper method to get darker colors for better text contrast
+  Color _getDarkerColorForText(Color originalColor) {
+    // Map colors to high-contrast dark variants for better readability
+    if (originalColor == Colors.blue) {
+      return const Color(0xFF1565C0); // Blue 800 - excellent contrast
+    } else if (originalColor == Colors.green) {
+      return const Color(0xFF2E7D32); // Green 800 - excellent contrast
+    } else if (originalColor == Colors.orange) {
+      return const Color(0xFFE65100); // Orange 900 - excellent contrast
+    } else if (originalColor == Colors.red) {
+      return const Color(0xFFC62828); // Red 800 - excellent contrast
+    } else if (originalColor == AppColors.gradeA) {
+      return const Color(0xFF1B5E20); // Dark green for A grade
+    } else if (originalColor == AppColors.gradeB) {
+      return const Color(0xFF0D47A1); // Dark blue for B grade
+    } else if (originalColor == AppColors.gradeC) {
+      return const Color(0xFFE65100); // Dark orange for C grade
+    } else if (originalColor == AppColors.gradeD) {
+      return const Color(0xFFBF360C); // Dark deep orange for D grade
+    } else if (originalColor == AppColors.gradeF) {
+      return const Color(0xFFB71C1C); // Dark red for F grade
+    } else {
+      // Generic darkening for other colors - ensures minimum contrast ratio
+      final hsl = HSLColor.fromColor(originalColor);
+      return hsl.withLightness(
+        (hsl.lightness * 0.3).clamp(0.0, 0.4) // Darker but not completely black
+      ).toColor();
+    }
   }
 
   String _getScoreLabel(int score) {

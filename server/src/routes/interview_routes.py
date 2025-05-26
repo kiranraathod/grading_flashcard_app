@@ -133,8 +133,18 @@ async def grade_interview_answers_batch(
                 logger.error(f"Error grading question {item.questionId}: {str(item_error)}")
                 logger.error(traceback.format_exc())
                 
-                # Continue with the next item instead of using a fallback
-                continue
+                # ✅ FIXED: Add fallback result instead of skipping
+                fallback_result = {
+                    "questionId": item.questionId,
+                    "score": 50,
+                    "feedback": "We couldn't properly analyze your answer due to a technical issue. Please try again later.",
+                    "suggestions": [
+                        "Review the key concepts related to this topic",
+                        "Try to be more specific in your answer",
+                        "Structure your response more clearly"
+                    ]
+                }
+                results.append(fallback_result)
         
         logger.info(f"Batch grading completed for {len(results)} answers")
         return results
