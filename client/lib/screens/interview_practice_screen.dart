@@ -37,7 +37,6 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
   late InterviewService _interviewService;
   Timer? _timer;
   final TextEditingController _userAnswerController = TextEditingController();
-  bool _isListening = false;
   bool _isGrading = false;
   bool _isSubmittingBatch = false;
   bool _hasLoadedInitialAnswer = false;
@@ -495,41 +494,113 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     }
   }
 
-  // Start voice recognition
-  void _startListening() {
-    // This would use a speech recognition package in a real implementation
-    // For example: speech_to_text package
-    setState(() {
-      _isListening = true;
-    });
-
-    // Simulate voice recognition for demo purposes
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Voice recording started - this would use the device microphone in a real implementation',
+  // Show preparation tips in a modal popup
+  void _showPreparationTips() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.45, // Reduced from 0.6
+        minChildSize: 0.3,      // Reduced from 0.4
+        maxChildSize: 0.7,      // Reduced from 0.8
+        builder: (_, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: context.surfaceColor,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(DS.borderRadiusMedium),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Added to minimize height
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: DS.spacingM),
+                decoration: BoxDecoration(
+                  color: context.onSurfaceVariantColor.withOpacityFix(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(DS.spacingL, 0, DS.spacingL, DS.spacingM), // Reduced bottom padding
+                child: Row(
+                  children: [
+                    Icon(Icons.lightbulb, color: context.primaryColor),
+                    const SizedBox(width: DS.spacingS),
+                    Text(
+                      'Preparation Tips',
+                      style: context.titleMedium?.copyWith(
+                        color: context.primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const Divider(height: 1), // Reduced divider height
+              
+              // Tips content - wrapped in Flexible instead of Expanded
+              Flexible(
+                child: SingleChildScrollView( // Changed from ListView to SingleChildScrollView
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(DS.spacingL),
+                  child: _buildPrepTips(),
+                ),
+              ),
+            ],
+          ),
         ),
-        duration: Duration(seconds: 2),
       ),
     );
-
-    // After a few seconds, stop the simulated recording
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        _stopListening();
-      }
-    });
   }
 
-  // Stop voice recognition
-  void _stopListening() {
-    setState(() {
-      _isListening = false;
-
-      // Add some simulated text for demo purposes
-      _userAnswerController.text =
-          '${_userAnswerController.text}${_userAnswerController.text.isEmpty ? '' : ' '}Voice input would appear here in a real implementation.';
-    });
+  // Navigate to the previous question
+  void _moveToPreviousQuestion() {
+    debugPrint('=== NAVIGATION TO PREVIOUS QUESTION ===');
+    
+    // Save current answer before navigating
+    _saveCurrentAnswer();
+    
+    if (widget.currentIndex > 0) {
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => InterviewPracticeScreen(
+            question: widget.questionList[widget.currentIndex - 1],
+            questionList: widget.questionList,
+            currentIndex: widget.currentIndex - 1,
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            // Slide from left animation for "previous"
+            const begin = Offset(-1.0, 0.0);
+            const end = Offset.zero;
+            const curve = Curves.easeInOut;
+            
+            var tween = Tween(begin: begin, end: end).chain(
+              CurveTween(curve: curve),
+            );
+            
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      );
+    }
+    
+    debugPrint('=== PREVIOUS NAVIGATION COMPLETE ===');
   }
 
   // Start the timer to track practice time
@@ -565,13 +636,27 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     if (widget.currentIndex < widget.questionList.length - 1) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder:
-              (context) => InterviewPracticeScreen(
-                question: widget.questionList[widget.currentIndex + 1],
-                questionList: widget.questionList,
-                currentIndex: widget.currentIndex + 1,
-              ),
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => InterviewPracticeScreen(
+            question: widget.questionList[widget.currentIndex + 1],
+            questionList: widget.questionList,
+            currentIndex: widget.currentIndex + 1,
+          ),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            // Slide from right animation for "next"
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            const curve = Curves.easeInOut;
+            
+            var tween = Tween(begin: begin, end: end).chain(
+              CurveTween(curve: curve),
+            );
+            
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
         ),
       );
     } else {
@@ -731,6 +816,16 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
               },
             ),
             actions: [
+              // Tips popup icon
+              IconButton(
+                icon: Icon(
+                  Icons.lightbulb_outline,
+                  color: context.primaryColor,
+                ),
+                tooltip: 'View preparation tips',
+                onPressed: _showPreparationTips,
+              ),
+              const SizedBox(width: DS.spacingS),
               // Progress indicator
               Center(
                 child: Text(
@@ -876,213 +971,121 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
 
                           const SizedBox(height: DS.spacingL),
 
-                          // Preparation area
+                          // Answer input area
                           if (!_showAnswer) ...[
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(DS.spacingM),
-                              decoration: BoxDecoration(
-                                color: context.primaryColor.withOpacityFix(
-                                  0.05,
-                                ),
-                                borderRadius: BorderRadius.circular(
-                                  DS.borderRadiusSmall,
-                                ),
-                                border: Border.all(
-                                  color: context.primaryColor.withOpacityFix(
-                                    0.2,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Your Answer:',
+                                  style: context.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Preparation Guide',
-                                    style: context.titleMedium?.copyWith(
-                                      color: context.primaryColor,
-                                    ),
+                                const SizedBox(height: DS.spacingXs),
+                                
+                                // Text field for user's answer
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: context.surfaceColor,
+                                    borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                    border: Border.all(color: context.colorScheme.outline),
                                   ),
-
-                                  const SizedBox(height: DS.spacingS),
-
-                                  // Tips based on category
-                                  _buildPrepTips(),
-
-                                  const SizedBox(height: DS.spacingM),
-
-                                  // User answer input area
-                                  Text(
-                                    'Your Answer:',
-                                    style: context.bodyLarge?.copyWith(
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: DS.spacingXs),
-
-                                  // Text field for user's answer
-                                  Container(
-                                    decoration: BoxDecoration(
-                                      color: context.surfaceColor,
-                                      borderRadius: BorderRadius.circular(
-                                        DS.borderRadiusSmall,
-                                      ),
-                                      border: Border.all(
-                                        color: context.colorScheme.outline,
-                                      ),
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        TextField(
-                                          controller: _userAnswerController,
-                                          maxLines: 6,
-                                          style: context.bodyLarge,
-                                          decoration: InputDecoration(
-                                            hintText:
-                                                'Type your answer here...',
-                                            hintStyle: context.bodyLarge
-                                                ?.copyWith(
-                                                  color:
-                                                      context
-                                                          .onSurfaceVariantColor,
-                                                ),
-                                            contentPadding:
-                                                const EdgeInsets.all(
-                                                  DS.spacingM,
-                                                ),
-                                            border: InputBorder.none,
-                                          ),
-                                        ),
-
-                                        // Voice input button and character count
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: DS.spacingM,
-                                            vertical: DS.spacingXs,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: context.surfaceVariantColor,
-                                            border: Border(
-                                              top: BorderSide(
-                                                color:
-                                                    context.colorScheme.outline,
-                                              ),
-                                            ),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              // Voice input button
-                                              IconButton(
-                                                onPressed:
-                                                    _isListening
-                                                        ? _stopListening
-                                                        : _startListening,
-                                                icon: Icon(
-                                                  _isListening
-                                                      ? Icons.mic
-                                                      : Icons.mic_none,
-                                                  color:
-                                                      _isListening
-                                                          ? context.errorColor
-                                                          : context
-                                                              .onSurfaceVariantColor,
-                                                ),
-                                                tooltip:
-                                                    _isListening
-                                                        ? 'Stop recording'
-                                                        : 'Start voice input',
-                                                padding: EdgeInsets.zero,
-                                                constraints:
-                                                    const BoxConstraints(),
-                                              ),
-
-                                              const SizedBox(
-                                                width: DS.spacingXs,
-                                              ),
-
-                                              Text(
-                                                _isListening
-                                                    ? 'Recording...'
-                                                    : 'Voice input',
-                                                style: context.bodySmall?.copyWith(
-                                                  color:
-                                                      _isListening
-                                                          ? context.errorColor
-                                                          : context
-                                                              .onSurfaceVariantColor,
-                                                ),
-                                              ),
-
-                                              const Spacer(),
-
-                                              // Character count
-                                              Text(
-                                                '${_userAnswerController.text.length} chars',
-                                                style: context.bodySmall,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: DS.spacingM),
-
-                                  // Show answer button
-                                  Row(
+                                  child: Column(
                                     children: [
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: _clearUserAnswer,
-                                          style: OutlinedButton.styleFrom(
-                                            side: BorderSide(
-                                              color:
-                                                  context.colorScheme.outline,
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: DS.spacingM,
-                                            ),
+                                      TextField(
+                                        controller: _userAnswerController,
+                                        maxLines: 8, // Increased from 6 since we have more space
+                                        style: context.bodyLarge,
+                                        decoration: InputDecoration(
+                                          hintText: 'Type your answer here...',
+                                          hintStyle: context.bodyLarge?.copyWith(
+                                            color: context.onSurfaceVariantColor,
                                           ),
-                                          child: Text('Clear'),
+                                          contentPadding: const EdgeInsets.all(DS.spacingM),
+                                          border: InputBorder.none,
                                         ),
                                       ),
 
-                                      const SizedBox(width: DS.spacingM),
-
-                                      Expanded(
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            // Save the user's answer if needed
-                                            _saveUserAnswer();
-
-                                            setState(() {
-                                              _showAnswer = true;
-                                            });
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                context.primaryColor,
-                                            foregroundColor:
-                                                context.onPrimaryColor,
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: DS.spacingM,
-                                            ),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                    DS.borderRadiusSmall,
-                                                  ),
+                                      // Character count bar
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: DS.spacingM,
+                                          vertical: DS.spacingXs,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: context.surfaceVariantColor,
+                                          border: Border(
+                                            top: BorderSide(
+                                              color: context.colorScheme.outline,
                                             ),
                                           ),
-                                          child: Text('Show Answer'),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Spacer(),
+                                            // Character count
+                                            Text(
+                                              '${_userAnswerController.text.length} chars',
+                                              style: context.bodySmall,
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
+                                ),
+
+                                const SizedBox(height: DS.spacingM),
+
+                                // Show answer button
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: _clearUserAnswer,
+                                        style: OutlinedButton.styleFrom(
+                                          side: BorderSide(
+                                            color: context.colorScheme.outline,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: DS.spacingM,
+                                          ),
+                                        ),
+                                        child: Text('Clear'),
+                                      ),
+                                    ),
+
+                                    const SizedBox(width: DS.spacingM),
+
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          // Save the user's answer if needed
+                                          _saveUserAnswer();
+
+                                          setState(() {
+                                            _showAnswer = true;
+                                          });
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: context.primaryColor,
+                                          foregroundColor: context.onPrimaryColor,
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: DS.spacingM,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              DS.borderRadiusSmall,
+                                            ),
+                                          ),
+                                        ),
+                                        child: Text('Show Answer'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ] else ...[
                             Column(
@@ -1222,137 +1225,142 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                         ),
                       ],
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Mark complete button
-                        OutlinedButton.icon(
-                          onPressed: _toggleCompletion,
-                          icon: Icon(
-                            _isCompleted
-                                ? Icons.check_circle
-                                : Icons.check_circle_outline,
-                            size: 18,
-                            color:
-                                _isCompleted
-                                    ? context.primaryColor
-                                    : context.onSurfaceVariantColor,
-                          ),
-                          label: Text(
-                            _isCompleted ? 'Completed' : 'Mark as Complete',
-                            style: TextStyle(
-                              color:
-                                  _isCompleted
-                                      ? context.primaryColor
-                                      : context.onSurfaceVariantColor,
-                            ),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color:
-                                  _isCompleted
-                                      ? context.primaryColor
-                                      : context.colorScheme.outline,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                DS.borderRadiusSmall,
+                        // Top row: Mark as Complete
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _toggleCompletion,
+                                icon: Icon(
+                                  _isCompleted ? Icons.check_circle : Icons.check_circle_outline,
+                                  size: 18,
+                                  color: _isCompleted ? context.successColor : context.onSurfaceVariantColor,
+                                ),
+                                label: Text(
+                                  _isCompleted ? 'Completed' : 'Mark as Complete',
+                                  style: TextStyle(
+                                    color: _isCompleted ? context.successColor : context.onSurfaceVariantColor,
+                                  ),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(
+                                    color: _isCompleted ? context.successColor : context.colorScheme.outline,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: DS.spacingS),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-
-                        // Show different buttons based on context
+                        
+                        const SizedBox(height: DS.spacingM),
+                        
+                        // Bottom row: Navigation and Grade All
                         _isSubmittingBatch || _isGrading
                             ? const CircularProgressIndicator()
                             : Row(
-                              children: [
-                                // Next/Submit single button
-                                ElevatedButton.icon(
-                                  onPressed:
-                                      widget.questionList.length > 1 &&
-                                              widget.currentIndex <
-                                                  widget.questionList.length - 1
-                                          ? _moveToNextQuestion
-                                          : _submitSingleAnswer,
-                                  icon: Icon(
-                                    widget.questionList.length > 1 &&
-                                            widget.currentIndex <
-                                                widget.questionList.length - 1
-                                        ? Icons.arrow_forward
-                                        : Icons.check,
-                                    size: 18,
-                                  ),
-                                  label: Text(
-                                    widget.questionList.length > 1 &&
-                                            widget.currentIndex <
-                                                widget.questionList.length - 1
-                                        ? 'Next Question'
-                                        : 'Submit This Answer',
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: context.primaryColor,
-                                    foregroundColor: context.onPrimaryColor,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                        DS.borderRadiusSmall,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Only add space if the Grade All button will be shown
-                                if (widget.questionList.length > 1)
-                                  const SizedBox(width: DS.spacingM),
-
-                                // Submit all button - only show when there are multiple questions
-                                if (widget.questionList.length > 1)
-                                  ElevatedButton.icon(
-                                    onPressed: () {
-                                      final answeredCount =
-                                          _getAnsweredQuestionCount();
-                                      if (answeredCount > 0) {
-                                        _submitAllAnswers();
-                                      } else {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Please answer at least one question before submitting',
-                                            ),
-                                            duration: Duration(seconds: 2),
+                                children: [
+                                  // Previous button
+                                  if (widget.currentIndex > 0) ...[
+                                    Expanded(
+                                      flex: 2,
+                                      child: OutlinedButton.icon(
+                                        onPressed: _moveToPreviousQuestion,
+                                        icon: const Icon(Icons.arrow_back, size: 18),
+                                        label: const Text('Previous'),
+                                        style: OutlinedButton.styleFrom(
+                                          side: BorderSide(color: context.colorScheme.outline),
+                                          padding: const EdgeInsets.symmetric(vertical: DS.spacingM),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                                           ),
-                                        );
-                                      }
-                                    },
-                                    icon: Icon(
-                                      _getAnsweredQuestionCount() > 0
-                                          ? Icons.check_circle
-                                          : Icons.check_circle_outline,
-                                      size: 18,
-                                    ),
-                                    label: Text(
-                                      'Grade All (${_getAnsweredQuestionCount()}/${widget.questionList.length})',
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          _getAnsweredQuestionCount() > 0
-                                              ? context.successColor
-                                              : context.surfaceVariantColor,
-                                      foregroundColor:
-                                          _getAnsweredQuestionCount() > 0
-                                              ? context.onPrimaryColor
-                                              : context.onSurfaceVariantColor,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          DS.borderRadiusSmall,
                                         ),
                                       ),
                                     ),
+                                    const SizedBox(width: DS.spacingM),
+                                  ],
+                                  
+                                  // Next button (primary action)
+                                  Expanded(
+                                    flex: 3,
+                                    child: ElevatedButton.icon(
+                                      onPressed: widget.currentIndex < widget.questionList.length - 1
+                                          ? _moveToNextQuestion
+                                          : _submitSingleAnswer,
+                                      icon: Icon(
+                                        widget.currentIndex < widget.questionList.length - 1
+                                            ? Icons.arrow_forward
+                                            : Icons.check,
+                                        size: 18,
+                                      ),
+                                      label: Text(
+                                        widget.currentIndex < widget.questionList.length - 1
+                                            ? 'Next Question'
+                                            : 'Submit Answer',
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: context.primaryColor,
+                                        foregroundColor: context.onPrimaryColor,
+                                        padding: const EdgeInsets.symmetric(vertical: DS.spacingM),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                        ),
+                                        elevation: 2,
+                                      ),
+                                    ),
                                   ),
-                              ],
-                            ),
+                                  
+                                  // Grade All button (secondary action)
+                                  if (widget.questionList.length > 1) ...[
+                                    const SizedBox(width: DS.spacingM),
+                                    Expanded(
+                                      flex: 2,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () {
+                                          final answeredCount = _getAnsweredQuestionCount();
+                                          if (answeredCount > 0) {
+                                            _submitAllAnswers();
+                                          } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Please answer at least one question before submitting'),
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                        icon: Icon(
+                                          _getAnsweredQuestionCount() > 0 ? Icons.grading : Icons.grading_outlined,
+                                          size: 18,
+                                        ),
+                                        label: Text(
+                                          'Grade All\n(${_getAnsweredQuestionCount()}/${widget.questionList.length})',
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: _getAnsweredQuestionCount() > 0
+                                              ? context.successColor
+                                              : context.surfaceVariantColor,
+                                          foregroundColor: _getAnsweredQuestionCount() > 0
+                                              ? context.onPrimaryColor
+                                              : context.onSurfaceVariantColor,
+                                          padding: const EdgeInsets.symmetric(vertical: DS.spacingS),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                       ],
                     ),
                   ),
