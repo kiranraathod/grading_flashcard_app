@@ -31,8 +31,6 @@ class InterviewPracticeScreen extends StatefulWidget {
 
 class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
   // State variables
-  bool _showAnswer = false;
-  bool _isCompleted = false;
   int _timeTaken = 0;
   late InterviewService _interviewService;
   Timer? _timer;
@@ -40,6 +38,10 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
   bool _isGrading = false;
   bool _isSubmittingBatch = false;
   bool _hasLoadedInitialAnswer = false;
+  
+  // ✨ NEW: Enhanced UI state variables
+  final FocusNode _answerFocusNode = FocusNode();
+  bool _isTextFieldFocused = false;
 
   // Map to store answers for all questions
   final Map<String, String> _userAnswers =
@@ -52,13 +54,19 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
   @override
   void initState() {
     super.initState();
-    _isCompleted = widget.question.isCompleted;
 
     // Note: _loadCurrentAnswer() moved to didChangeDependencies()
     // to ensure _interviewService is initialized first
 
     // ✅ ADDED: Auto-save on text changes
     _userAnswerController.addListener(_autoSaveAnswer);
+
+    // ✨ NEW: Enhanced UI focus listener
+    _answerFocusNode.addListener(() {
+      setState(() {
+        _isTextFieldFocused = _answerFocusNode.hasFocus;
+      });
+    });
 
     // Start a timer to track how long the user spends on this question
     _startTimer();
@@ -157,6 +165,9 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     // Remove listener first
     _userAnswerController.removeListener(_autoSaveAnswer);
 
+    // ✨ NEW: Dispose focus node
+    _answerFocusNode.dispose();
+
     // ✅ FINAL SAVE: Ensure current answer is saved before disposing
     final currentText = _userAnswerController.text.trim();
     if (currentText.isNotEmpty) {
@@ -184,27 +195,27 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     super.dispose();
   }
 
-  // Clear the user's answer
-  void _clearUserAnswer() {
-    setState(() {
-      _userAnswerController.clear();
-    });
-  }
-
   // Save the user's answer
   void _saveUserAnswer() {
     _saveCurrentAnswer();
     debugPrint('User answer saved: ${_userAnswerController.text}');
   }
 
-  // Submit a single answer
+  // Submit a single answer with word validation
   void _submitSingleAnswer() async {
-    if (_userAnswerController.text.trim().isEmpty) {
-      // Show a message if the answer is empty
+    final wordCount = _getWordCount(_userAnswerController.text.trim());
+    
+    // Validate word length
+    if (wordCount < 200 || wordCount > 300) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please provide an answer before submitting'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(
+            wordCount < 200 
+                ? 'Answer too short. Please write at least 200 words (currently $wordCount)'
+                : 'Answer too long. Please keep it under 300 words (currently $wordCount)'
+          ),
+          backgroundColor: const Color(0xFFEF4444),
+          duration: const Duration(seconds: 3),
         ),
       );
       return;
@@ -258,23 +269,18 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
         _isGrading = false;
       });
 
-      // Mark the question as completed if the score is good (70 or above)
-      if ((gradedAnswer.score ?? 0) >= 70) {
-        _interviewService.toggleCompletion(widget.question.id);
-        setState(() {
-          _isCompleted = true;
-        });
+      // ✨ AUTOMATIC COMPLETION: Always mark as completed when word requirements are met
+      _interviewService.toggleCompletion(widget.question.id);
 
-        // Record the view again with completed status
-        context.read<RecentViewBloc>().add(
-          RecordInterviewQuestionView(
-            question: widget.question,
-            category: widget.question.category,
-            isCompleted: true,
-          ),
-        );
-        debugPrint('Recorded completed interview question view');
-      }
+      // Record the view again with completed status
+      context.read<RecentViewBloc>().add(
+        RecordInterviewQuestionView(
+          question: widget.question,
+          category: widget.question.category,
+          isCompleted: true,
+        ),
+      );
+      debugPrint('Automatically marked question as completed due to word requirement compliance');
 
       // Show the results screen - no need for mounted check here as we already checked above
       Navigator.push(
@@ -373,23 +379,28 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     debugPrint('Local _userAnswers map: $_userAnswers');
     debugPrint('Final allAnswers map: $allAnswers');
 
-    // ✅ STEP 4: Validate we have at least one answer
-    final nonEmptyAnswers =
-        allAnswers.values.where((answer) => answer.trim().isNotEmpty).toList();
-    if (nonEmptyAnswers.isEmpty) {
-      debugPrint('❌ No answers found to submit');
+    // ✅ STEP 4: Validate we have at least one valid answer (200-300 words)
+    final validAnswers = allAnswers.entries
+        .where((entry) {
+          final wordCount = _getWordCount(entry.value.trim());
+          return wordCount >= 200 && wordCount <= 300;
+        })
+        .toList();
+    
+    if (validAnswers.isEmpty) {
+      debugPrint('❌ No valid answers found to submit (all answers must be 200-300 words)');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Please answer at least one question before submitting',
+            'Please provide at least one answer with 200-300 words before submitting',
           ),
-          duration: Duration(seconds: 2),
+          duration: Duration(seconds: 3),
         ),
       );
       return;
     }
 
-    debugPrint('Non-empty answers found: ${nonEmptyAnswers.length}');
+    debugPrint('Valid answers found: ${validAnswers.length}');
 
     // ✅ STEP 5: Create answer objects for ALL questions (including empty ones for tracking)
     final List<InterviewAnswer> answersList =
@@ -409,15 +420,19 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
           );
         }).toList();
 
-    // ✅ STEP 6: Filter for only answered questions for API call
+    // ✅ STEP 6: Filter for only valid answered questions for API call (200-300 words)
     final answeredQuestions =
         answersList
-            .where((answer) => answer.userAnswer.trim().isNotEmpty)
+            .where((answer) {
+              final wordCount = _getWordCount(answer.userAnswer.trim());
+              return wordCount >= 200 && wordCount <= 300;
+            })
             .toList();
 
-    debugPrint('Questions being sent to API: ${answeredQuestions.length}');
+    debugPrint('Valid questions being sent to API: ${answeredQuestions.length}');
     for (final answer in answeredQuestions) {
-      debugPrint('- API $answer.questionId: $answer.userAnswer.length chars');
+      final wordCount = _getWordCount(answer.userAnswer);
+      debugPrint('- API $answer.questionId: $wordCount words (valid)');
     }
     debugPrint('=== BATCH GRADING DEBUG END ===');
 
@@ -430,7 +445,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       // Show loading indicator
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Grading ${answeredQuestions.length} answers...'),
+          content: Text('Grading ${answeredQuestions.length} valid answers...'),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -445,14 +460,12 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       // Check if widget is still mounted before using BuildContext
       if (!mounted) return;
 
-      // Mark questions as completed if they have a passing score
+      // ✨ AUTOMATIC COMPLETION: Mark all submitted questions as completed
       for (final answer in gradedAnswers) {
-        if (answer.score != null && answer.score! >= 70) {
-          _interviewService.toggleCompletion(answer.questionId);
-          debugPrint(
-            '✓ Marked $answer.questionId as completed (score: $answer.score)',
-          );
-        }
+        _interviewService.toggleCompletion(answer.questionId);
+        debugPrint(
+          '✓ Automatically marked $answer.questionId as completed (met word requirements)',
+        );
       }
 
       setState(() {
@@ -492,6 +505,239 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
         ),
       );
     }
+  }
+
+  // ✨ NEW: Show example answer in a modal popup
+  void _showExampleAnswer() {
+    // Save current answer before showing example
+    _saveUserAnswer();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        builder: (_, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: context.surfaceColor,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(DS.borderRadiusMedium),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: DS.spacingM),
+                decoration: BoxDecoration(
+                  color: context.onSurfaceVariantColor.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(DS.spacingL, 0, DS.spacingL, DS.spacingS),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.visibility, color: Colors.white, size: 18),
+                    ),
+                    const SizedBox(width: DS.spacingS),
+                    Text(
+                      'Example Answer',
+                      style: context.titleMedium?.copyWith(
+                        color: const Color(0xFF3B82F6),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const Divider(height: 1),
+              
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(DS.spacingL),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // User's answer display (if exists)
+                      if (_userAnswerController.text.trim().isNotEmpty) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(DS.spacingM),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF0D9488).withValues(alpha: 0.1),
+                                const Color(0xFF0D9488).withValues(alpha: 0.05),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                            border: Border.all(
+                              color: const Color(0xFF0D9488).withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF0D9488),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.person, color: Colors.white, size: 14),
+                                  ),
+                                  const SizedBox(width: DS.spacingXs),
+                                  Text(
+                                    'Your Answer',
+                                    style: context.titleSmall?.copyWith(
+                                      color: const Color(0xFF0D9488),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: _getAnswerQualityColor().withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '${_getWordCount(_userAnswerController.text)} words',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: _getAnswerQualityColor(),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: DS.spacingS),
+                              Text(
+                                _userAnswerController.text,
+                                style: context.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacingL),
+                      ],
+                      
+                      // Example answer
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(DS.spacingM),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                              const Color(0xFF3B82F6).withValues(alpha: 0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                          border: Border.all(
+                            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF3B82F6),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.lightbulb, color: Colors.white, size: 14),
+                                ),
+                                const SizedBox(width: DS.spacingXs),
+                                Text(
+                                  'Example Answer',
+                                  style: context.titleSmall?.copyWith(
+                                    color: const Color(0xFF3B82F6),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.star, size: 12, color: Color(0xFF10B981)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'High Quality',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF10B981),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: DS.spacingS),
+                            Text(
+                              widget.question.answer ?? 'No example answer available for this question.',
+                              style: context.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // Show preparation tips in a modal popup
@@ -627,9 +873,9 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     _saveCurrentAnswer();
 
     // Show summary of current state
-    final answeredCount = _getAnsweredQuestionCount();
+    final validAnsweredCount = _getValidAnsweredQuestionCount();
     debugPrint(
-      'Navigation summary: Answered $answeredCount/${widget.questionList.length} questions',
+      'Navigation summary: Valid answers $validAnsweredCount/${widget.questionList.length} questions',
     );
     debugPrint('Local answers: ${_userAnswers.keys.toList()}');
 
@@ -673,21 +919,12 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     debugPrint('=== NAVIGATION COMPLETE ===');
   }
 
-  // Toggle question completion status
-  void _toggleCompletion() {
-    setState(() {
-      _isCompleted = !_isCompleted;
-    });
-
-    // Update in the service
-    _interviewService.toggleCompletion(widget.question.id);
-  }
-
-  // Helper method to get actual answered question count
-  int _getAnsweredQuestionCount() {
+  // Helper method to get valid answered question count (200-300 words)
+  int _getValidAnsweredQuestionCount() {
     // Save current answer first to ensure accurate count
     final currentText = _userAnswerController.text.trim();
-    if (currentText.isNotEmpty) {
+    final currentWordCount = _getWordCount(currentText);
+    if (currentWordCount >= 200 && currentWordCount <= 300) {
       _userAnswers[widget.question.id] = currentText;
       _interviewService.saveUserAnswer(widget.question.id, currentText);
     }
@@ -697,44 +934,68 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       final localAnswer = _userAnswers[question.id];
       final globalAnswer = _interviewService.getUserAnswer(question.id);
 
-      if ((localAnswer != null && localAnswer.trim().isNotEmpty) ||
-          (globalAnswer != null && globalAnswer.trim().isNotEmpty)) {
-        count++;
+      String? answer = localAnswer ?? globalAnswer;
+      if (answer != null) {
+        final wordCount = _getWordCount(answer);
+        if (wordCount >= 200 && wordCount <= 300) {
+          count++;
+        }
       }
     }
 
     debugPrint(
-      'Current answered question count: $count/${widget.questionList.length}',
+      'Current valid answered question count: $count/${widget.questionList.length}',
     );
     return count;
   }
 
-  // Helper method to get difficulty color
-  Color _getDifficultyColor(BuildContext context) {
+  // ✨ UPDATED: Word-based quality helpers (200-300 words required)
+  Color _getAnswerQualityColor() {
+    final wordCount = _getWordCount(_userAnswerController.text);
+    if (wordCount >= 200 && wordCount <= 300) return const Color(0xFF10B981); // Green - Perfect
+    if (wordCount >= 150 && wordCount < 200) return const Color(0xFF0D9488); // Teal - Close
+    if (wordCount > 300) return const Color(0xFFF59E0B); // Amber - Too long
+    return const Color(0xFFEF4444); // Red - Too short
+  }
+
+  // ✨ NEW: Helper method for difficulty gradient colors
+  List<Color> _getDifficultyGradientColors() {
     switch (widget.question.difficulty) {
       case 'entry':
-        return context.successColor.withOpacityFix(0.1);
+        return [const Color(0xFF10B981), const Color(0xFF6EE7B7)]; // Green gradient
       case 'mid':
-        return context.warningColor.withOpacityFix(0.1);
+        return [const Color(0xFFF59E0B), const Color(0xFFFDE68A)]; // Amber gradient
       case 'senior':
-        return context.errorColor.withOpacityFix(0.1);
+        return [const Color(0xFFEF4444), const Color(0xFFFCA5A5)]; // Red gradient
       default:
-        return context.surfaceVariantColor;
+        return [const Color(0xFF64748B), const Color(0xFF94A3B8)]; // Gray gradient
     }
   }
 
-  // Helper method to get difficulty text color
-  Color _getDifficultyTextColor(BuildContext context) {
-    switch (widget.question.difficulty) {
-      case 'entry':
-        return context.successColor;
-      case 'mid':
-        return context.warningColor;
-      case 'senior':
-        return context.errorColor;
-      default:
-        return context.onSurfaceVariantColor;
-    }
+  IconData _getAnswerQualityIcon() {
+    final wordCount = _getWordCount(_userAnswerController.text);
+    if (wordCount >= 200 && wordCount <= 300) return Icons.check_circle;
+    if (wordCount >= 150 && wordCount < 200) return Icons.trending_up;
+    if (wordCount > 300) return Icons.warning_amber;
+    return Icons.edit;
+  }
+
+  String _getAnswerQualityText() {
+    final wordCount = _getWordCount(_userAnswerController.text);
+    if (wordCount >= 200 && wordCount <= 300) return 'Perfect length';
+    if (wordCount >= 150 && wordCount < 200) return 'Almost there';
+    if (wordCount > 300) return 'Too long';
+    return 'Keep writing';
+  }
+
+  // ✨ NEW: Check if answer meets submission requirements
+  bool _canSubmitAnswer() {
+    final wordCount = _getWordCount(_userAnswerController.text);
+    return wordCount >= 200 && wordCount <= 300;
+  }
+
+  int _getWordCount(String text) {
+    return text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
   }
 
   // Helper method to get difficulty text
@@ -751,23 +1012,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     }
   }
 
-  // Helper method to get category color
-  Color _getCategoryColor(BuildContext context) {
-    switch (widget.question.category) {
-      case 'technical':
-        return context.secondaryColor.withOpacityFix(0.1);
-      case 'applied':
-        return context.successColor.withOpacityFix(0.1);
-      case 'case':
-        return context.secondaryColor.withOpacityFix(0.15);
-      case 'behavioral':
-        return context.warningColor.withOpacityFix(0.1);
-      case 'job':
-        return context.errorColor.withOpacityFix(0.1);
-      default:
-        return context.surfaceVariantColor;
-    }
-  }
+
 
   // Helper method to get category name
   String _getCategoryName() {
@@ -802,76 +1047,235 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
         });
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text('Practice Mode', style: context.titleLarge),
-            leading: IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                // Check if any answer has been entered
-                if (_userAnswerController.text.trim().isNotEmpty) {
-                  // Save the answer before leaving
-                  _saveCurrentAnswer();
-                }
-                Navigator.of(context).pop();
-              },
+          // ✨ ENHANCED APP BAR
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(80),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.white, const Color(0xFFF8FAFC)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                border: const Border(
+                  bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  child: Row(
+                    children: [
+                      // Enhanced close button
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          color: const Color(0xFF64748B),
+                          onPressed: () {
+                            if (_userAnswerController.text.trim().isNotEmpty) {
+                              _saveCurrentAnswer();
+                            }
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 16),
+                      
+                      // Enhanced title
+                      const Text(
+                        'Practice Mode',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      
+                      const Spacer(),
+                      
+                      // Enhanced tips button
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0D9488), Color(0xFF5EEAD4)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0D9488).withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.lightbulb, size: 20),
+                          color: Colors.white,
+                          tooltip: 'View preparation tips',
+                          onPressed: _showPreparationTips,
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 12),
+                      
+                      // ✨ NEW: Show Answer button as icon
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF3B82F6), Color(0xFF60A5FA)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.visibility, size: 20),
+                          color: Colors.white,
+                          tooltip: 'View example answer',
+                          onPressed: _showExampleAnswer,
+                        ),
+                      ),
+                      
+                      const SizedBox(width: 12),
+                      
+                      // Enhanced question indicator
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          widget.questionList.length > 1
+                              ? 'Question ${widget.currentIndex + 1}/${widget.questionList.length}'
+                              : 'Question 1/1',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            actions: [
-              // Tips popup icon
-              IconButton(
-                icon: Icon(
-                  Icons.lightbulb_outline,
-                  color: context.primaryColor,
-                ),
-                tooltip: 'View preparation tips',
-                onPressed: _showPreparationTips,
-              ),
-              const SizedBox(width: DS.spacingS),
-              // Progress indicator
-              Center(
-                child: Text(
-                  widget.questionList.length > 1
-                      ? 'Question ${widget.currentIndex + 1}/${widget.questionList.length}'
-                      : 'Question 1/1',
-                  style: context.bodyMedium,
-                ),
-              ),
-              const SizedBox(width: DS.spacingM),
-            ],
           ),
           body: Stack(
             children: [
               Column(
                 children: [
-                  // Timer bar at the top
+                  // ✨ ENHANCED TIMER BAR
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacingL,
-                      vertical: DS.spacingS,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF10B981).withValues(alpha: 0.05),
+                          const Color(0xFF10B981).withValues(alpha: 0.1),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                        ),
+                      ),
                     ),
-                    color: context.primaryColor.withOpacityFix(0.1),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.timer,
-                          size: 20,
-                          color: context.primaryColor,
-                        ),
-                        const SizedBox(width: DS.spacingS),
-                        Text(
-                          'Time: ${_formatTime(_timeTaken)}',
-                          style: context.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                            color: context.primaryColor,
+                        // Timer icon with background
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.timer,
+                            color: Colors.white,
+                            size: 16,
                           ),
                         ),
-                        const Spacer(),
-                        // Completion status
-                        Checkbox(
-                          value: _isCompleted,
-                          onChanged: (value) => _toggleCompletion(),
-                          activeColor: context.primaryColor,
+                        
+                        const SizedBox(width: 12),
+                        
+                        // Timer text
+                        Text(
+                          'Time: ${_formatTime(_timeTaken)}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF10B981),
+                          ),
                         ),
-                        Text('Mark as Complete', style: context.bodyMedium),
+                        
+                        const Spacer(),
+                        
+                        // Word count indicator
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _getAnswerQualityColor().withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: _getAnswerQualityColor().withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getAnswerQualityIcon(),
+                                size: 16,
+                                color: _getAnswerQualityColor(),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${_getWordCount(_userAnswerController.text)}/200-300 words',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: _getAnswerQualityColor(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -908,50 +1312,90 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Category and difficulty tags
+                                // ✨ ENHANCED Category and difficulty tags with gradients
                                 Row(
                                   children: [
+                                    // Enhanced category tag with gradient
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: DS.spacingS,
-                                        vertical: 4,
+                                        vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: _getCategoryColor(context),
-                                        borderRadius: BorderRadius.circular(16),
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            const Color(0xFF0D9488),
+                                            const Color(0xFF5EEAD4),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFF0D9488).withValues(alpha: 0.2),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
                                       child: Text(
                                         _getCategoryName(),
-                                        style: context.labelMedium,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                        ),
                                       ),
                                     ),
 
-                                    const SizedBox(width: DS.spacingXs),
+                                    const SizedBox(width: DS.spacingS),
 
-                                    // Subtopic
-                                    Text(
-                                      '• ${widget.question.subtopic}',
-                                      style: context.bodySmall,
+                                    // Subtopic with enhanced styling
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF64748B).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        widget.question.subtopic,
+                                        style: context.bodySmall?.copyWith(
+                                          color: const Color(0xFF64748B),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
                                     ),
 
                                     const Spacer(),
 
-                                    // Difficulty
+                                    // Enhanced difficulty tag with gradient
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: DS.spacingS,
-                                        vertical: 4,
+                                        vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: _getDifficultyColor(context),
-                                        borderRadius: BorderRadius.circular(16),
+                                        gradient: LinearGradient(
+                                          colors: _getDifficultyGradientColors(),
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: _getDifficultyGradientColors()[0].withValues(alpha: 0.2),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
                                       child: Text(
                                         _getDifficultyText(),
-                                        style: context.labelMedium?.copyWith(
-                                          color: _getDifficultyTextColor(
-                                            context,
-                                          ),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
                                         ),
                                       ),
                                     ),
@@ -972,238 +1416,128 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                           const SizedBox(height: DS.spacingL),
 
                           // Answer input area
-                          if (!_showAnswer) ...[
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Your Answer:',
-                                  style: context.bodyLarge?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Your Answer:',
+                                style: context.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                const SizedBox(height: DS.spacingXs),
-                                
-                                // Text field for user's answer
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: context.surfaceColor,
-                                    borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                                    border: Border.all(color: context.colorScheme.outline),
+                              ),
+                              const SizedBox(height: DS.spacingXs),
+                              
+                              // ✨ ENHANCED Text field for user's answer with focus states
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: context.surfaceColor,
+                                  borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                  border: Border.all(
+                                    color: _isTextFieldFocused ? const Color(0xFF0D9488) : context.colorScheme.outline,
+                                    width: _isTextFieldFocused ? 2 : 1,
                                   ),
-                                  child: Column(
-                                    children: [
-                                      TextField(
-                                        controller: _userAnswerController,
-                                        maxLines: 8, // Increased from 6 since we have more space
-                                        style: context.bodyLarge,
-                                        decoration: InputDecoration(
-                                          hintText: 'Type your answer here...',
-                                          hintStyle: context.bodyLarge?.copyWith(
-                                            color: context.onSurfaceVariantColor,
-                                          ),
-                                          contentPadding: const EdgeInsets.all(DS.spacingM),
-                                          border: InputBorder.none,
-                                        ),
-                                      ),
-
-                                      // Character count bar
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: DS.spacingM,
-                                          vertical: DS.spacingXs,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: context.surfaceVariantColor,
-                                          border: Border(
-                                            top: BorderSide(
-                                              color: context.colorScheme.outline,
-                                            ),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            const Spacer(),
-                                            // Character count
-                                            Text(
-                                              '${_userAnswerController.text.length} chars',
-                                              style: context.bodySmall,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                  boxShadow: _isTextFieldFocused ? [
+                                    BoxShadow(
+                                      color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                                      blurRadius: 8,
+                                      spreadRadius: 4,
+                                    ),
+                                  ] : null,
                                 ),
-
-                                const SizedBox(height: DS.spacingM),
-
-                                // Show answer button
-                                Row(
+                                child: Column(
                                   children: [
-                                    Expanded(
-                                      child: OutlinedButton(
-                                        onPressed: _clearUserAnswer,
-                                        style: OutlinedButton.styleFrom(
-                                          side: BorderSide(
-                                            color: context.colorScheme.outline,
-                                          ),
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: DS.spacingM,
-                                          ),
+                                    TextField(
+                                      controller: _userAnswerController,
+                                      focusNode: _answerFocusNode,
+                                      maxLines: 8,
+                                      style: context.bodyLarge,
+                                      decoration: InputDecoration(
+                                        hintText: 'Type your answer here...',
+                                        hintStyle: context.bodyLarge?.copyWith(
+                                          color: context.onSurfaceVariantColor,
                                         ),
-                                        child: Text('Clear'),
+                                        contentPadding: const EdgeInsets.all(DS.spacingM),
+                                        border: InputBorder.none,
                                       ),
                                     ),
 
-                                    const SizedBox(width: DS.spacingM),
-
-                                    Expanded(
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          // Save the user's answer if needed
-                                          _saveUserAnswer();
-
-                                          setState(() {
-                                            _showAnswer = true;
-                                          });
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: context.primaryColor,
-                                          foregroundColor: context.onPrimaryColor,
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: DS.spacingM,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              DS.borderRadiusSmall,
-                                            ),
+                                    // ✨ ENHANCED Character count bar with quality indicators
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: DS.spacingM,
+                                        vertical: DS.spacingS,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _getAnswerQualityColor().withValues(alpha: 0.05),
+                                        border: Border(
+                                          top: BorderSide(
+                                            color: context.colorScheme.outline.withValues(alpha: 0.3),
                                           ),
                                         ),
-                                        child: Text('Show Answer'),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          // Quality indicator
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: _getAnswerQualityColor().withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: _getAnswerQualityColor().withValues(alpha: 0.3),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  _getAnswerQualityIcon(),
+                                                  size: 14,
+                                                  color: _getAnswerQualityColor(),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  _getAnswerQualityText(),
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: _getAnswerQualityColor(),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          
+                                          const Spacer(),
+                                          
+                                          // Word count requirement
+                                          Text(
+                                            '${_getWordCount(_userAnswerController.text)} words',
+                                            style: context.bodySmall?.copyWith(
+                                              color: _getAnswerQualityColor(),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          
+                                          const SizedBox(width: DS.spacingXs),
+                                          
+                                          // Requirement indicator
+                                          Text(
+                                            '(200-300 required)',
+                                            style: context.bodySmall?.copyWith(
+                                              color: context.onSurfaceVariantColor,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
-                          ] else ...[
-                            Column(
-                              children: [
-                                // User's answer display
-                                if (_userAnswerController.text.isNotEmpty)
-                                  Container(
-                                    width: double.infinity,
-                                    margin: const EdgeInsets.only(
-                                      bottom: DS.spacingM,
-                                    ),
-                                    padding: const EdgeInsets.all(DS.spacingM),
-                                    decoration: BoxDecoration(
-                                      color: context.successColor
-                                          .withOpacityFix(0.1),
-                                      borderRadius: BorderRadius.circular(
-                                        DS.borderRadiusSmall,
-                                      ),
-                                      border: Border.all(
-                                        color: context.successColor
-                                            .withOpacityFix(0.3),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.person,
-                                              color: context.successColor,
-                                              size: 20,
-                                            ),
-                                            const SizedBox(width: DS.spacingXs),
-                                            Text(
-                                              'Your Answer',
-                                              style: context.titleMedium
-                                                  ?.copyWith(
-                                                    color: context.successColor,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
+                              ),
 
-                                        const SizedBox(height: DS.spacingM),
-
-                                        Text(
-                                          _userAnswerController.text,
-                                          style: context.bodyLarge,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                // Example answer area
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(DS.spacingM),
-                                  decoration: BoxDecoration(
-                                    color: context.surfaceColor,
-                                    borderRadius: BorderRadius.circular(
-                                      DS.borderRadiusSmall,
-                                    ),
-                                    border: Border.all(
-                                      color: context.colorScheme.outline,
-                                    ),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.lightbulb,
-                                            color: context.primaryColor,
-                                            size: 20,
-                                          ),
-                                          const SizedBox(width: DS.spacingXs),
-                                          Text(
-                                            'Example Answer',
-                                            style: context.titleMedium,
-                                          ),
-                                          const Spacer(),
-                                          // Hide answer button
-                                          TextButton(
-                                            onPressed: () {
-                                              setState(() {
-                                                _showAnswer = false;
-                                              });
-                                            },
-                                            child: Text('Back to Practice'),
-                                          ),
-                                        ],
-                                      ),
-
-                                      const SizedBox(height: DS.spacingM),
-
-                                      // Divider
-                                      Divider(
-                                        color: context.colorScheme.outline,
-                                      ),
-
-                                      const SizedBox(height: DS.spacingM),
-
-                                      // Answer content
-                                      Text(
-                                        widget.question.answer ??
-                                            'No answer available for this question.',
-                                        style: context.bodyLarge,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                              const SizedBox(height: DS.spacingM),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -1228,45 +1562,32 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Top row: Mark as Complete
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _toggleCompletion,
-                                icon: Icon(
-                                  _isCompleted ? Icons.check_circle : Icons.check_circle_outline,
-                                  size: 18,
-                                  color: _isCompleted ? context.successColor : context.onSurfaceVariantColor,
-                                ),
-                                label: Text(
-                                  _isCompleted ? 'Completed' : 'Mark as Complete',
-                                  style: TextStyle(
-                                    color: _isCompleted ? context.successColor : context.onSurfaceVariantColor,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                    color: _isCompleted ? context.successColor : context.colorScheme.outline,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(vertical: DS.spacingS),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        
-                        const SizedBox(height: DS.spacingM),
-                        
-                        // Bottom row: Navigation and Grade All
+                        // ✨ ENHANCED Bottom row: Navigation and Grade All with validation
                         _isSubmittingBatch || _isGrading
-                            ? const CircularProgressIndicator()
+                            ? Container(
+                                padding: const EdgeInsets.all(DS.spacingL),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        const Color(0xFF0D9488),
+                                      ),
+                                    ),
+                                    const SizedBox(height: DS.spacingS),
+                                    Text(
+                                      _isSubmittingBatch ? 'Grading all answers...' : 'Grading your answer...',
+                                      style: context.bodyMedium?.copyWith(
+                                        color: const Color(0xFF0D9488),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
                             : Row(
                                 children: [
-                                  // Previous button
+                                  // Previous button (secondary action)
                                   if (widget.currentIndex > 0) ...[
                                     Expanded(
                                       flex: 2,
@@ -1280,80 +1601,124 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                                           ),
+                                          foregroundColor: context.onSurfaceVariantColor,
                                         ),
                                       ),
                                     ),
                                     const SizedBox(width: DS.spacingM),
                                   ],
                                   
-                                  // Next button (primary action)
+                                  // Next/Submit button (primary action with validation)
                                   Expanded(
                                     flex: 3,
-                                    child: ElevatedButton.icon(
-                                      onPressed: widget.currentIndex < widget.questionList.length - 1
-                                          ? _moveToNextQuestion
-                                          : _submitSingleAnswer,
-                                      icon: Icon(
-                                        widget.currentIndex < widget.questionList.length - 1
-                                            ? Icons.arrow_forward
-                                            : Icons.check,
-                                        size: 18,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: _canSubmitAnswer() 
+                                            ? const LinearGradient(
+                                                colors: [Color(0xFF0D9488), Color(0xFF10B981)],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                              )
+                                            : null,
+                                        color: _canSubmitAnswer() ? null : const Color(0xFF94A3B8),
+                                        borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                        boxShadow: _canSubmitAnswer() ? [
+                                          BoxShadow(
+                                            color: const Color(0xFF0D9488).withValues(alpha: 0.25),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ] : null,
                                       ),
-                                      label: Text(
-                                        widget.currentIndex < widget.questionList.length - 1
-                                            ? 'Next Question'
-                                            : 'Submit Answer',
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: context.primaryColor,
-                                        foregroundColor: context.onPrimaryColor,
-                                        padding: const EdgeInsets.symmetric(vertical: DS.spacingM),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                      child: ElevatedButton.icon(
+                                        onPressed: _canSubmitAnswer()
+                                            ? (widget.currentIndex < widget.questionList.length - 1
+                                                ? _moveToNextQuestion
+                                                : _submitSingleAnswer)
+                                            : null,
+                                        icon: Icon(
+                                          widget.currentIndex < widget.questionList.length - 1
+                                              ? Icons.arrow_forward
+                                              : Icons.check,
+                                          size: 18,
                                         ),
-                                        elevation: 2,
+                                        label: Text(
+                                          widget.currentIndex < widget.questionList.length - 1
+                                              ? 'Next Question'
+                                              : 'Submit Answer',
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          foregroundColor: _canSubmitAnswer() ? Colors.white : const Color(0xFF64748B),
+                                          shadowColor: Colors.transparent,
+                                          padding: const EdgeInsets.symmetric(vertical: DS.spacingM),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
                                   
-                                  // Grade All button (secondary action)
+                                  // Grade All button (enhanced styling)
                                   if (widget.questionList.length > 1) ...[
                                     const SizedBox(width: DS.spacingM),
                                     Expanded(
                                       flex: 2,
-                                      child: ElevatedButton.icon(
-                                        onPressed: () {
-                                          final answeredCount = _getAnsweredQuestionCount();
-                                          if (answeredCount > 0) {
-                                            _submitAllAnswers();
-                                          } else {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('Please answer at least one question before submitting'),
-                                                duration: Duration(seconds: 2),
-                                              ),
-                                            );
-                                          }
-                                        },
-                                        icon: Icon(
-                                          _getAnsweredQuestionCount() > 0 ? Icons.grading : Icons.grading_outlined,
-                                          size: 18,
-                                        ),
-                                        label: Text(
-                                          'Grade All\n(${_getAnsweredQuestionCount()}/${widget.questionList.length})',
-                                          textAlign: TextAlign.center,
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: _getAnsweredQuestionCount() > 0
-                                              ? context.successColor
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: _getValidAnsweredQuestionCount() > 0
+                                              ? const LinearGradient(
+                                                  colors: [Color(0xFF10B981), Color(0xFF34D399)],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                )
+                                              : null,
+                                          color: _getValidAnsweredQuestionCount() > 0 
+                                              ? null 
                                               : context.surfaceVariantColor,
-                                          foregroundColor: _getAnsweredQuestionCount() > 0
-                                              ? context.onPrimaryColor
-                                              : context.onSurfaceVariantColor,
-                                          padding: const EdgeInsets.symmetric(vertical: DS.spacingS),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                          borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                          boxShadow: _getValidAnsweredQuestionCount() > 0 ? [
+                                            BoxShadow(
+                                              color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ] : null,
+                                        ),
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            final validCount = _getValidAnsweredQuestionCount();
+                                            if (validCount > 0) {
+                                              _submitAllAnswers();
+                                            } else {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Please provide at least one answer with 200-300 words before submitting'),
+                                                  duration: Duration(seconds: 3),
+                                                ),
+                                              );
+                                            }
+                                          },
+                                          icon: Icon(
+                                            _getValidAnsweredQuestionCount() > 0 ? Icons.grading : Icons.grading_outlined,
+                                            size: 16,
+                                          ),
+                                          label: Text(
+                                            'Grade All\n(${_getValidAnsweredQuestionCount()}/${widget.questionList.length})',
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(fontSize: 11, height: 1.2),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.transparent,
+                                            foregroundColor: _getValidAnsweredQuestionCount() > 0
+                                                ? Colors.white
+                                                : context.onSurfaceVariantColor,
+                                            shadowColor: Colors.transparent,
+                                            padding: const EdgeInsets.symmetric(vertical: DS.spacingS),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
+                                            ),
                                           ),
                                         ),
                                       ),

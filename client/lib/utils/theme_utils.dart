@@ -155,11 +155,4 @@ extension ColorWithOpacityFix on Color {
   Color withOpacityFix(double opacity) {
     return withValues(alpha: opacity);
   }
-  
-  // Custom extension method to replace withOpacity for our app
-  Color withValues({required double alpha}) {
-    // Create a new color with the specified alpha value using non-deprecated properties
-    // Convert the double values to integers as required by Color.fromRGBO
-    return Color.fromRGBO(r.toInt(), g.toInt(), b.toInt(), alpha);
-  }
 }
