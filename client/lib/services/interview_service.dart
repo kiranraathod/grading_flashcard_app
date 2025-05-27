@@ -331,20 +331,57 @@ class InterviewService extends ChangeNotifier {
     }
   }
   
-  // ✅ SIMPLIFIED: Get questions by category with clean server-aligned logic
-  List<InterviewQuestion> getQuestionsByCategory(String uiCategory) {
+  // ✅ UPDATED: Get questions by category - now handles both categories and subtopics
+  List<InterviewQuestion> getQuestionsByCategory(String uiCategory, {bool isSubtopic = false}) {
     if (uiCategory == 'all') {
       return questions;
     }
     
-    debugPrint('Getting questions for UI category: $uiCategory');
+    debugPrint('=== FILTERING DEBUG: Getting questions ===');
+    debugPrint('Category: $uiCategory');
+    debugPrint('isSubtopic: $isSubtopic');
+    debugPrint('Total published questions: ${questions.length}');
     
     final filteredQuestions = questions.where((question) {
-      // ✅ PRIMARY: Check if question has categoryId field (server-generated)
+      // SPECIAL DEBUG: Track API Development questions specifically
+      if (uiCategory == 'API Development' || question.subtopic.toLowerCase().contains('api') || question.text.toLowerCase().contains('api')) {
+        debugPrint('🔍 POTENTIAL API DEV FILTERING CHECK:');
+        debugPrint('  Text: "${question.text}"');
+        debugPrint('  Raw subtopic: "${question.subtopic}"');
+        debugPrint('  Normalized subtopic: "${question.subtopic.trim()}"');
+        debugPrint('  Category: "${question.category}"');
+        debugPrint('  CategoryId: "${question.categoryId}"');
+        debugPrint('  isDraft: ${question.isDraft}');
+        debugPrint('  Target category: "$uiCategory"');
+        debugPrint('  isSubtopic: $isSubtopic');
+      }
+      
+      // If this is a subtopic search, match by subtopic directly
+      if (isSubtopic) {
+        // FIXED: Use same normalization as counting (trim only, case-sensitive)
+        final questionSubtopic = question.subtopic.trim();
+        final targetSubtopic = uiCategory.trim();
+        final matches = questionSubtopic == targetSubtopic;
+        
+        if (uiCategory == 'API Development') {
+          debugPrint('  🔍 API DEV SUBTOPIC CHECK:');
+          debugPrint('    Question subtopic (normalized): "$questionSubtopic"');
+          debugPrint('    Target subtopic (normalized): "$targetSubtopic"');
+          debugPrint('    Matches: $matches');
+        }
+        
+        if (matches) {
+          debugPrint('  ✅ MATCH FOUND: ${question.text}');
+        }
+        return matches;
+      }
+      
+      // Otherwise, use the original category matching logic
+      // ✅ PRIMARY: Check if question has categoryId field (server-generated or user-created)
       if (question.categoryId != null) {
         final serverUICategory = CategoryMapper.mapInternalToUICategory(question.categoryId!);
         if (serverUICategory == uiCategory) {
-          debugPrint('Server category match: ${question.text}');
+          debugPrint('CategoryId match: ${question.text} (categoryId: ${question.categoryId})');
           return true;
         }
       }
@@ -352,20 +389,35 @@ class InterviewService extends ChangeNotifier {
       // ✅ FALLBACK: Use legacy category mapping for backward compatibility
       final mappedCategory = CategoryMapper.getDefaultCategory(question.category);
       if (mappedCategory == uiCategory) {
-        debugPrint('Legacy category match: ${question.text}');
+        debugPrint('Legacy category match: ${question.text} (category: ${question.category} -> $mappedCategory)');
         return true;
       }
       
       // ✅ SPECIAL: Handle specific subtopic patterns
       if (_isSpecialSubtopicMatch(uiCategory, question)) {
-        debugPrint('Subtopic pattern match: ${question.text}');
+        debugPrint('Subtopic pattern match: ${question.text} (subtopic: ${question.subtopic})');
         return true;
       }
       
       return false;
     }).toList();
     
-    debugPrint('Found ${filteredQuestions.length} questions for category $uiCategory');
+    debugPrint('=== FILTERING RESULT ===');
+    debugPrint('Found ${filteredQuestions.length} questions for ${isSubtopic ? 'subtopic' : 'category'} $uiCategory');
+    for (final q in filteredQuestions) {
+      debugPrint('  - "${q.text}" (subtopic: "${q.subtopic}")');
+    }
+    
+    // SPECIAL DEBUG: API Development specific summary
+    if (uiCategory == 'API Development') {
+      debugPrint('🎯 API DEVELOPMENT FILTERING SUMMARY:');
+      debugPrint('  Questions found by filtering: ${filteredQuestions.length}');
+      debugPrint('  This is what will be displayed on the questions screen');
+      debugPrint('  If this doesn\'t match the card count, there\'s a mismatch!');
+    }
+    
+    debugPrint('=== END FILTERING DEBUG ===');
+    
     return filteredQuestions;
   }
 
@@ -421,41 +473,57 @@ class InterviewService extends ChangeNotifier {
     return questions.where((q) => q.difficulty == difficulty).toList();
   }
   
-  // ✅ FIXED: Get filtered questions using server-aligned logic
+  // ✅ UPDATED: Get filtered questions using same logic as getQuestionsByCategory (now supports subtopics)
   List<InterviewQuestion> getFilteredQuestions({
     String category = 'all',
     String difficulty = 'all',
     String searchQuery = '',
     bool includeDrafts = false,
+    bool isSubtopic = false, // New parameter to indicate if category is actually a subtopic
   }) {
     // Start with either all questions or just published ones
     final baseList = includeDrafts ? _questions : questions;
     
     return baseList.where((q) {
-      // Filter by category using SAME logic as getQuestionsByCategory and server
+      // Filter by category using SAME logic as getQuestionsByCategory
       if (category != 'all') {
-        // ✅ PRIMARY: Check if question has categoryId field (server-generated)
-        if (q.categoryId != null) {
-          final serverUICategory = CategoryMapper.mapInternalToUICategory(q.categoryId!);
-          if (serverUICategory == category) {
-            return true; // ✅ FIXED: Return immediately if categoryId matches
+        // If this is a subtopic search, match by subtopic directly
+        if (isSubtopic) {
+          // FIXED: Use same normalization as counting and getQuestionsByCategory
+          final questionSubtopic = q.subtopic.trim();
+          final targetSubtopic = category.trim();
+          if (questionSubtopic != targetSubtopic) {
+            return false;
           }
-        }
-        
-        // ✅ FALLBACK: Use legacy category mapping ONLY for questions without categoryId
-        if (q.categoryId == null) {
-          final mappedCategory = CategoryMapper.getDefaultCategory(q.category);
-          if (mappedCategory == category) {
-            return true;
+        } else {
+          // Use the original category matching logic
+          bool matches = false;
+          
+          // PRIMARY: Check categoryId field
+          if (q.categoryId != null) {
+            final serverUICategory = CategoryMapper.mapInternalToUICategory(q.categoryId!);
+            if (serverUICategory == category) {
+              matches = true;
+            }
           }
           
-          // ✅ SPECIAL: Handle specific subtopic patterns for legacy questions
-          if (_isSpecialSubtopicMatch(category, q)) {
-            return true;
+          // FALLBACK: Use legacy category mapping
+          if (!matches) {
+            final mappedCategory = CategoryMapper.getDefaultCategory(q.category);
+            if (mappedCategory == category) {
+              matches = true;
+            }
+          }
+          
+          // SPECIAL: Handle subtopic patterns
+          if (!matches && _isSpecialSubtopicMatch(category, q)) {
+            matches = true;
+          }
+          
+          if (!matches) {
+            return false;
           }
         }
-        
-        return false; // ✅ FIXED: Explicit rejection if no matches
       }
       
       // Filter by difficulty
@@ -501,7 +569,7 @@ class InterviewService extends ChangeNotifier {
   Future<void> addQuestion(InterviewQuestion question) async {
     // Debug log to track the question being added
     debugPrint('Adding new question: ${question.text} with isDraft=${question.isDraft}');
-    debugPrint('Question details - Category: ${question.category}, UI Category: ${CategoryMapper.getDefaultCategory(question.category)}, Subtopic: ${question.subtopic}');
+    debugPrint('Question details - Category: ${question.category}, CategoryId: ${question.categoryId}, UI Category: ${CategoryMapper.getDefaultCategory(question.category)}, Subtopic: ${question.subtopic}');
     
     // Add to the in-memory list
     _questions.add(question);
@@ -515,6 +583,29 @@ class InterviewService extends ChangeNotifier {
     // Debug log to confirm question count
     debugPrint('Questions count after adding: ${_questions.length}');
     debugPrint('Published questions: ${questions.length}, Drafts: ${drafts.length}');
+    
+    // ✅ ADDED: Debug verification for category mapping
+    _debugQuestionCategoryMapping(question);
+  }
+  
+  // ✅ FIXED: Debug method to verify question category mapping (simplified)
+  void _debugQuestionCategoryMapping(InterviewQuestion question) {
+    debugPrint('=== CATEGORY MAPPING DEBUG FOR QUESTION ${question.id} ===');
+    debugPrint('Question text: ${question.text}');
+    debugPrint('Internal category: ${question.category}');
+    debugPrint('CategoryId field: ${question.categoryId}');
+    debugPrint('Subtopic: ${question.subtopic}');
+    
+    // Show the final UI category this question will appear in
+    if (question.categoryId != null) {
+      final uiCategory = CategoryMapper.mapInternalToUICategory(question.categoryId!);
+      debugPrint('✅ WILL APPEAR in "$uiCategory" category (using categoryId)');
+    } else {
+      final uiCategory = CategoryMapper.getDefaultCategory(question.category);
+      debugPrint('✅ WILL APPEAR in "$uiCategory" category (using legacy mapping)');
+    }
+    
+    debugPrint('=== END CATEGORY MAPPING DEBUG ===');
   }
   
   // Update a question
@@ -729,6 +820,94 @@ class InterviewService extends ChangeNotifier {
         .toList();
   }
   
+  /// Debug method to verify subtopic counts and identify mismatches
+  void debugSubtopicCounts([String? specificSubtopic]) {
+    debugPrint('=== SUBTOPIC COUNT DEBUG ===');
+    
+    final subtopicCounts = <String, int>{};
+    final allPublishedQuestions = questions; // This gets non-draft questions
+    
+    debugPrint('Total published questions: ${allPublishedQuestions.length}');
+    
+    for (final question in allPublishedQuestions) {
+      final normalizedSubtopic = question.subtopic.trim();
+      if (normalizedSubtopic.isNotEmpty) {
+        subtopicCounts[normalizedSubtopic] = (subtopicCounts[normalizedSubtopic] ?? 0) + 1;
+        
+        if (specificSubtopic != null && normalizedSubtopic == specificSubtopic) {
+          debugPrint('FOUND for $specificSubtopic: "${question.text}"');
+          debugPrint('  - Raw subtopic: "${question.subtopic}"');
+          debugPrint('  - Normalized: "$normalizedSubtopic"');
+          debugPrint('  - isDraft: ${question.isDraft}');
+        }
+      }
+    }
+    
+    debugPrint('All subtopic counts:');
+    final sortedSubtopics = subtopicCounts.keys.toList()..sort();
+    for (final subtopic in sortedSubtopics) {
+      debugPrint('  $subtopic: ${subtopicCounts[subtopic]}');
+    }
+    
+    if (specificSubtopic != null) {
+      debugPrint('');
+      debugPrint('SPECIFIC DEBUG for: $specificSubtopic');
+      debugPrint('Count: ${subtopicCounts[specificSubtopic] ?? 0}');
+      
+      // Test filtering with same subtopic
+      final filtered = getQuestionsByCategory(specificSubtopic, isSubtopic: true);
+      debugPrint('Filtered count: ${filtered.length}');
+      
+      if ((subtopicCounts[specificSubtopic] ?? 0) != filtered.length) {
+        debugPrint('⚠️  COUNT MISMATCH DETECTED!');
+        debugPrint('   Counting found: ${subtopicCounts[specificSubtopic] ?? 0}');
+        debugPrint('   Filtering found: ${filtered.length}');
+      } else {
+        debugPrint('✅ Counts match correctly');
+      }
+    }
+    
+    debugPrint('=========================');
+  }
+  
+  /// Debug method to print all questions and their category mappings
+  void debugPrintAllQuestions() {
+    debugPrint('=== ALL QUESTIONS DEBUG ===');
+    for (int i = 0; i < _questions.length; i++) {
+      final q = _questions[i];
+      debugPrint('[$i] ID: ${q.id}');
+      debugPrint('    Text: ${q.text}'); 
+      debugPrint('    Category: ${q.category}');
+      debugPrint('    CategoryId: ${q.categoryId}');
+      debugPrint('    Subtopic: ${q.subtopic}');
+      debugPrint('    isDraft: ${q.isDraft}');
+      debugPrint('    UI Category: ${CategoryMapper.getDefaultCategory(q.category)}');
+    }
+    debugPrint('Total: ${_questions.length}, Published: ${questions.length}');
+    debugPrint('=========================');
+  }
+  
+  /// Debug method to verify category counts
+  void debugCategoryCounts() {
+    final counts = <String, int>{};
+    
+    for (final question in questions) {
+      String uiCategory;
+      if (question.categoryId != null) {
+        uiCategory = CategoryMapper.mapInternalToUICategory(question.categoryId!);
+      } else {
+        uiCategory = CategoryMapper.getDefaultCategory(question.category);
+      }
+      counts[uiCategory] = (counts[uiCategory] ?? 0) + 1;
+    }
+    
+    debugPrint('=== LOCAL CATEGORY COUNTS ===');
+    for (final entry in counts.entries) {
+      debugPrint('${entry.key}: ${entry.value} questions');
+    }
+    debugPrint('=============================');
+  }
+
   // Search for interview questions containing the query
   Future<List<InterviewQuestion>> searchQuestions(String query) async {
     final normalizedQuery = query.toLowerCase().trim();

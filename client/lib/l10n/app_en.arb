@@ -88,9 +88,9 @@
   "@interviewQuestions": {
     "description": "Title for interview questions section"
   },
-  "otherCategories": "Other Interview Categories",
+  "otherCategories": "Subtopics",
   "@otherCategories": {
-    "description": "Header for other interview categories section"
+    "description": "Header for subtopics section"
   },
   "browseByTopic": "Browse by Topic",
   "@browseByTopic": {

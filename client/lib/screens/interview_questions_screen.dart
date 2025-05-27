@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../widgets/interview/category_filter.dart';
 import '../widgets/interview/difficulty_filter.dart';
 import '../widgets/interview/interview_question_card_improved.dart';
-import '../widgets/interview/category_accordion.dart';
 import '../widgets/interview/answer_view.dart';
 import '../widgets/multi_action_fab.dart';
 import '../models/interview_question.dart';
@@ -20,10 +19,12 @@ import 'create_flashcard_screen.dart';
 
 class InterviewQuestionsScreen extends StatefulWidget {
   final String category;
+  final bool isSubtopic; // New parameter to indicate if category is actually a subtopic
   
   const InterviewQuestionsScreen({
     super.key,
     required this.category,
+    this.isSubtopic = false, // Default to false for backward compatibility
   });
   
   @override
@@ -34,13 +35,6 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
   String _activeCategory = 'all';
   String _activeDifficulty = 'all';
   final TextEditingController _searchController = TextEditingController();
-  final Map<String, bool> _expandedCategories = {
-    'technical': true,
-    'applied': false,
-    'case': false,
-    'behavioral': false,
-    'job': false,
-  };
   
   InterviewService? _interviewService;
 
@@ -64,7 +58,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
     super.dispose();
   }
   
-  // Get filtered questions using the service
+  // Get filtered questions using the service - UPDATED: Support subtopic filtering
   List<InterviewQuestion> _getFilteredQuestions() {
     if (_interviewService == null) {
       return [];
@@ -74,6 +68,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
       category: _activeCategory,
       difficulty: _activeDifficulty,
       searchQuery: _searchController.text,
+      isSubtopic: widget.isSubtopic, // Pass the isSubtopic flag
     );
     
     // ✅ ADDED: Debug validation to verify count consistency
@@ -147,83 +142,6 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
     }
   }
   
-  // Toggle category expansion in the accordion
-  void _toggleCategoryExpansion(String category) {
-    setState(() {
-      _expandedCategories[category] = !(_expandedCategories[category] ?? false);
-    });
-  }
-  
-  // Get all subtopics for a category using the service
-  List<String> _getCategorySubtopics(String category) {
-    if (_interviewService == null) {
-      return [];
-    }
-    
-    // Get all subtopics for this category
-    List<String> subtopics = _interviewService!.getSubtopicsForCategory(category);
-    
-    // Get all unique subtopics across all categories
-    List<String> allSubtopics = _interviewService!.getAllUniqueSubtopics();
-    
-    // Find any custom subtopics that might belong to this category based on questions
-    for (var subtopic in allSubtopics) {
-      // Get questions for this subtopic
-      final questions = _interviewService!.getQuestionsBySubtopic(subtopic);
-      
-      // If any question with this subtopic belongs to the current category, add it
-      if (questions.any((q) => q.category == category) && !subtopics.contains(subtopic)) {
-        subtopics.add(subtopic);
-      }
-    }
-    
-    debugPrint('Category $category has subtopics: ${subtopics.join(", ")}');
-    return subtopics;
-  }
-  
-  // Helper method to get category name
-  String _getCategoryName(String categoryId) {
-    // Use CategoryMapper to get UI category name from internal category ID
-    return CategoryMapper.mapInternalToUICategory(categoryId);
-  }
-  
-  // Helper method to get category icon
-  IconData _getCategoryIcon(String categoryId) {
-    switch (categoryId) {
-      case 'technical':
-        return Icons.bar_chart;
-      case 'applied':
-        return Icons.build;
-      case 'case':
-        return Icons.trending_up;
-      case 'behavioral':
-        return Icons.psychology;
-      case 'job':
-        return Icons.work;
-      default:
-        return Icons.help_outline;
-    }
-  }
-  
-  // Helper method to get category color
-  Color _getCategoryColor(String categoryId) {
-    final isDarkMode = context.isDarkMode;
-    switch (categoryId) {
-      case 'technical':
-        return isDarkMode ? const Color(0xFF1E3A8A) : Colors.blue.shade100;
-      case 'applied':
-        return isDarkMode ? const Color(0xFF064E3B) : Colors.green.shade100;
-      case 'case':
-        return isDarkMode ? const Color(0xFF4C1D95) : Colors.purple.shade100;
-      case 'behavioral':
-        return isDarkMode ? const Color(0xFF854D0E) : Colors.yellow.shade100;
-      case 'job':
-        return isDarkMode ? const Color(0xFF991B1B) : Colors.red.shade100;
-      default:
-        return isDarkMode ? const Color(0xFF374151) : Colors.grey.shade100;
-    }
-  }
-  
   // Calculate progress for the user using the service
   (int, int) _calculateProgress() {
     if (_interviewService == null) {
@@ -239,9 +157,6 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
     final filteredQuestions = _getFilteredQuestions();
     final (completed, total) = _calculateProgress();
     final progressPercent = total > 0 ? (completed / total * 100).round() : 0;
-    
-    // Get categories from questions for the accordion
-    final categories = ['technical', 'applied', 'case', 'behavioral', 'job'];
     
     return Scaffold(
       appBar: AppBar(
@@ -395,35 +310,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                   },
                 ),
                 
-                const SizedBox(height: DS.spacingL),
-                
-                // Question Categories Header
-                Text(
-                  'Question Categories',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: context.onSurfaceColor,
-                  ),
-                ),
-                
-                const SizedBox(height: DS.spacingS),
-                
-                // Using our category accordion widget
-                ...categories.map((category) {
-                  final subtopics = _getCategorySubtopics(category);
-                  final isExpanded = _expandedCategories[category] ?? false;
-                  
-                  return CategoryAccordion(
-                    categoryId: category,
-                    categoryName: _getCategoryName(category),
-                    categoryIcon: _getCategoryIcon(category),
-                    categoryColor: _getCategoryColor(category),
-                    subtopics: subtopics,
-                    isExpanded: isExpanded,
-                    onToggle: () => _toggleCategoryExpansion(category),
-                  );
-                }),
+                // ✅ REMOVED: Question Categories section per user request
                 
                 const SizedBox(height: DS.spacingL),
                 

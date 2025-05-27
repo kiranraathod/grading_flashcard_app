@@ -63,128 +63,92 @@ class DefaultDataService:
         self, user_id: Optional[str] = None, category: Optional[str] = None, 
         difficulty: Optional[str] = None
     ) -> List[DefaultInterviewQuestionResponse]:
-        """Get comprehensive interview questions covering all UI categories."""
+        """Get exactly 6 subtopics with 3 questions each (18 total questions)."""
         logger.info(f"Generating interview questions for user: {user_id}")
         
-        # Comprehensive question database covering all 6+ UI categories
+        # UPDATED: Exactly 6 subtopics with 3 questions each = 18 total questions
         questions = [
-            # Data Analysis Category (18+ questions)
+            # Data Analysis Subtopic (3 questions)
             DefaultInterviewQuestionResponse(
                 id="data-analysis-1", text="How would you handle missing data in a dataset?",
-                category="applied", subtopic="Data Cleaning & Preprocessing", difficulty="entry",
+                category="applied", subtopic="Data Analysis", difficulty="entry",
                 answer="Identify patterns, evaluate extent, choose imputation strategy, validate approach.",
                 user_id=user_id, category_id="data_analysis"
             ),
             DefaultInterviewQuestionResponse(
                 id="data-analysis-2", text="Explain the difference between correlation and causation",
-                category="applied", subtopic="Statistical Analysis", difficulty="entry",
+                category="applied", subtopic="Data Analysis", difficulty="entry",
                 answer="Correlation indicates relationship strength, causation implies direct cause-effect relationship.",
                 user_id=user_id, category_id="data_analysis"
             ),
             DefaultInterviewQuestionResponse(
                 id="data-analysis-3", text="How do you detect outliers in data?",
-                category="applied", subtopic="Data Cleaning & Preprocessing", difficulty="mid",
+                category="applied", subtopic="Data Analysis", difficulty="mid",
                 answer="Use statistical methods like IQR, Z-score, or visualization techniques like box plots.",
                 user_id=user_id, category_id="data_analysis"
             ),
-            DefaultInterviewQuestionResponse(
-                id="data-analysis-4", text="What is exploratory data analysis (EDA)?",
-                category="applied", subtopic="Data Analysis", difficulty="entry",
-                answer="Process of analyzing datasets to summarize main characteristics using statistical graphics.",
-                user_id=user_id, category_id="data_analysis"
-            ),
-            DefaultInterviewQuestionResponse(
-                id="data-analysis-5", text="How do you validate data quality?",
-                category="applied", subtopic="Data Quality", difficulty="mid",
-                answer="Check completeness, accuracy, consistency, timeliness, and validity of data.",
-                user_id=user_id, category_id="data_analysis"
-            ),
 
-            # Machine Learning Category (22+ questions)
+            # Machine Learning Subtopic (3 questions)
             DefaultInterviewQuestionResponse(
                 id="ml-1", text="Explain machine learning bias and variance",
-                category="technical", subtopic="ML Algorithms", difficulty="mid",
+                category="technical", subtopic="Machine Learning", difficulty="mid",
                 answer="Bias is error from oversimplification, variance is error from sensitivity to data.",
                 user_id=user_id, category_id="machine_learning"
             ),
             DefaultInterviewQuestionResponse(
                 id="ml-2", text="What is overfitting and how do you prevent it?",
-                category="technical", subtopic="Model Evaluation", difficulty="mid",
+                category="technical", subtopic="Machine Learning", difficulty="mid",
                 answer="Overfitting occurs when model memorizes training data. Prevent with regularization, cross-validation.",
                 user_id=user_id, category_id="machine_learning"
             ),
             DefaultInterviewQuestionResponse(
                 id="ml-3", text="Explain the difference between supervised and unsupervised learning",
-                category="technical", subtopic="ML Fundamentals", difficulty="entry",
+                category="technical", subtopic="Machine Learning", difficulty="entry",
                 answer="Supervised uses labeled data for prediction, unsupervised finds patterns in unlabeled data.",
                 user_id=user_id, category_id="machine_learning"
             ),
-            DefaultInterviewQuestionResponse(
-                id="ml-4", text="What is cross-validation and why is it important?",
-                category="technical", subtopic="Model Evaluation", difficulty="mid",
-                answer="Technique to assess model performance by training on subsets and testing on holdout data.",
-                user_id=user_id, category_id="machine_learning"
-            ),
-            DefaultInterviewQuestionResponse(
-                id="ml-5", text="Explain gradient descent algorithm",
-                category="technical", subtopic="Optimization", difficulty="senior",
-                answer="Iterative optimization algorithm that finds minimum of cost function using gradients.",
-                user_id=user_id, category_id="machine_learning"
-            ),
 
-            # SQL Category (10+ questions)
+            # SQL Database Subtopic (3 questions)
             DefaultInterviewQuestionResponse(
                 id="sql-1", text="Explain the difference between INNER JOIN and LEFT JOIN",
-                category="technical", subtopic="SQL & Database", difficulty="entry",
+                category="technical", subtopic="SQL Database", difficulty="entry",
                 answer="INNER JOIN returns only matching records, LEFT JOIN returns all left table records.",
                 user_id=user_id, category_id="sql"
             ),
             DefaultInterviewQuestionResponse(
                 id="sql-2", text="What is a subquery and when would you use it?",
-                category="technical", subtopic="SQL Queries", difficulty="mid",
+                category="technical", subtopic="SQL Database", difficulty="mid",
                 answer="Query nested inside another query, useful for complex filtering and calculations.",
                 user_id=user_id, category_id="sql"
             ),
             DefaultInterviewQuestionResponse(
                 id="sql-3", text="How do you optimize a slow SQL query?",
-                category="technical", subtopic="Performance Optimization", difficulty="senior",
+                category="technical", subtopic="SQL Database", difficulty="senior",
                 answer="Add indexes, analyze execution plan, rewrite joins, limit result sets, update statistics.",
                 user_id=user_id, category_id="sql"
             ),
-            DefaultInterviewQuestionResponse(
-                id="sql-4", text="Explain database normalization",
-                category="technical", subtopic="Database Design", difficulty="mid",
-                answer="Process of organizing data to minimize redundancy and dependency issues.",
-                user_id=user_id, category_id="sql"
-            ),
 
-            # Python Category (14+ questions)
+            # Python Programming Subtopic (3 questions)
             DefaultInterviewQuestionResponse(
                 id="python-1", text="What are Python decorators?",
-                category="technical", subtopic="Python Fundamentals", difficulty="mid",
+                category="technical", subtopic="Python Programming", difficulty="mid",
                 answer="Functions that modify or extend behavior of other functions without changing their code.",
                 user_id=user_id, category_id="python"
             ),
             DefaultInterviewQuestionResponse(
                 id="python-2", text="Explain list comprehensions in Python",
-                category="technical", subtopic="Python Syntax", difficulty="entry",
+                category="technical", subtopic="Python Programming", difficulty="entry",
                 answer="Concise way to create lists using syntax: [expression for item in iterable if condition]",
                 user_id=user_id, category_id="python"
             ),
             DefaultInterviewQuestionResponse(
                 id="python-3", text="What is the difference between == and is in Python?",
-                category="technical", subtopic="Python Fundamentals", difficulty="entry",
+                category="technical", subtopic="Python Programming", difficulty="entry",
                 answer="== compares values, 'is' compares object identity (memory location).",
                 user_id=user_id, category_id="python"
             ),
-            DefaultInterviewQuestionResponse(
-                id="python-4", text="Explain Python's GIL (Global Interpreter Lock)",
-                category="technical", subtopic="Python Internals", difficulty="senior",
-                answer="Mutex that prevents multiple threads from executing Python bytecodes simultaneously.",
-                user_id=user_id, category_id="python"
-            ),
 
-            # Web Development Category (15+ questions)
+            # API Development Subtopic (3 questions)
             DefaultInterviewQuestionResponse(
                 id="web-1", text="What is RESTful API design?",
                 category="technical", subtopic="API Development", difficulty="mid",
@@ -193,33 +157,33 @@ class DefaultDataService:
             ),
             DefaultInterviewQuestionResponse(
                 id="web-2", text="Explain the difference between GET and POST requests",
-                category="technical", subtopic="HTTP Methods", difficulty="entry",
+                category="technical", subtopic="API Development", difficulty="entry",
                 answer="GET retrieves data (idempotent), POST sends data to server (may cause changes).",
                 user_id=user_id, category_id="web_development"
             ),
             DefaultInterviewQuestionResponse(
                 id="web-3", text="What is CORS and why is it important?",
-                category="technical", subtopic="Web Security", difficulty="mid",
+                category="technical", subtopic="API Development", difficulty="mid",
                 answer="Cross-Origin Resource Sharing - security feature that controls cross-domain requests.",
                 user_id=user_id, category_id="web_development"
             ),
 
-            # Statistics Category (8+ questions)
+            # Statistics Subtopic (3 questions)
             DefaultInterviewQuestionResponse(
                 id="stats-1", text="What is the central limit theorem?",
-                category="technical", subtopic="Statistical Theory", difficulty="mid",
+                category="technical", subtopic="Statistics", difficulty="mid",
                 answer="Sample means approach normal distribution as sample size increases, regardless of population distribution.",
                 user_id=user_id, category_id="statistics"
             ),
             DefaultInterviewQuestionResponse(
                 id="stats-2", text="Explain Type I and Type II errors",
-                category="technical", subtopic="Hypothesis Testing", difficulty="mid",
+                category="technical", subtopic="Statistics", difficulty="mid",
                 answer="Type I: false positive (reject true null), Type II: false negative (accept false null).",
                 user_id=user_id, category_id="statistics"
             ),
             DefaultInterviewQuestionResponse(
                 id="stats-3", text="What is p-value and how do you interpret it?",
-                category="technical", subtopic="Statistical Significance", difficulty="entry",
+                category="technical", subtopic="Statistics", difficulty="entry",
                 answer="Probability of observing results at least as extreme as observed, assuming null hypothesis is true.",
                 user_id=user_id, category_id="statistics"
             ),

@@ -183,10 +183,10 @@ abstract class AppLocalizations {
   /// **'Interview Questions'**
   String get interviewQuestions;
 
-  /// Header for other interview categories section
+  /// Header for subtopics section
   ///
   /// In en, this message translates to:
-  /// **'Other Interview Categories'**
+  /// **'Subtopics'**
   String get otherCategories;
 
   /// Header for browsing questions by topic

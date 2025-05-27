@@ -62,7 +62,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get interviewQuestions => 'Interview Questions';
 
   @override
-  String get otherCategories => 'Other Interview Categories';
+  String get otherCategories => 'Subtopics';
 
   @override
   String get browseByTopic => 'Browse by Topic';

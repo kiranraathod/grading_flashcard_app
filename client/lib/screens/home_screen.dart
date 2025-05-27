@@ -10,6 +10,7 @@ import '../utils/design_system.dart';
 import '../utils/spacing_components.dart';
 import '../utils/keyboard_shortcuts.dart';
 import '../utils/responsive_helpers.dart';
+
 import '../blocs/recent_view/recent_view_bloc.dart';
 import '../blocs/recent_view/recent_view_event.dart';
 import '../screens/search/search_results_screen.dart';
@@ -25,7 +26,7 @@ import '../services/flashcard_service.dart';
 import '../services/interview_service.dart';
 import '../services/recent_view_service.dart';
 import '../services/default_data_service.dart';
-import '../utils/category_theme.dart';
+
 import '../widgets/interview/arrow_painter.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -1073,25 +1074,163 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Load category counts from server with fallback to empty map
+  /// Load category counts from server and combine with local question counts - UPDATED: Focus on subtopics
   Future<Map<String, int>> _loadCategoryCounts() async {
     try {
-      return await _defaultDataService.loadCategoryCounts();
+      // Check if widget is still mounted before using context
+      if (!mounted) return <String, int>{};
+      
+      // Get local question counts from InterviewService (now using subtopics)
+      final interviewService = Provider.of<InterviewService>(context, listen: false);
+      final localCounts = _calculateLocalCategoryCounts(interviewService);
+      
+      // Also get server questions directly to extract their subtopics
+      final serverQuestions = await _defaultDataService.loadDefaultInterviewQuestions();
+      final serverSubtopicCounts = <String, int>{};
+      
+      debugPrint('=== COUNTING DEBUG: Server Questions ===');
+      debugPrint('Total server questions: ${serverQuestions.length}');
+      
+      for (final question in serverQuestions) {
+        // FIXED: Normalize subtopic consistently (same as local counting)
+        final rawSubtopic = question.subtopic;
+        final normalizedSubtopic = rawSubtopic.trim();
+        
+        // SPECIAL DEBUG: Track API Development questions specifically
+        if (normalizedSubtopic.toLowerCase().contains('api') || question.text.toLowerCase().contains('api')) {
+          debugPrint('🔍 POTENTIAL API DEV SERVER QUESTION:');
+          debugPrint('  Text: "${question.text}"');
+          debugPrint('  Raw subtopic: "$rawSubtopic"');
+          debugPrint('  Normalized subtopic: "$normalizedSubtopic"');
+          debugPrint('  Category: "${question.category}"');
+          debugPrint('  CategoryId: "${question.categoryId}"');
+          debugPrint('  isDraft: ${question.isDraft}');
+        }
+        
+        if (normalizedSubtopic.isNotEmpty) {
+          serverSubtopicCounts[normalizedSubtopic] = (serverSubtopicCounts[normalizedSubtopic] ?? 0) + 1;
+          if (normalizedSubtopic == 'API Development') {
+            debugPrint('  ✅ Added SERVER question to "API Development": "${question.text}"');
+          }
+        }
+      }
+      
+      // Combine server and local subtopic counts
+      final combinedCounts = Map<String, int>.from(serverSubtopicCounts);
+      for (final entry in localCounts.entries) {
+        combinedCounts[entry.key] = (combinedCounts[entry.key] ?? 0) + entry.value;
+      }
+      
+      // 🔧 QUICK FIX: Verify counts using actual filtering to ensure accuracy
+      // Check if widget is still mounted before using context again
+      if (!mounted) return <String, int>{};
+      
+      final verifiedCounts = <String, int>{};
+      
+      for (final entry in combinedCounts.entries) {
+        final subtopic = entry.key;
+        // Get the actual count by filtering (same logic as clicking the card)
+        final actualQuestions = interviewService.getQuestionsByCategory(subtopic, isSubtopic: true);
+        final actualCount = actualQuestions.length;
+        
+        verifiedCounts[subtopic] = actualCount;
+        
+        // Debug only major mismatches
+        if (entry.value != actualCount) {
+          debugPrint('⚠️  COUNT MISMATCH for $subtopic: calculated=${entry.value}, actual=$actualCount');
+        }
+      }
+      
+      debugPrint('Server subtopic counts: $serverSubtopicCounts');
+      debugPrint('Local subtopic counts: $localCounts');
+      debugPrint('Combined subtopic counts: $combinedCounts');
+      debugPrint('Verified subtopic counts: $verifiedCounts');
+      
+      // SPECIAL DEBUG: API Development specific summary
+      final serverApiCount = serverSubtopicCounts['API Development'] ?? 0;
+      final localApiCount = localCounts['API Development'] ?? 0;
+      final combinedApiCount = combinedCounts['API Development'] ?? 0;
+      final verifiedApiCount = verifiedCounts['API Development'] ?? 0;
+      
+      debugPrint('🎯 API DEVELOPMENT COUNT SUMMARY:');
+      debugPrint('  Server count: $serverApiCount');
+      debugPrint('  Local count: $localApiCount');
+      debugPrint('  Combined count: $combinedApiCount');
+      debugPrint('  Verified count: $verifiedApiCount');
+      debugPrint('  Using verified count for display: $verifiedApiCount');
+      
+      return verifiedCounts;
     } catch (e) {
-      debugPrint(
-        'Failed to load category counts from server: $e',
-      );
-      // Return empty map to let UI handle gracefully
-      return <String, int>{};
+      debugPrint('Failed to load subtopic counts: $e');
+      
+      // Check if widget is still mounted before using context
+      if (!mounted) return <String, int>{};
+      
+      // Fallback: Use only local counts if server fails, but verify them too
+      final fallbackInterviewService = Provider.of<InterviewService>(context, listen: false);
+      final localCounts = _calculateLocalCategoryCounts(fallbackInterviewService);
+      
+      // Verify local counts using actual filtering
+      final verifiedLocalCounts = <String, int>{};
+      for (final entry in localCounts.entries) {
+        final subtopic = entry.key;
+        final actualCount = fallbackInterviewService.getQuestionsByCategory(subtopic, isSubtopic: true).length;
+        verifiedLocalCounts[subtopic] = actualCount;
+      }
+      
+      return verifiedLocalCounts;
     }
   }
+  
+  /// Calculate question counts from local InterviewService - UPDATED: Use subtopics instead of categories
+  Map<String, int> _calculateLocalCategoryCounts(InterviewService interviewService) {
+    final localCounts = <String, int>{};
+    
+    // Get all published questions
+    final publishedQuestions = interviewService.questions;
+    
+    debugPrint('=== COUNTING DEBUG: Local Questions ===');
+    debugPrint('Total published questions: ${publishedQuestions.length}');
+    
+    for (final question in publishedQuestions) {
+      // FIXED: Normalize subtopic consistently (trim + toLowerCase for case-insensitive comparison)
+      final rawSubtopic = question.subtopic;
+      final normalizedSubtopic = rawSubtopic.trim();
+      
+      // SPECIAL DEBUG: Track API Development questions specifically
+      if (normalizedSubtopic.toLowerCase().contains('api') || question.text.toLowerCase().contains('api')) {
+        debugPrint('🔍 POTENTIAL API DEV LOCAL QUESTION:');
+        debugPrint('  Text: "${question.text}"');
+        debugPrint('  Raw subtopic: "$rawSubtopic"');
+        debugPrint('  Normalized subtopic: "$normalizedSubtopic"');
+        debugPrint('  Category: "${question.category}"');
+        debugPrint('  CategoryId: "${question.categoryId}"');
+        debugPrint('  isDraft: ${question.isDraft}');
+      }
+      
+      if (normalizedSubtopic.isNotEmpty) {
+        localCounts[normalizedSubtopic] = (localCounts[normalizedSubtopic] ?? 0) + 1;
+        if (normalizedSubtopic == 'API Development') {
+          debugPrint('  ✅ Added LOCAL question to "API Development": "${question.text}"');
+        }
+      } else {
+        // Fallback for questions without subtopic
+        localCounts['General'] = (localCounts['General'] ?? 0) + 1;
+        debugPrint('  - Added to General category, new count: ${localCounts['General']}');
+      }
+    }
+    
+    debugPrint('Final local subtopic counts: $localCounts');
+    debugPrint('=== END COUNTING DEBUG ===');
+    return localCounts;
+  }
 
-  // Method for displaying topic categories - FIXED: Use only server categories
+  // Method for displaying topic categories - UPDATED: Display individual subtopics instead of grouped categories
   Widget _buildTopicCategories() {
     return FutureBuilder<Map<String, int>>(
       future: _loadCategoryCounts(),
       builder: (context, snapshot) {
-        List<Map<String, dynamic>> categories;
+        List<Map<String, dynamic>> subtopics = [];
 
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -1103,33 +1242,35 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-          // ✅ SOLUTION: Use ONLY server-generated categories
-          categories = snapshot.data!.entries
-              .where((entry) => entry.value > 0) // Filter out empty categories
-              .map((entry) => {'title': entry.key, 'count': entry.value})
-              .toList();
+          // All subtopics from combined server + local counts
+          for (final entry in snapshot.data!.entries) {
+            if (entry.value > 0) {
+              subtopics.add({
+                'title': entry.key, 
+                'count': entry.value, 
+                'isCustom': !_isStandardSubtopic(entry.key) // Check if it's a standard or custom subtopic
+              });
+            }
+          }
+          
+          // Sort subtopics alphabetically for better organization
+          subtopics.sort((a, b) => a['title'].toString().compareTo(b['title'].toString()));
               
-          debugPrint('Using ${categories.length} server-generated categories');
+          debugPrint('Displaying ${subtopics.length} subtopics');
+          debugPrint('Subtopics with counts: ${subtopics.map((s) => '${s['title']}: ${s['count']}').join(', ')}');
         } else {
-          // ✅ SOLUTION: Clean fallback categories (no duplicates)
-          categories = [
-            {'title': 'Data Analysis', 'count': 0},
-            {'title': 'Machine Learning', 'count': 0},
-            {'title': 'SQL', 'count': 0},
-            {'title': 'Python', 'count': 0},
-            {'title': 'Web Development', 'count': 0},
-            {'title': 'Statistics', 'count': 0},
+          // Fallback subtopics (only standard ones)
+          subtopics = [
+            {'title': 'Data Cleaning & Preprocessing', 'count': 0, 'isCustom': false},
+            {'title': 'Statistical Analysis', 'count': 0, 'isCustom': false},
+            {'title': 'ML Algorithms', 'count': 0, 'isCustom': false},
+            {'title': 'Model Evaluation', 'count': 0, 'isCustom': false},
+            {'title': 'SQL & Database', 'count': 0, 'isCustom': false},
+            {'title': 'Python Fundamentals', 'count': 0, 'isCustom': false},
           ];
           
-          debugPrint('Using fallback categories due to server issue');
+          debugPrint('Using fallback subtopics due to server issue');
         }
-
-        // ❌ REMOVED: No more subtopic-based category generation
-        // ❌ REMOVED: getAllUniqueSubtopics() logic
-        // ❌ REMOVED: customCategories creation
-        // ❌ REMOVED: finalCategories combination
-
-        debugPrint('Displaying ${categories.length} consolidated category cards');
 
         return GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -1146,25 +1287,57 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: categories.length,
+          itemCount: subtopics.length,
           itemBuilder: (context, index) {
-            final category = categories[index];
-            return _buildCategoryChip(category['title'], category['count']);
+            final subtopic = subtopics[index];
+            return _buildCategoryChip(subtopic['title'], subtopic['count'], subtopic['isCustom'] ?? false);
           },
         );
       },
     ); // Close FutureBuilder
   }
 
-  // Helper method for category chips
-  Widget _buildCategoryChip(String title, int count) {
+  /// Helper method to determine if a subtopic is standard (from server) or custom (user-created)
+  bool _isStandardSubtopic(String subtopic) {
+    // List of standard subtopics that come from the server
+    final standardSubtopics = {
+      'Data Cleaning & Preprocessing',
+      'Statistical Analysis', 
+      'Data Analysis',
+      'Data Quality',
+      'ML Algorithms',
+      'Model Evaluation', 
+      'ML Fundamentals',
+      'Optimization',
+      'SQL & Database',
+      'SQL Queries',
+      'Performance Optimization',
+      'Database Design',
+      'Python Fundamentals',
+      'Python Syntax',
+      'Python Internals',
+      'API Development',
+      'HTTP Methods',
+      'Web Security',
+      'Statistical Theory',
+      'Hypothesis Testing', 
+      'Statistical Significance',
+    };
+    return standardSubtopics.contains(subtopic);
+  }
+
+  // Helper method for category chips - UPDATED: Support subtopics with plain styling
+  Widget _buildCategoryChip(String title, int count, [bool isCustom = false]) {
     return InkWell(
       onTap: () {
-        // Navigate to interview questions for this category
+        // Navigate to interview questions for this subtopic
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => InterviewQuestionsScreen(category: title),
+            builder: (context) => InterviewQuestionsScreen(
+              category: title, // Now passing subtopic name instead of main category
+              isSubtopic: true, // Add flag to indicate this is a subtopic
+            ),
           ),
         );
       },
@@ -1174,32 +1347,34 @@ class _HomeScreenState extends State<HomeScreen> {
           vertical: DS.spacing2xs,
         ),
         decoration: BoxDecoration(
-          color: CategoryTheme.getContextAwareColor(context, title),
+          // Use plain styling for all subtopic cards
+          color: context.surfaceColor,
           borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-          border: Border.all(color: context.colorScheme.outline.withValues(alpha: 0.3)),
+          border: Border.all(
+            color: isCustom
+                ? context.colorScheme.outline.withValues(alpha: 0.7) // More prominent border for custom
+                : context.colorScheme.outline.withValues(alpha: 0.5), // Standard border for server subtopics
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Add category icon
-            Icon(
-              CategoryTheme.getIcon(title),
-              size: 24,
-              color: CategoryTheme.getContrastingTextColor(context, title),
-            ),
-            SizedBox(height: DS.spacing2xs),
+            // No icons for subtopics - just clean text
             Text(
               title,
               style: context.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
-                color: CategoryTheme.getContrastingTextColor(context, title),
+                color: context.onSurfaceColor,
               ),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
+            SizedBox(height: DS.spacing2xs),
             Text(
               AppLocalizations.of(context).questionCount(count),
               style: context.bodySmall?.copyWith(
-                color: CategoryTheme.getContrastingTextColor(context, title).withValues(alpha: 0.8),
+                color: context.onSurfaceVariantColor,
               ),
               textAlign: TextAlign.center,
             ),

@@ -201,6 +201,7 @@ class _CreateInterviewQuestionScreenState
       difficulty: _selectedDifficulty,
       answer: _answerTextController.text,
       isDraft: asDraft,
+      categoryId: _selectedCategory, // ✅ FIX: Set categoryId to match category for proper UI mapping
     );
 
     try {
@@ -393,69 +394,48 @@ class _CreateInterviewQuestionScreenState
 
         const SizedBox(height: 8),
 
-        // Grid of category options
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 2.5,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
+        // Category dropdown
+        DropdownButtonFormField<String>(
+          value: _selectedCategory.isNotEmpty ? _selectedCategory : null,
+          decoration: InputDecoration(
+            hintText: 'Select a category',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: AppColors.primary, width: 2),
+            ),
+            prefixIcon: _selectedCategory.isNotEmpty 
+                ? Icon(
+                    _categories.firstWhere((c) => c['id'] == _selectedCategory)['icon'],
+                    color: AppColors.primary,
+                  )
+                : Icon(Icons.category, color: Colors.grey.shade400),
           ),
-          itemCount: _categories.length,
-          itemBuilder: (context, index) {
-            final category = _categories[index];
-            final isSelected = _selectedCategory == category['id'];
-
-            return InkWell(
-              onTap: () {
-                setState(() {
-                  _selectedCategory = category['id'];
-                  _selectedSubtopic =
-                      ''; // Reset subtopic when category changes
-                  _isAddingCustomSubtopic = false;
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected ? category['color'] : Colors.transparent,
-                  border: Border.all(
-                    color:
-                        isSelected ? AppColors.primary : Colors.grey.shade300,
-                    width: isSelected ? 2 : 1,
+          items: _categories.map((category) {
+            return DropdownMenuItem<String>(
+              value: category['id'],
+              child: Row(
+                children: [
+                  Icon(
+                    category['icon'],
+                    size: 20,
+                    color: AppColors.primary,
                   ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      category['icon'],
-                      size: 18,
-                      color:
-                          isSelected ? AppColors.primary : Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        category['name'],
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight:
-                              isSelected ? FontWeight.w500 : FontWeight.normal,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+                  const SizedBox(width: 12),
+                  Text(category['name']),
+                ],
               ),
             );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _selectedCategory = value ?? '';
+              _selectedSubtopic = ''; // Reset subtopic when category changes
+              _isAddingCustomSubtopic = false;
+            });
           },
         ),
 
