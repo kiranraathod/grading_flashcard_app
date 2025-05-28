@@ -41,7 +41,6 @@ void main() {
               width: 300,
               child: FlashcardDeckCard(
                 title: 'Sample Deck',
-                category: 'Technical',
                 cardCount: 25,
                 progressPercent: 75,
                 onTap: () {},
@@ -65,7 +64,6 @@ void main() {
               width: 300,
               child: FlashcardDeckCard(
                 title: 'Sample Deck',
-                category: 'Technical',
                 cardCount: 25,
                 progressPercent: 75,
                 onTap: () {},

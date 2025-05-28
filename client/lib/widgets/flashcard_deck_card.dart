@@ -7,7 +7,6 @@ import 'themed_gradient_container.dart';
 
 class FlashcardDeckCard extends StatefulWidget {
   final String title;
-  final String category;
   final int cardCount;
   final int progressPercent;
   final VoidCallback onTap;
@@ -16,7 +15,6 @@ class FlashcardDeckCard extends StatefulWidget {
   const FlashcardDeckCard({
     super.key,
     required this.title,
-    required this.category,
     required this.cardCount,
     required this.progressPercent,
     required this.onTap,
@@ -91,28 +89,6 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Category badge
-                        Container(
-                          margin: EdgeInsets.only(bottom: 
-                            isVerySmall ? DS.spacing2xs * 0.5 : (isSmall ? DS.spacing2xs * 0.75 : (isMedium ? DS.spacing2xs : DS.spacingXs))
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: isVerySmall ? DS.spacing2xs * 0.75 : (isSmall ? DS.spacing2xs : (isMedium ? DS.spacing2xs + 2 : DS.spacingXs)),
-                            vertical: isVerySmall ? 1 : DS.spacing2xs * 0.5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: context.surfaceColor,
-                            borderRadius: BorderRadius.circular(DS.borderRadiusXs),
-                          ),
-                          child: Text(
-                            widget.category,
-                            style: isVerySmall ? 
-                              context.bodySmall?.copyWith(fontSize: 9) : 
-                              (isSmall ? 
-                                context.bodySmall?.copyWith(fontSize: 10) : 
-                                context.bodySmall),
-                          ),
-                        ),
                         // Title
                         Text(
                           widget.title,

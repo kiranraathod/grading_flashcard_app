@@ -25,7 +25,6 @@ void main() {
               width: 300,
               child: FlashcardDeckCard(
                 title: 'Accessibility Test Card',
-                category: 'Technical',
                 cardCount: 30,
                 progressPercent: 75,
                 onTap: () {},
@@ -60,7 +59,6 @@ void main() {
               width: 300,
               child: FlashcardDeckCard(
                 title: 'Large Text Test',
-                category: 'Accessibility',
                 cardCount: 15,
                 progressPercent: 50,
                 onTap: () {},
@@ -95,7 +93,6 @@ void main() {
               width: 350,
               child: FlashcardDeckCard(
                 title: 'Accessibility Standards Test',
-                category: 'User Experience',
                 cardCount: 42,
                 progressPercent: 88,
                 onTap: () {},

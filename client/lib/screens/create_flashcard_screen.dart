@@ -20,7 +20,6 @@ class CreateFlashcardScreen extends StatefulWidget {
 
 class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
   final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final List<Map<String, TextEditingController>> _terms = [];
   bool _isEditMode = false;
@@ -31,7 +30,6 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
     if (widget.editSet != null) {
       _isEditMode = true;
       _titleController.text = widget.editSet!.title;
-      _descriptionController.text = widget.editSet!.description;
       
       for (var flashcard in widget.editSet!.flashcards) {
         _terms.add({
@@ -77,7 +75,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
         // Update existing set
         FlashcardSet updatedSet = widget.editSet!.copyWith(
           title: _titleController.text,
-          description: _descriptionController.text,
+          description: '', // Empty description since field is removed
           flashcards: flashcards,
         );
         
@@ -87,7 +85,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
         FlashcardSet newSet = FlashcardSet(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: _titleController.text,
-          description: _descriptionController.text,
+          description: '', // Empty description since field is removed
           flashcards: flashcards,
         );
 
@@ -103,7 +101,6 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
   @override
   void dispose() {
     _titleController.dispose();
-    _descriptionController.dispose();
     for (var term in _terms) {
       term['term']?.dispose();
       term['definition']?.dispose();
@@ -197,36 +194,6 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
                   }
                   return null;
                 },
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _descriptionController,
-                style: context.bodyLarge,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Enter Description',
-                  hintStyle: context.bodyMedium?.copyWith(
-                    color: context.onSurfaceVariantColor,
-                  ),
-                  filled: true,
-                  fillColor: context.surfaceVariantColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(16)),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(16)),
-                    borderSide: BorderSide(
-                      color: context.primaryColor,
-                      width: 2,
-                    ),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                ),
               ),
               const SizedBox(height: 24),
 

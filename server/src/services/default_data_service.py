@@ -48,7 +48,7 @@ class DefaultDataService:
         sets = [DefaultFlashcardSetResponse(
             id="python-basics-001",
             title="Python Basics",
-            description="Python fundamentals",
+            description="",  # Empty description
             is_draft=False,
             rating=4.5,
             rating_count=12,

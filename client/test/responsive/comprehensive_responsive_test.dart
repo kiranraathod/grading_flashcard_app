@@ -16,7 +16,6 @@ void main() {
               width: 300,
               child: FlashcardDeckCard(
                 title: 'Multi-Size Test Card',
-                category: 'Testing',
                 cardCount: 50,
                 progressPercent: 60,
                 onTap: () {},
@@ -48,7 +47,6 @@ void main() {
                   width: 320,
                   child: FlashcardDeckCard(
                     title: 'Accessibility Test',
-                    category: 'A11y',
                     cardCount: 25,
                     progressPercent: 80,
                     onTap: () {},
@@ -85,7 +83,6 @@ void main() {
                     width: size.width * 0.8, // Use 80% of screen width
                     child: FlashcardDeckCard(
                       title: 'Extreme Test Case',
-                      category: 'Stress Test',
                       cardCount: 999,
                       progressPercent: 100,
                       onTap: () {},

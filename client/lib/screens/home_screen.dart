@@ -745,10 +745,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: DS.cardHeight, // Use design system card height
                       child: FlashcardDeckCard(
                         title: set.title,
-                        category:
-                            set.description.isNotEmpty
-                                ? set.description
-                                : 'Python',
                         cardCount: set.flashcards.length,
                         progressPercent: _calculateProgress(set),
                         isStudyDeck: true,

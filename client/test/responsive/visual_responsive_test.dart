@@ -17,7 +17,6 @@ void main() {
               width: 200, // Very constrained width
               child: FlashcardDeckCard(
                 title: 'Test Card',
-                category: 'Technical',
                 cardCount: 25,
                 progressPercent: 60,
                 onTap: () {},
@@ -45,7 +44,6 @@ void main() {
               width: 350, // Medium constrained width
               child: FlashcardDeckCard(
                 title: 'Test Card with Longer Title',
-                category: 'Applied Skills',
                 cardCount: 42,
                 progressPercent: 85,
                 onTap: () {},
@@ -69,7 +67,6 @@ void main() {
               width: 500, // Large constrained width
               child: FlashcardDeckCard(
                 title: 'Test Card with Very Long Title That Should Handle Well',
-                category: 'Technical Knowledge',
                 cardCount: 100,
                 progressPercent: 45,
                 onTap: () {},
@@ -96,7 +93,6 @@ void main() {
               width: 150, // Very small width
               child: FlashcardDeckCard(
                 title: 'Small',
-                category: 'Tech',
                 cardCount: 5,
                 progressPercent: 20,
                 onTap: () {},
@@ -123,7 +119,6 @@ void main() {
               width: 800, // Very large width
               child: FlashcardDeckCard(
                 title: 'Large Screen Card with Extensive Title for Testing',
-                category: 'Advanced Technical Knowledge',
                 cardCount: 250,
                 progressPercent: 95,
                 onTap: () {},
