@@ -50,7 +50,10 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                                 context.bodyLarge?.copyWith(fontWeight: FontWeight.bold) :
                                 context.titleMedium));
           
-          return Container(
+          return AnimatedContainer(
+            duration: DS.durationMedium, // 300ms smooth transition
+            curve: Curves.easeOutCubic, // Enhanced smooth curve for better feel
+            transform: Matrix4.translationValues(0, _isHovered ? -3 : 0, 0), // Slightly more lift
             width: constraints.maxWidth, // Explicitly set width to match parent constraint
             height: DS.cardHeight, // Use design system card height (201px)
             clipBehavior: Clip.antiAlias, // Ensure nothing overflows
@@ -60,14 +63,51 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
           borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
           border: Border.all(
             color: context.isDarkMode 
-                ? context.colorScheme.outline.withValues(alpha: 0.2)
+                ? context.colorScheme.outline.withValues(alpha: 0.3) // Improved contrast
                 : context.colorScheme.outline,
             width: context.isDarkMode ? 1.2 : 1.0,
           ),
           boxShadow: _isHovered ? (
-            context.isDarkMode ? DS.getShadow(DS.elevationM, color: context.shadowColor) : context.cardShadow
+            context.isDarkMode 
+              ? [
+                  // Enhanced dark mode hover shadow with subtle glow effect
+                  BoxShadow(
+                    color: context.primaryColor.withValues(alpha: 0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, 12),
+                  ),
+                  BoxShadow(
+                    color: context.shadowColor.withValues(alpha: 0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ] 
+              : [
+                  // Enhanced light mode hover shadow with depth
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 32,
+                    offset: const Offset(0, 16),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: context.primaryColor.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
           ) : (
-            context.isDarkMode ? DS.getShadow(DS.elevationS, color: context.shadowColor) : null
+            context.isDarkMode ? DS.getShadow(DS.elevationS, color: context.shadowColor) : [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ]
           ),
         ),
         child: Column(
@@ -98,25 +138,62 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                         ),
                       ],
                     ),
-                    // Play button (visible on hover)
-                    if (_isHovered)
-                      Container(
-                        height: DS.buttonHeightS,
-                        width: DS.buttonHeightS,
-                        decoration: BoxDecoration(
-                          color: context.surfaceColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.play_arrow,
-                            size: DS.iconSizeXs,
-                            color: widget.isStudyDeck
-                                ? context.primaryColor
-                                : context.secondaryColor,
+                    // Play button (visible on hover with enhanced animation)
+                    AnimatedOpacity(
+                      duration: DS.durationMedium,
+                      curve: Curves.easeOutCubic, // Smoother animation curve
+                      opacity: _isHovered ? 1.0 : 0.0,
+                      child: AnimatedScale(
+                        duration: DS.durationMedium,
+                        curve: Curves.elasticOut, // More playful bounce effect
+                        scale: _isHovered ? 1.0 : 0.7, // Start smaller for more dramatic entrance
+                        child: AnimatedContainer(
+                          duration: DS.durationMedium,
+                          curve: Curves.easeOutCubic,
+                          height: DS.buttonHeightS,
+                          width: DS.buttonHeightS,
+                          decoration: BoxDecoration(
+                            color: context.surfaceColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: (widget.isStudyDeck 
+                                ? context.primaryColor 
+                                : context.secondaryColor).withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                            boxShadow: _isHovered ? [
+                              BoxShadow(
+                                color: (widget.isStudyDeck 
+                                  ? context.primaryColor 
+                                  : context.secondaryColor).withValues(alpha: 0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ] : [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.play_arrow,
+                              size: DS.iconSizeXs,
+                              color: widget.isStudyDeck
+                                  ? context.primaryColor
+                                  : context.secondaryColor,
+                            ),
                           ),
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -150,15 +227,26 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                   
                   // Always show progress bar, but with zero width for 0%
                   SizedBox(height: isVerySmall ? DS.spacing2xs : (isSmall ? DS.spacing2xs + 2 : DS.spacingXs)),
-                  SizedBox(
+                  Container(
                     height: isVerySmall ? DS.spacing2xs : DS.spacing2xs + 2, // 4-6px
-                    child: LinearProgressIndicator(
-                      value: widget.progressPercent > 0 ? widget.progressPercent / 100 : 0.001,
-                      backgroundColor: context.isDarkMode
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(DS.borderRadiusXs * 0.75), // ~3px
+                      color: context.isDarkMode
                           ? context.surfaceVariantColor.withValues(alpha: 0.3)
                           : context.surfaceVariantColor,
-                      valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
+                    ),
+                    child: ClipRRect(
                       borderRadius: BorderRadius.circular(DS.borderRadiusXs * 0.75), // ~3px
+                      child: LinearProgressIndicator(
+                        value: widget.progressPercent > 0 ? widget.progressPercent / 100 : 0.001,
+                        backgroundColor: Colors.transparent, // Background handled by container
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          widget.progressPercent == 100 
+                              ? context.successColor // Special color for completion
+                              : context.primaryColor
+                        ),
+                        minHeight: double.infinity, // Fill container height
+                      ),
                     ),
                   ),
                   
@@ -171,17 +259,25 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                     style: (isVerySmall ? 
                       context.bodySmall?.copyWith(
                         fontSize: 9,
-                        color: widget.progressPercent > 0
-                            ? context.primaryColor
-                            : context.onSurfaceVariantColor,
+                        color: widget.progressPercent == 100
+                            ? context.successColor // Special color for completion
+                            : widget.progressPercent > 0
+                                ? context.primaryColor
+                                : context.isDarkMode
+                                    ? context.onSurfaceColor.withValues(alpha: 0.85) // WCAG AA compliant contrast
+                                    : context.onSurfaceColor.withValues(alpha: 0.75),
                         fontWeight: widget.progressPercent > 0
                             ? FontWeight.w500
                             : FontWeight.normal,
                       ) : 
                       context.bodySmall?.copyWith(
-                        color: widget.progressPercent > 0
-                            ? context.primaryColor
-                            : context.onSurfaceVariantColor,
+                        color: widget.progressPercent == 100
+                            ? context.successColor // Special color for completion
+                            : widget.progressPercent > 0
+                                ? context.primaryColor
+                                : context.isDarkMode
+                                    ? context.onSurfaceColor.withValues(alpha: 0.85) // WCAG AA compliant contrast
+                                    : context.onSurfaceColor.withValues(alpha: 0.75),
                         fontWeight: widget.progressPercent > 0
                             ? FontWeight.w500
                             : FontWeight.normal,
@@ -198,18 +294,41 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
               ),
             ),
             
-            // Action button
+            // Action button with enhanced hover effects
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
                 border: Border(
-                  top: BorderSide(color: context.colorScheme.outline),
+                  top: BorderSide(
+                    color: context.isDarkMode
+                        ? context.colorScheme.outline.withValues(alpha: 0.3)
+                        : context.colorScheme.outline,
+                  ),
                 ),
               ),
-              child: TextButton(
-                onPressed: widget.onTap,
-                style: TextButton.styleFrom(
-                  foregroundColor: context.onSurfaceVariantColor,
+              child: AnimatedContainer(
+                duration: DS.durationMedium, // Add smooth animation
+                curve: Curves.easeOutCubic,
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(
+                      color: context.isDarkMode
+                          ? context.colorScheme.outline.withValues(alpha: 0.3)
+                          : context.colorScheme.outline,
+                    ),
+                  ),
+                ),
+                child: TextButton(
+                  onPressed: widget.onTap,
+                  style: TextButton.styleFrom(
+                    foregroundColor: _isHovered 
+                        ? context.primaryColor // Enhanced color on hover
+                        : context.isDarkMode
+                            ? context.onSurfaceColor.withValues(alpha: 0.85) // Improved contrast
+                            : context.onSurfaceColor.withValues(alpha: 0.75),
+                    backgroundColor: _isHovered 
+                        ? context.primaryColor.withValues(alpha: 0.08) // More subtle background on hover
+                        : Colors.transparent,
                   padding: EdgeInsets.symmetric(
                     vertical: DS.spacing2xs + 2  // 6px - compact but accessible
                   ),
@@ -228,9 +347,12 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       widget.isStudyDeck ? AppLocalizations.of(context).startLearning : AppLocalizations.of(context).practiceQuestions,
-                      style: isVerySmall ? 
+                      style: (isVerySmall ? 
                         context.bodySmall?.copyWith(fontSize: 10) : 
-                        context.bodySmall,
+                        context.bodySmall)?.copyWith(
+                        fontWeight: _isHovered ? FontWeight.w500 : FontWeight.normal, // Enhanced weight on hover
+                      ),
+                    ),
                     ),
                   ),
                 ),

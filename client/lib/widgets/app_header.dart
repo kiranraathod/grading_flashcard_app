@@ -159,19 +159,6 @@ class _AppHeaderState extends State<AppHeader> {
           // Action buttons
           Row(
             children: [
-              // Achievements
-              IconButton(
-                onPressed: () {},
-                icon: Icon(
-                  Icons.emoji_events_outlined,
-                  color: context.onSurfaceVariantColor,
-                  size: DS.iconSizeS,
-                ),
-                tooltip: AppLocalizations.of(context).achievements,
-              ),
-              
-              const SizedBox(width: DS.spacingXs),
-              
               // Dark mode toggle - This is the fix for the missing dark icon
               const ThemeToggleButton(),
               

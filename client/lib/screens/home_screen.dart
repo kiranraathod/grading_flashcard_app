@@ -349,8 +349,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                             color:
                                                 _activeTab == 'Decks'
                                                     ? context.primaryColor
-                                                    : context
-                                                        .onSurfaceVariantColor,
+                                                    : context.isDarkMode
+                                                        ? context.onSurfaceColor.withValues(alpha: 0.9) // WCAG AA compliant contrast for dark mode
+                                                        : context.onSurfaceColor.withValues(alpha: 0.8), // WCAG AA compliant contrast for light mode
                                           ),
                                         ),
                                       ),
@@ -428,8 +429,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     _activeTab ==
                                                             'Interview Questions'
                                                         ? context.primaryColor
-                                                        : context
-                                                            .onSurfaceVariantColor,
+                                                        : context.isDarkMode
+                                                            ? context.onSurfaceColor.withValues(alpha: 0.9) // WCAG AA compliant contrast for dark mode
+                                                            : context.onSurfaceColor.withValues(alpha: 0.8), // WCAG AA compliant contrast for light mode
                                               ),
                                             ),
                                           ),
@@ -512,8 +514,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                             color:
                                                 _activeTab == 'Recent'
                                                     ? context.primaryColor
-                                                    : context
-                                                        .onSurfaceVariantColor,
+                                                    : context.isDarkMode
+                                                        ? context.onSurfaceColor.withValues(alpha: 0.9) // WCAG AA compliant contrast for dark mode
+                                                        : context.onSurfaceColor.withValues(alpha: 0.8), // WCAG AA compliant contrast for light mode
                                           ),
                                         ),
                                       ),
