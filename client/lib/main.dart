@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'screens/home_screen.dart';
 import 'screens/job_description_question_generator_screen.dart';
+import 'screens/data_validation_screen.dart';
 import 'utils/theme_provider.dart';
 import 'utils/app_themes.dart';
 import 'services/flashcard_service.dart';
@@ -192,6 +193,8 @@ class MyApp extends StatelessWidget {
                                     '/job-description-generator':
                                         (context) =>
                                             const JobDescriptionQuestionGeneratorScreen(),
+                                    '/data-validation': (context) =>
+                                        const DataValidationScreen(),
                                   },
                                   debugShowCheckedModeBanner: false,
                                   // Localization config
