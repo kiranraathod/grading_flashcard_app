@@ -28,6 +28,7 @@ import '../services/recent_view_service.dart';
 import '../services/default_data_service.dart';
 
 import '../widgets/interview/arrow_painter.dart';
+import '../utils/dialogs/delete_confirmation_dialog.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -58,6 +59,43 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Calculate percentage - always start at zero for clean state
     return (completedCount / set.flashcards.length * 100).round();
+  }
+
+  // Handle delete flashcard set with confirmation
+  Future<void> _handleDeleteFlashcardSet(BuildContext context, FlashcardSet set) async {
+    // Get references before any async operation
+    final flashcardService = Provider.of<FlashcardService>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    final confirmed = await DeleteConfirmationDialog.show(
+      context,
+      itemName: set.title,
+      itemType: 'flashcard set',
+    );
+
+    if (confirmed) {
+      try {
+        await flashcardService.deleteFlashcardSet(set.id);
+        
+        if (mounted) {
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text('Deleted "${set.title}"'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('Failed to delete flashcard set'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -780,6 +818,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           });
                         },
+                        onDelete: () => _handleDeleteFlashcardSet(context, set),
                       ),
                     ),
                   ),

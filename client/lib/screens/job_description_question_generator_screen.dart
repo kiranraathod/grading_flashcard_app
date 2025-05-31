@@ -6,6 +6,7 @@ import '../models/question_set.dart';
 import '../services/job_description_service.dart';
 import '../services/interview_service.dart';
 import '../utils/theme_utils.dart';
+import '../utils/dialogs/delete_confirmation_dialog.dart';
 import 'interview_practice_screen.dart';
 
 class JobDescriptionQuestionGeneratorScreen extends StatefulWidget {
@@ -475,6 +476,50 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
         ],
       ),
     );
+  }
+
+  // Handle delete question with confirmation
+  Future<void> _handleDeleteQuestion(InterviewQuestion question) async {
+    // Get scaffold messenger reference before any async operation
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    final confirmed = await DeleteConfirmationDialog.show(
+      context,
+      itemName: question.text.length > 50 
+          ? '${question.text.substring(0, 50)}...' 
+          : question.text,
+      itemType: 'question',
+    );
+
+    if (confirmed) {
+      try {
+        // Remove from local generated questions list
+        setState(() {
+          _generatedQuestions.removeWhere((q) => q.id == question.id);
+        });
+        
+        // If the question was already saved to the interview service, delete it from there too
+        _interviewService.deleteQuestion(question.id);
+        
+        if (mounted) {
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('Question deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('Failed to delete question'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
   
   // Save all questions and navigate to categories page
@@ -1072,6 +1117,19 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                     size: 18,
                     color: context.onSurfaceVariantColor,
                   ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () {
+                    _handleDeleteQuestion(question);
+                  },
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                  ),
+                  color: Colors.red,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),

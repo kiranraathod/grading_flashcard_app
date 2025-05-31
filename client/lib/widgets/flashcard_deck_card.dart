@@ -10,6 +10,7 @@ class FlashcardDeckCard extends StatefulWidget {
   final int cardCount;
   final int progressPercent;
   final VoidCallback onTap;
+  final VoidCallback? onDelete; // Optional delete callback
   final bool isStudyDeck; // True for study deck, false for interview questions
 
   const FlashcardDeckCard({
@@ -18,6 +19,7 @@ class FlashcardDeckCard extends StatefulWidget {
     required this.cardCount,
     required this.progressPercent,
     required this.onTap,
+    this.onDelete, // Optional delete functionality
     this.isStudyDeck = true,
   });
 
@@ -126,74 +128,126 @@ class _FlashcardDeckCardState extends State<FlashcardDeckCard> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title
-                        Text(
-                          widget.title,
-                          style: titleStyle,
-                          maxLines: isVerySmall ? 1 : 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                    // Play button (visible on hover with enhanced animation)
-                    AnimatedOpacity(
-                      duration: DS.durationMedium,
-                      curve: Curves.easeOutCubic, // Smoother animation curve
-                      opacity: _isHovered ? 1.0 : 0.0,
-                      child: AnimatedScale(
-                        duration: DS.durationMedium,
-                        curve: Curves.elasticOut, // More playful bounce effect
-                        scale: _isHovered ? 1.0 : 0.7, // Start smaller for more dramatic entrance
-                        child: AnimatedContainer(
-                          duration: DS.durationMedium,
-                          curve: Curves.easeOutCubic,
-                          height: DS.buttonHeightS,
-                          width: DS.buttonHeightS,
-                          decoration: BoxDecoration(
-                            color: context.surfaceColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: (widget.isStudyDeck 
-                                ? context.primaryColor 
-                                : context.secondaryColor).withValues(alpha: 0.2),
-                              width: 1,
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: _isHovered ? DS.spacing2xs : 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Title
+                            Text(
+                              widget.title,
+                              style: titleStyle,
+                              maxLines: isVerySmall ? 1 : 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            boxShadow: _isHovered ? [
-                              BoxShadow(
-                                color: (widget.isStudyDeck 
-                                  ? context.primaryColor 
-                                  : context.secondaryColor).withValues(alpha: 0.4),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ] : [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Icon(
-                              Icons.play_arrow,
-                              size: DS.iconSizeXs,
-                              color: widget.isStudyDeck
-                                  ? context.primaryColor
-                                  : context.secondaryColor,
-                            ),
-                          ),
+                          ],
                         ),
                       ),
                     ),
+                    // Action buttons (visible on hover)
+                    if (_isHovered)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Delete button (if delete callback provided)
+                          if (widget.onDelete != null)
+                            AnimatedOpacity(
+                              duration: DS.durationMedium,
+                              curve: Curves.easeOutCubic,
+                              opacity: _isHovered ? 1.0 : 0.0,
+                              child: AnimatedScale(
+                                duration: DS.durationMedium,
+                                curve: Curves.elasticOut,
+                                scale: _isHovered ? 1.0 : 0.7,
+                                child: Container(
+                                  height: isVerySmall ? DS.buttonHeightS - 8 : DS.buttonHeightS,
+                                  width: isVerySmall ? DS.buttonHeightS - 8 : DS.buttonHeightS,
+                                  margin: EdgeInsets.only(right: isVerySmall ? DS.spacing2xs : DS.spacingXs),
+                                  decoration: BoxDecoration(
+                                    color: context.surfaceColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.red.withValues(alpha: 0.3),
+                                      width: 1,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.red.withValues(alpha: 0.2),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: IconButton(
+                                    onPressed: widget.onDelete,
+                                    icon: const Icon(Icons.delete_outline),
+                                    iconSize: isVerySmall ? DS.iconSizeXs - 2 : DS.iconSizeXs,
+                                    color: Colors.red,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          // Play button
+                          AnimatedOpacity(
+                            duration: DS.durationMedium,
+                            curve: Curves.easeOutCubic, // Smoother animation curve
+                            opacity: _isHovered ? 1.0 : 0.0,
+                            child: AnimatedScale(
+                              duration: DS.durationMedium,
+                              curve: Curves.elasticOut, // More playful bounce effect
+                              scale: _isHovered ? 1.0 : 0.7, // Start smaller for more dramatic entrance
+                              child: AnimatedContainer(
+                                duration: DS.durationMedium,
+                                curve: Curves.easeOutCubic,
+                                height: isVerySmall ? DS.buttonHeightS - 8 : DS.buttonHeightS,
+                                width: isVerySmall ? DS.buttonHeightS - 8 : DS.buttonHeightS,
+                                decoration: BoxDecoration(
+                                  color: context.surfaceColor,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: (widget.isStudyDeck 
+                                      ? context.primaryColor 
+                                      : context.secondaryColor).withValues(alpha: 0.2),
+                                    width: 1,
+                                  ),
+                                  boxShadow: _isHovered ? [
+                                    BoxShadow(
+                                      color: (widget.isStudyDeck 
+                                        ? context.primaryColor 
+                                        : context.secondaryColor).withValues(alpha: 0.4),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ] : [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.05),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.play_arrow,
+                                    size: isVerySmall ? DS.iconSizeXs - 2 : DS.iconSizeXs,
+                                    color: widget.isStudyDeck
+                                        ? context.primaryColor
+                                        : context.secondaryColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),

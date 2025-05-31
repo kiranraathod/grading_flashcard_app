@@ -12,6 +12,7 @@ class InterviewQuestionCardImproved extends StatelessWidget {
   final VoidCallback onToggleStar;
   final VoidCallback onShare;
   final VoidCallback onEdit;
+  final VoidCallback? onDelete; // Optional delete callback
   
   const InterviewQuestionCardImproved({
     super.key,
@@ -21,6 +22,7 @@ class InterviewQuestionCardImproved extends StatelessWidget {
     required this.onToggleStar,
     required this.onShare,
     required this.onEdit,
+    this.onDelete, // Optional delete functionality
   });
   
   // Helper method to get category color
@@ -315,7 +317,7 @@ class InterviewQuestionCardImproved extends StatelessWidget {
                     
                     const Spacer(),
                     
-                    // Share and Edit buttons
+                    // Share, Edit, and Delete buttons
                     Row(
                       children: [
                         IconButton(
@@ -347,6 +349,22 @@ class InterviewQuestionCardImproved extends StatelessWidget {
                           padding: EdgeInsets.zero,
                           splashRadius: 20,
                         ),
+                        
+                        // Delete button (if callback provided)
+                        if (onDelete != null) ...[
+                          const SizedBox(width: DS.spacingS),
+                          IconButton(
+                            onPressed: onDelete,
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              size: 18,
+                            ),
+                            color: Colors.red,
+                            constraints: const BoxConstraints(),
+                            padding: EdgeInsets.zero,
+                            splashRadius: 20,
+                          ),
+                        ],
                       ],
                     ),
                   ],

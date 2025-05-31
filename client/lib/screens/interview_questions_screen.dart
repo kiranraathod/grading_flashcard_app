@@ -11,6 +11,7 @@ import '../utils/design_system.dart';
 import '../utils/theme_utils.dart';
 import '../utils/colors.dart';
 import '../utils/category_mapper.dart';
+import '../utils/dialogs/delete_confirmation_dialog.dart';
 import 'create_interview_question_screen.dart';
 import 'interview_practice_screen.dart';
 import 'interview_practice_batch_screen.dart';
@@ -118,6 +119,45 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
     }
     
     return filteredQuestions;
+  }
+
+  // Handle delete question with confirmation
+  Future<void> _handleDeleteQuestion(BuildContext context, InterviewQuestion question) async {
+    // Get scaffold messenger reference before any async operation
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    final confirmed = await DeleteConfirmationDialog.show(
+      context,
+      itemName: question.text.length > 50 
+          ? '${question.text.substring(0, 50)}...' 
+          : question.text,
+      itemType: 'question',
+    );
+
+    if (confirmed) {
+      try {
+        _interviewService?.deleteQuestion(question.id);
+        
+        if (mounted) {
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('Question deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          setState(() {}); // Refresh the UI
+        }
+      } catch (e) {
+        if (mounted) {
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('Failed to delete question'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
   
   // Helper method to check special subtopic matches (same as service)
@@ -510,6 +550,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                         setState(() {});
                       });
                     },
+                    onDelete: () => _handleDeleteQuestion(context, question),
                   );
                 }),
                 
