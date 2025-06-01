@@ -311,9 +311,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             CrossAxisAlignment
                                 .start, // Align everything to the left
                         children: [
-                          // Tabs and filters in a single row with space between
+                          // Tabs row
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               // Tabs aligned to the left
@@ -561,42 +561,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ],
                                 ),
-                              ),
-
-                              // Filter and Sort controls aligned to the right
-                              LayoutBuilder(
-                                builder: (context, constraints) {
-                                  // Check if we have enough space for both filters side by side
-                                  final availableWidth = constraints.maxWidth;
-                                  final shouldStack =
-                                      availableWidth <
-                                      300; // Threshold for stacking
-
-                                  if (shouldStack) {
-                                    // Stack vertically on narrow screens
-                                    return Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        _buildFilterButton(context),
-                                        DSSpacing.verticalS,
-                                        _buildSortButton(context),
-                                      ],
-                                    );
-                                  } else {
-                                    // Display horizontally without flexible sizing to avoid constraints issues
-                                    return Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        _buildFilterButton(context),
-                                        DSSpacing.horizontalS,
-                                        _buildSortButton(context),
-                                      ],
-                                    );
-                                  }
-                                },
                               ),
                             ],
                           ),
@@ -1402,75 +1366,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Helper method to build filter button
-  Widget _buildFilterButton(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxWidth: context.isPhone ? 100 : 120,
-      ), // Responsive constraint
-      padding: EdgeInsets.symmetric(
-        horizontal: DS.spacingS,
-        vertical: DS.spacing2xs + 2, // 6px total
-      ),
-      decoration: BoxDecoration(
-        border: Border.all(color: context.colorScheme.outline),
-        borderRadius: BorderRadius.circular(DS.borderRadiusXs),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.filter_list,
-            size: DS.iconSizeM,
-            color: context.onSurfaceVariantColor,
-          ),
-          DSSpacing.horizontalXS,
-          Text(
-            AppLocalizations.of(context).filter,
-            style: context.bodySmall,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper method to build sort button
-  Widget _buildSortButton(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxWidth: context.isPhone ? 160 : 180,
-      ), // Responsive constraint
-      padding: EdgeInsets.symmetric(
-        horizontal: DS.spacingS,
-        vertical: DS.spacing2xs + 2, // 6px total
-      ),
-      decoration: BoxDecoration(
-        border: Border.all(color: context.colorScheme.outline),
-        borderRadius: BorderRadius.circular(DS.borderRadiusXs),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.access_time,
-            size: DS.iconSizeM,
-            color: context.onSurfaceVariantColor,
-          ),
-          DSSpacing.horizontalXS,
-          Text(
-            AppLocalizations.of(context).lastUpdated,
-            style: context.bodySmall,
-            overflow: TextOverflow.ellipsis,
-          ),
-          DSSpacing.horizontalXS,
-          Icon(
-            Icons.keyboard_arrow_down,
-            size: DS.iconSizeM,
-            color: context.onSurfaceVariantColor,
-          ),
-        ],
-      ),
-    );
-  }
 }
