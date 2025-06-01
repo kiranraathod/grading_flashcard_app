@@ -17,6 +17,7 @@ import 'services/speech_to_text_service.dart';
 import 'services/interview_service.dart';
 import 'services/recent_view_service.dart';
 import 'services/job_description_service.dart';
+import 'services/storage_service.dart';
 import 'services/network_infrastructure_initializer.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_status_tracker.dart';
@@ -27,6 +28,9 @@ import 'widgets/error_handler.dart';
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize storage service
+  await StorageService.initialize();
   
   // Initialize enhanced network infrastructure
   await _initializeNetworkInfrastructure();

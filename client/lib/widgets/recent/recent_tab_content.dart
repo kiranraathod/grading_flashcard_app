@@ -7,6 +7,7 @@ import '../../blocs/recent_view/recent_view_event.dart';
 import '../../blocs/recent_view/recent_view_state.dart';
 import '../../models/recently_viewed_item.dart';
 import '../../utils/colors.dart';
+import '../../utils/design_system.dart';
 import '../../screens/study_screen.dart';
 import '../../screens/interview_questions_screen.dart';
 import '../../services/flashcard_service.dart';
@@ -265,21 +266,21 @@ class _RecentTabContentState extends State<RecentTabContent>
       child: Row(
         children: [
           _buildStatItem('Total Items', items.length.toString()),
-          const SizedBox(width: 16),
+          SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingM),
           _buildStatItem(
             'Flashcards',
             flashcardCount.toString(),
             icon: Icons.style,
             color: AppColors.primary,
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingM),
           _buildStatItem(
             'Interview Questions',
             interviewCount.toString(),
             icon: Icons.question_answer,
             color: Colors.purple,
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingM),
           _buildStatItem(
             'Last Studied',
             lastStudiedText,
@@ -304,27 +305,37 @@ class _RecentTabContentState extends State<RecentTabContent>
           Row(
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 14, color: color ?? Colors.grey.shade600),
-                const SizedBox(width: 4),
+                Icon(
+                  icon, 
+                  size: DS.isExtraSmallScreen(context) ? 12 : 14, 
+                  color: color ?? Colors.grey.shade600,
+                ),
+                SizedBox(width: DS.isExtraSmallScreen(context) ? 2 : 4),
               ],
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: DS.isExtraSmallScreen(context) ? 10 : 12,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: DS.isExtraSmallScreen(context) ? 4 : 6),
           Text(
             value,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: DS.isExtraSmallScreen(context) ? 14 : 18,
               fontWeight: FontWeight.bold,
               color: color ?? AppColors.textPrimary,
             ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ],
       ),
@@ -332,56 +343,59 @@ class _RecentTabContentState extends State<RecentTabContent>
   }
 
   Widget _buildFilterControls(RecentViewLoaded state) {
-    return Row(
-      children: [
-        _buildFilterButton(
-          label: 'All',
-          isActive: state.activeFilter == null,
-          onPressed: () {
-            setState(() {
-              _filterType = null;
-            });
-            context.read<RecentViewBloc>().add(
-              SetRecentViewFilter(filterType: null),
-            );
-          },
-          icon: Icons.all_inclusive,
-        ),
-        const SizedBox(width: 12),
-        _buildFilterButton(
-          label: 'Flashcards',
-          isActive:
-              state.activeFilter != null &&
-              state.activeFilter == RecentItemType.flashcard,
-          onPressed: () {
-            setState(() {
-              _filterType = RecentItemType.flashcard;
-            });
-            context.read<RecentViewBloc>().add(
-              SetRecentViewFilter(filterType: RecentItemType.flashcard),
-            );
-          },
-          icon: Icons.style,
-          color: AppColors.primary,
-        ),
-        const SizedBox(width: 12),
-        _buildFilterButton(
-          label: 'Interview Questions',
-          isActive:
-              state.activeFilter != null &&
-              state.activeFilter == RecentItemType.interviewQuestion,
-          onPressed: () {
-            setState(() {
-              _filterType = RecentItemType.interviewQuestion;
-            });
-            context.read<RecentViewBloc>().add(
-              SetRecentViewFilter(filterType: RecentItemType.interviewQuestion),
-            );
-          },
-          icon: Icons.question_answer,
-          color: Colors.purple,
-        ),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildFilterButton(
+            label: 'All',
+            isActive: state.activeFilter == null,
+            onPressed: () {
+              setState(() {
+                _filterType = null;
+              });
+              context.read<RecentViewBloc>().add(
+                SetRecentViewFilter(filterType: null),
+              );
+            },
+            icon: Icons.all_inclusive,
+          ),
+          const SizedBox(width: 12),
+          _buildFilterButton(
+            label: 'Flashcards',
+            isActive:
+                state.activeFilter != null &&
+                state.activeFilter == RecentItemType.flashcard,
+            onPressed: () {
+              setState(() {
+                _filterType = RecentItemType.flashcard;
+              });
+              context.read<RecentViewBloc>().add(
+                SetRecentViewFilter(filterType: RecentItemType.flashcard),
+              );
+            },
+            icon: Icons.style,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 12),
+          _buildFilterButton(
+            label: 'Interview Questions',
+            isActive:
+                state.activeFilter != null &&
+                state.activeFilter == RecentItemType.interviewQuestion,
+            onPressed: () {
+              setState(() {
+                _filterType = RecentItemType.interviewQuestion;
+              });
+              context.read<RecentViewBloc>().add(
+                SetRecentViewFilter(filterType: RecentItemType.interviewQuestion),
+              );
+            },
+            icon: Icons.question_answer,
+            color: Colors.purple,
+          ),
+        ],
+      ),
     );
   }
 
@@ -573,42 +587,50 @@ class _RecentTabContentState extends State<RecentTabContent>
               ),
             ),
 
-            // Action buttons
+            // Action buttons - FIXED: Prevent overflow on narrow screens
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                OutlinedButton(
-                  onPressed: () => _navigateToItem(item),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.grey.shade700,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                Flexible(
+                  child: OutlinedButton(
+                    onPressed: () => _navigateToItem(item),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.grey.shade700,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
-                    side: BorderSide(color: Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                    child: const Text('View'),
                   ),
-                  child: const Text('View'),
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () => _navigateToItem(item),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        isFlashcard ? AppColors.primary : Colors.purple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: ElevatedButton(
+                    onPressed: () => _navigateToItem(item),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          isFlashcard ? AppColors.primary : Colors.purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                    child: Text(
+                      isFlashcard ? 'Resume Study' : 'Practice',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
-                  child: Text(isFlashcard ? 'Resume Study' : 'Practice'),
                 ),
               ],
             ),
@@ -643,29 +665,61 @@ class _RecentTabContentState extends State<RecentTabContent>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  // Navigate to flashcards
-                  Navigator.of(context).pop(); // Go back to home screen
-                },
-                icon: const Icon(Icons.style),
-                label: const Text('Study Flashcards'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+              Flexible(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // Navigate to flashcards
+                    Navigator.of(context).pop(); // Go back to home screen
+                  },
+                  icon: Icon(
+                    Icons.style, 
+                    size: DS.isExtraSmallScreen(context) ? 16 : 20,
+                  ),
+                  label: Text(
+                    'Study Flashcards',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: DS.isExtraSmallScreen(context) ? 12 : 14,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: DS.isExtraSmallScreen(context) ? 8 : 16,
+                      vertical: DS.isExtraSmallScreen(context) ? 8 : 12,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // Navigate to interview questions
-                  Navigator.of(context).pop(); // Go back to home screen
-                },
-                icon: const Icon(Icons.question_answer),
-                label: const Text('Practice Interviews'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.purple,
-                  foregroundColor: Colors.white,
+              SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacingXs : DS.spacingM),
+              Flexible(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // Navigate to interview questions
+                    Navigator.of(context).pop(); // Go back to home screen
+                  },
+                  icon: Icon(
+                    Icons.question_answer,
+                    size: DS.isExtraSmallScreen(context) ? 16 : 20,
+                  ),
+                  label: Text(
+                    'Practice Interviews',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: DS.isExtraSmallScreen(context) ? 12 : 14,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: DS.isExtraSmallScreen(context) ? 8 : 16,
+                      vertical: DS.isExtraSmallScreen(context) ? 8 : 12,
+                    ),
+                  ),
                 ),
               ),
             ],

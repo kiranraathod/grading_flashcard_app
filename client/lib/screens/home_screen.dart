@@ -311,22 +311,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             CrossAxisAlignment
                                 .start, // Align everything to the left
                         children: [
-                          // Tabs row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // Tabs aligned to the left
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: context.surfaceVariantColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize:
-                                      MainAxisSize
-                                          .min, // Don't expand beyond needed
-                                  children: [
+                          // Tabs row - FIXED: RenderFlex overflow by adding horizontal scrolling  
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: context.surfaceVariantColor,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize:
+                                    MainAxisSize
+                                        .min, // Don't expand beyond needed
+                                children: [
                                     // Decks tab
                                     InkWell(
                                       onTap: () {
@@ -561,8 +558,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
+                            ),
                           ),
                         ],
                       ),

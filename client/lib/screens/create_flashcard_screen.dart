@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
 import '../services/flashcard_service.dart';
+import '../services/id_service.dart';
 import '../widgets/flashcard_term_widget.dart';
 import '../screens/import_modal_screen.dart';
 import '../widgets/multi_action_fab.dart';
@@ -65,7 +66,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
 
       List<Flashcard> flashcards = _terms.map((term) {
         return Flashcard(
-          id: '${DateTime.now().millisecondsSinceEpoch}_${_terms.indexOf(term)}',
+          id: IdService.flashcard(),
           question: term['term']!.text,
           answer: term['definition']!.text,
         );
@@ -83,7 +84,7 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
       } else {
         // Create new set
         FlashcardSet newSet = FlashcardSet(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          id: IdService.set(),
           title: _titleController.text,
           description: '', // Empty description since field is removed
           flashcards: flashcards,

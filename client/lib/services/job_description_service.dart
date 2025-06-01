@@ -4,6 +4,7 @@ import '../models/job_description_analysis.dart';
 import '../models/interview_question.dart';
 import '../models/app_error.dart';
 import '../services/error_service.dart';
+import '../services/id_service.dart';
 import '../utils/config.dart';
 import '../web/proxy.dart';
 
@@ -118,9 +119,8 @@ class JobDescriptionService {
         
         // Convert to InterviewQuestion objects
         return responseData.map((questionData) {
-          final index = responseData.indexOf(questionData);
           return InterviewQuestion(
-            id: "${DateTime.now().millisecondsSinceEpoch}_$index",
+            id: IdService.custom('job_'),
             text: questionData['text'],
             category: questionData['category'],
             subtopic: questionData['subtopic'],

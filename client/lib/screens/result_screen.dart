@@ -4,6 +4,7 @@ import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../models/answer.dart' as answer_model;
 import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
+import '../services/id_service.dart';
 import '../widgets/suggestions_widget.dart';
 import '../utils/colors.dart';
 import '../utils/design_system.dart';
@@ -70,14 +71,14 @@ class _ResultScreenState extends State<ResultScreen> {
           RecordFlashcardView(
             // Create a minimal Flashcard with the information we have
             flashcard: Flashcard(
-              id: 'flashcard-${DateTime.now().millisecondsSinceEpoch}',
+              id: IdService.flashcard(),
               question: widget.answer.question,
               answer: widget.correctAnswer,
               isCompleted: isCompleted,
             ),
             // Create a minimal FlashcardSet
             set: FlashcardSet(
-              id: 'set-${DateTime.now().millisecondsSinceEpoch}',
+              id: IdService.set(),
               title: 'Study Session',
               description: '',
               flashcards: [],
@@ -269,14 +270,14 @@ class _ResultScreenState extends State<ResultScreen> {
         RecordFlashcardView(
           // Create a minimal Flashcard with the information we have
           flashcard: Flashcard(
-            id: 'flashcard-${DateTime.now().millisecondsSinceEpoch}',
+            id: IdService.flashcard(),
             question: widget.answer.question,
             answer: widget.correctAnswer,
             isCompleted: isCompleted,
           ),
           // Create a minimal FlashcardSet
           set: FlashcardSet(
-            id: 'set-${DateTime.now().millisecondsSinceEpoch}',
+            id: IdService.set(),
             title: 'Study Session',
             description: '',
             flashcards: [],

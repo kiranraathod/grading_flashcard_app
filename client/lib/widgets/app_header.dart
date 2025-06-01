@@ -57,33 +57,49 @@ class _AppHeaderState extends State<AppHeader> {
       ),
       child: Row(
         children: [
-          // Logo/Brand
-          Row(
-            children: [
-              Icon(
-                Icons.book_outlined,
-                color: context.primaryColor,
-                size: DS.iconSizeS,
+          // Logo/Brand - FIXED: Highly compressed on small screens
+          if (!DS.isExtraSmallScreen(context)) // Hide logo on very small screens
+            Flexible(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.book_outlined,
+                    color: context.primaryColor,
+                    size: DS.iconSizeS,
+                  ),
+                  SizedBox(width: DS.spacingXs),
+                  Flexible(
+                    child: Text(
+                      AppLocalizations.of(context).appTitle,
+                      style: context.titleLarge?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: context.onSurfaceColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: DS.spacingXs),
-              Text(
-                AppLocalizations.of(context).appTitle,
-                style: context.titleLarge?.copyWith(
-                  fontSize: DS.isSmallScreen(context) ? 16 : 18,
-                  fontWeight: FontWeight.w500,
-                  color: context.onSurfaceColor,
-                ),
-              ),
-            ],
-          ),
+            ),
           
-          const SizedBox(width: DS.spacingL),
+          if (!DS.isExtraSmallScreen(context)) // Hide spacing on very small screens
+            const SizedBox(width: DS.spacingM)
+          else 
+            const SizedBox(width: DS.spacing2xs),
           
-          // Search bar
+          // Search bar - FIXED: Maximum space utilization
           Expanded(
             child: Container(
               height: DS.inputHeightL - 12, // 36px total
-              padding: const EdgeInsets.symmetric(horizontal: DS.spacingS),
+              constraints: BoxConstraints(
+                minWidth: DS.isExtraSmallScreen(context) ? 150 : 200, // Minimum usable width
+              ),
+              padding: EdgeInsets.symmetric(
+                horizontal: DS.isExtraSmallScreen(context) ? 6 : DS.spacingS,
+              ),
               decoration: BoxDecoration(
                 color: context.isDarkMode 
                     ? context.surfaceVariantColor
@@ -103,9 +119,9 @@ class _AppHeaderState extends State<AppHeader> {
                     Icon(
                       Icons.search,
                       color: context.onSurfaceVariantColor,
-                      size: DS.iconSizeXs + 2, // 18px total
+                      size: DS.isExtraSmallScreen(context) ? 14 : 16,
                     ),
-                    const SizedBox(width: DS.spacingXs),
+                    SizedBox(width: DS.isExtraSmallScreen(context) ? 4 : DS.spacingXs),
                     Expanded(
                       child: TextField(
                         controller: _searchController,
@@ -154,39 +170,31 @@ class _AppHeaderState extends State<AppHeader> {
             ),
           ),
           
-          const SizedBox(width: DS.spacingL),
+          SizedBox(width: DS.isExtraSmallScreen(context) ? 4 : DS.spacingM),
           
-          // Action buttons
+          // Action buttons - FIXED: Minimal spacing on small screens
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               // Dark mode toggle - This is the fix for the missing dark icon
               const ThemeToggleButton(),
               
-              const SizedBox(width: DS.spacingM),
+              SizedBox(width: DS.isExtraSmallScreen(context) ? 4 : DS.spacingXs),
               
-              // Profile dropdown
+              // Profile dropdown - FIXED: RenderFlex overflow by simplifying design
               PopupMenuButton<String>(
                 offset: const Offset(0, DS.avatarSizeM),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
                 ),
-                icon: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: DS.avatarSizeXs * 0.58, // ~14px radius
-                      backgroundColor: context.primaryColor,
-                      child: Icon(
-                        Icons.person,
-                        color: context.onPrimaryColor,
-                        size: DS.iconSizeXs,
-                      ),
-                    ),
-                    Icon(
-                      Icons.keyboard_arrow_down,
-                      color: context.onSurfaceVariantColor,
-                      size: DS.iconSizeXs - 2, // 14px total
-                    ),
-                  ],
+                icon: CircleAvatar(
+                  radius: DS.avatarSizeXs * 0.5, // Reduced size: ~12px radius
+                  backgroundColor: context.primaryColor,
+                  child: Icon(
+                    Icons.person,
+                    color: context.onPrimaryColor,
+                    size: DS.iconSizeXs - 2, // Reduced size: 14px
+                  ),
                 ),
                 itemBuilder: (_) => [
                   PopupMenuItem(

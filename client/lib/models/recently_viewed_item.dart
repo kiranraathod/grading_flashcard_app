@@ -1,3 +1,5 @@
+import '../services/id_service.dart';
+
 /// Enum defining the possible types of recently viewed items
 enum RecentItemType {
   flashcard,
@@ -57,7 +59,7 @@ class RecentlyViewedItem {
     bool isCompleted = false,
   }) {
     return RecentlyViewedItem(
-      id: 'recent-fc-${DateTime.now().millisecondsSinceEpoch}',
+      id: IdService.custom('recent-fc-'),
       itemId: flashcardId,
       type: RecentItemType.flashcard,
       parentId: setId,
@@ -77,7 +79,7 @@ class RecentlyViewedItem {
     bool isCompleted = false,
   }) {
     return RecentlyViewedItem(
-      id: 'recent-iq-${DateTime.now().millisecondsSinceEpoch}',
+      id: IdService.custom('recent-iq-'),
       itemId: questionId,
       type: RecentItemType.interviewQuestion,
       parentId: category,

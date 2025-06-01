@@ -113,7 +113,7 @@ class DataValidationService {
       return;
     }
     
-    final cardData = flashcard as Map<String, dynamic>;
+    final cardData = flashcard;
     
     // Required fields
     final requiredFields = ['id', 'question', 'answer'];
@@ -401,56 +401,56 @@ class DataValidationReport {
   }
   
   void printReport() {
-    print('=== DATA VALIDATION REPORT ===');
-    print('Generated: ${DateTime.now().toIso8601String()}');
-    print('');
+    debugPrint('=== DATA VALIDATION REPORT ===');
+    debugPrint('Generated: ${DateTime.now().toIso8601String()}');
+    debugPrint('');
     
     if (criticalErrors.isNotEmpty) {
-      print('🚨 CRITICAL ERRORS (${criticalErrors.length}):');
+      debugPrint('🚨 CRITICAL ERRORS (${criticalErrors.length}):');
       for (final issue in criticalErrors) {
-        print('  ❌ ${issue.location}: ${issue.message}');
+        debugPrint('  ❌ ${issue.location}: ${issue.message}');
       }
-      print('');
+      debugPrint('');
     }
     
     if (errors.isNotEmpty) {
-      print('❌ ERRORS (${errors.length}):');
+      debugPrint('❌ ERRORS (${errors.length}):');
       for (final issue in errors) {
-        print('  ❌ ${issue.location}: ${issue.message}');
+        debugPrint('  ❌ ${issue.location}: ${issue.message}');
       }
-      print('');
+      debugPrint('');
     }
     
     if (warnings.isNotEmpty) {
-      print('⚠️ WARNINGS (${warnings.length}):');
+      debugPrint('⚠️ WARNINGS (${warnings.length}):');
       for (final issue in warnings) {
-        print('  ⚠️ ${issue.location}: ${issue.message}');
+        debugPrint('  ⚠️ ${issue.location}: ${issue.message}');
       }
-      print('');
+      debugPrint('');
     }
     
     if (suggestions.isNotEmpty) {
-      print('💡 SUGGESTIONS (${suggestions.length}):');
+      debugPrint('💡 SUGGESTIONS (${suggestions.length}):');
       for (final issue in suggestions) {
-        print('  💡 ${issue.location}: ${issue.message}');
+        debugPrint('  💡 ${issue.location}: ${issue.message}');
       }
-      print('');
+      debugPrint('');
     }
     
-    print('=== SUMMARY ===');
-    print('Critical Errors: ${criticalErrors.length}');
-    print('Errors: ${errors.length}');
-    print('Warnings: ${warnings.length}');
-    print('Suggestions: ${suggestions.length}');
-    print('Total Issues: $totalIssues');
-    print('Migration Status: $migrationStatus');
-    print('');
+    debugPrint('=== SUMMARY ===');
+    debugPrint('Critical Errors: ${criticalErrors.length}');
+    debugPrint('Errors: ${errors.length}');
+    debugPrint('Warnings: ${warnings.length}');
+    debugPrint('Suggestions: ${suggestions.length}');
+    debugPrint('Total Issues: $totalIssues');
+    debugPrint('Migration Status: $migrationStatus');
+    debugPrint('');
     
     if (hasBlockingIssues) {
-      print('🚨 MIGRATION BLOCKED - Fix critical errors and errors before proceeding');
-      print('   Estimated fix time: ${estimateFixTime()} days');
+      debugPrint('🚨 MIGRATION BLOCKED - Fix critical errors and errors before proceeding');
+      debugPrint('   Estimated fix time: ${estimateFixTime()} days');
     } else {
-      print('✅ Data validation passed - Ready for migration');
+      debugPrint('✅ Data validation passed - Ready for migration');
     }
   }
   

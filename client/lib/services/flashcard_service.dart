@@ -1,9 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
 import 'default_data_service.dart';
+import 'storage_service.dart';
 import 'dart:async';
 
 class FlashcardService extends ChangeNotifier {
@@ -18,17 +17,17 @@ class FlashcardService extends ChangeNotifier {
 
   Future<void> _loadSets() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final setsJson = prefs.getStringList('flashcard_sets');
+      final setsData = StorageService.getFlashcardSets();
 
-      if (setsJson != null && setsJson.isNotEmpty) {
+      if (setsData != null && setsData.isNotEmpty) {
         _sets.clear();
-        for (final setJson in setsJson) {
-          final Map<String, dynamic> data = json.decode(setJson);
+        for (final data in setsData) {
           _sets.add(FlashcardSet.fromJson(data));
         }
+        debugPrint('Loaded ${_sets.length} flashcard sets from storage using StorageService');
       } else {
         // Load default data from server if no saved sets
+        debugPrint('No saved sets found, loading default data from server...');
         await _loadDefaultData();
       }
       
@@ -118,33 +117,31 @@ class FlashcardService extends ChangeNotifier {
 
   Future<void> _saveSets() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Convert sets to JSON strings
-      final setsJson = _sets.map((set) {
-        final jsonStr = json.encode(set.toJson());
+      // Log set details before saving
+      for (final set in _sets) {
         debugPrint('Saving set: ${set.id} - ${set.title}');
         // Count completed flashcards for each set
         final completedCount = set.flashcards.where((card) => card.isCompleted).length;
         debugPrint('Set ${set.id} has $completedCount/${set.flashcards.length} completed cards');
-        return jsonStr;
-      }).toList();
+      }
       
-      // Clear previous data and save new data
-      await prefs.remove('flashcard_sets');
-      final success = await prefs.setStringList('flashcard_sets', setsJson);
+      // Save using simple StorageService
+      final setsData = _sets.map((set) => set.toJson()).toList();
+      await StorageService.saveFlashcardSets(setsData);
       
-      debugPrint('Flashcard sets saved successfully: $success');
+      debugPrint('Flashcard sets saved successfully');
       
       // Verify the data was saved correctly
-      final savedSetsJson = prefs.getStringList('flashcard_sets');
-      if (savedSetsJson != null) {
-        debugPrint('Verified saved data: ${savedSetsJson.length} sets found in storage');
+      final savedSetsData = StorageService.getFlashcardSets();
+      if (savedSetsData != null) {
+        debugPrint('Verified saved data: ${savedSetsData.length} sets found in storage');
       } else {
         debugPrint('WARNING: Failed to verify saved data!');
       }
     } catch (e) {
       debugPrint('Error saving flashcard sets: $e');
+      // Re-throw for proper error handling
+      throw Exception('Failed to save flashcard sets: $e');
     }
   }
 

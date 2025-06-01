@@ -6,6 +6,7 @@ import '../models/interview_answer.dart';
 import '../models/question_set.dart';
 import '../utils/category_mapper.dart';
 import 'default_data_service.dart';
+import 'storage_service.dart';
 
 class InterviewService extends ChangeNotifier {
   List<InterviewQuestion> _questions = [];
@@ -238,14 +239,12 @@ class InterviewService extends ChangeNotifier {
   // Load questions from shared preferences
   Future<void> _loadQuestionsFromStorage() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final questionsJson = prefs.getString('interview_questions');
+      final questionsData = StorageService.getInterviewQuestions();
       
-      if (questionsJson != null && questionsJson.isNotEmpty) {
-        debugPrint('Found saved questions in SharedPreferences');
-        final List<dynamic> decoded = jsonDecode(questionsJson);
+      if (questionsData != null && questionsData.isNotEmpty) {
+        debugPrint('Found saved questions in storage using StorageService');
         
-        List<InterviewQuestion> loadedQuestions = decoded.map<InterviewQuestion>((item) {
+        List<InterviewQuestion> loadedQuestions = questionsData.map<InterviewQuestion>((item) {
           // Default isDraft to false if it's missing in the stored data
           final bool isDraft = item['isDraft'] ?? false;
           
@@ -270,7 +269,7 @@ class InterviewService extends ChangeNotifier {
         // Only update if we actually loaded questions
         if (loadedQuestions.isNotEmpty) {
           _questions = loadedQuestions;
-          debugPrint('Loaded ${_questions.length} questions from storage');
+          debugPrint('Loaded ${_questions.length} questions from storage using StorageService');
           
           // Count published vs draft questions
           final publishedCount = _questions.where((q) => !q.isDraft).length;
@@ -299,7 +298,6 @@ class InterviewService extends ChangeNotifier {
   // Save questions to shared preferences
   Future<void> _saveQuestionsToStorage() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       final List<Map<String, dynamic>> serialized = _questions.map((q) {
         // Convert InterviewQuestion objects to JSON
         final Map<String, dynamic> json = {
@@ -321,13 +319,15 @@ class InterviewService extends ChangeNotifier {
         return json;
       }).toList();
       
-      final jsonStr = jsonEncode(serialized);
-      await prefs.setString('interview_questions', jsonStr);
+      // Save using simple StorageService
+      await StorageService.saveInterviewQuestions(serialized);
       
       // Verify the data was saved correctly
-      debugPrint('Successfully saved ${serialized.length} questions to storage');
+      debugPrint('Successfully saved ${serialized.length} questions to storage using StorageService');
     } catch (e) {
       debugPrint('Error saving questions: $e');
+      // Re-throw for proper error handling
+      throw Exception('Failed to save interview questions: $e');
     }
   }
   

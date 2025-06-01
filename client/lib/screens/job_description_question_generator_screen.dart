@@ -5,6 +5,7 @@ import '../models/interview_question.dart';
 import '../models/question_set.dart';
 import '../services/job_description_service.dart';
 import '../services/interview_service.dart';
+import '../services/id_service.dart';
 import '../utils/theme_utils.dart';
 import '../utils/dialogs/delete_confirmation_dialog.dart';
 import 'interview_practice_screen.dart';
@@ -543,7 +544,7 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
     
     try {
       // Generate a unique ID for the question set
-      final setId = DateTime.now().millisecondsSinceEpoch.toString();
+      final setId = IdService.job();
       final questionIds = <String>[];
       
       // Mark questions as published (not drafts) before saving

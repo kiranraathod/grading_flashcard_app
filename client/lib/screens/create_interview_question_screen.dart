@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/interview_question.dart';
 import '../services/interview_service.dart';
+import '../services/id_service.dart';
 import '../utils/colors.dart';
 import '../utils/category_mapper.dart';
 
@@ -194,7 +195,7 @@ class _CreateInterviewQuestionScreenState
     // Create new question or update existing one
     final question = InterviewQuestion(
       id: widget.questionToEdit?.id ??
-          DateTime.now().millisecondsSinceEpoch.toString(),
+          IdService.interview(),
       text: _questionTextController.text,
       category: _selectedCategory,  // This is already the internal category ID
       subtopic: _selectedSubtopic,

@@ -2,6 +2,11 @@
 
 Welcome to the documentation for the Flashcard Application. This directory contains guides, implementation details, and references for various aspects of the application.
 
+## 🤖 Claude 4 Sonnet Quick Start Guides
+
+- **[Claude RenderFlex Context Guide](CLAUDE_RENDERFLEX_CONTEXT_GUIDE.md)** - Essential instructions for Claude 4 Sonnet to quickly understand RenderFlex overflow issues and implement proper fixes
+- **[General Codebase Context](../../../paste.txt)** - Comprehensive context instructions for understanding the overall project architecture and development patterns
+
 ## Table of Contents
 
 1. [Theme Documentation](#theme-documentation)
@@ -38,7 +43,8 @@ Documentation for UI enhancements and improvements.
 
 Details about bug fixes and code improvements.
 
-- **[Answer View Dark Mode Fix](bug_fixes/answer_view_dark_mode_fix.md)** - Fix for answer view visibility in dark mode
+- **[Claude RenderFlex Context Guide](CLAUDE_RENDERFLEX_CONTEXT_GUIDE.md)** - Comprehensive instructions for Claude 4 Sonnet to quickly gain context for RenderFlex overflow issues
+- **[RenderFlex Overflow Fixes](bug_fixes/renderflex_overflow_fixes.md)** - Complete history and solutions for layout overflow issues
 - **[Deprecated Method Fixes](bug_fixes/deprecated_method_fixes.md)** - Fixes for deprecated withOpacity methods
 - **[Deprecation and Dead Code Fixes](bug_fixes/deprecation_and_dead_code_fixes.md)** - Comprehensive fixes for deprecation warnings
 - **[Interview Question Card Fixes](bug_fixes/interview_question_card_fixes.md)** - Fixes for interview question cards
