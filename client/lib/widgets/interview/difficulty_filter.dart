@@ -36,9 +36,11 @@ class DifficultyFilter extends StatelessWidget {
             ),
           ),
         ),
-        Row(
-          children:
-              difficulties.map((difficulty) {
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children:
+                difficulties.map((difficulty) {
                 final isActive = activeDifficulty == difficulty['id'];
 
                 return Padding(
@@ -85,6 +87,7 @@ class DifficultyFilter extends StatelessWidget {
                   ),
                 );
               }).toList(),
+          ),
         ),
       ],
     );

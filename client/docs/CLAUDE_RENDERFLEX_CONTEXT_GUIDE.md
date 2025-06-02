@@ -1,31 +1,47 @@
-# Claude 4 Sonnet RenderFlex Overflow Context Guide
+# Claude 4 Sonnet RenderFlex Overflow Context Guide - UPDATED 2025-06-01
 
 ## 🎯 Quick Start for RenderFlex Overflow Issues
 
 When starting a new chat session to work on **RenderFlex overflow issues** in the **FlashMaster Flutter Application**, follow this systematic approach to gain complete context before implementing any fixes.
 
+## 🚨 CRITICAL UPDATE: Previous fixes may not have resolved all issues
+
+**IMPORTANT**: Despite previous comprehensive fixes documented in this application, the user reports that RenderFlex overflow issues still exist. This means there are likely additional overflow sources that need to be identified and fixed.
+
 ## 📋 Critical First Steps Checklist
 
 ### ✅ 1. Check Current RenderFlex Status (FIRST PRIORITY)
 
-**Read This File IMMEDIATELY:**
+**Read These Files IMMEDIATELY:**
 ```
 📁 client/docs/bug_fixes/
-├── 📄 renderflex_overflow_fixes.md     # CRITICAL: Complete history & solutions
+├── 📄 renderflex_overflow_fixes.md     # CRITICAL: Complete history & solutions  
 └── 📄 data_consistency_progress.md     # Task 0 status & lessons learned
 ```
 
 **Key Questions to Answer:**
-- ✅ What is the current status of Task 0 (RenderFlex Overflow)?
-- ✅ Which specific overflow issues have been resolved?
+- ✅ What is the current status of RenderFlex overflow fixes?
+- ✅ Which specific overflow issues have been resolved previously?
 - ✅ What patterns and solutions have been proven to work?
 - ✅ Are there any known problematic approaches to avoid?
+- ✅ What NEW overflow issues need to be identified?
 
-### ✅ 2. Understand Previous Solutions (CRITICAL PATTERNS)
+### ✅ 2. GET CURRENT ERROR DETAILS FROM USER
 
-**Review These Successful Fix Patterns:**
+**Essential Information to Request:**
+- **Exact error messages** from Flutter console with full stack traces
+- **File paths and line numbers** from error logs
+- **Screen width constraints** (e.g., BoxConstraints(0.0<=w<=XXX.X))
+- **Overflow amounts** (e.g., "overflowed by X pixels on the right")
+- **Screenshots** showing the affected UI areas
+- **Device/screen size** where the issue occurs
+- **Steps to reproduce** the overflow issue
 
-#### **Pattern 1: Flexible Widget Strategy**
+### ✅ 3. Understand PROVEN Successful Fix Patterns
+
+**Review These Battle-Tested Solutions:**
+
+#### **✅ Pattern 1: Flexible Widget Strategy**
 ```dart
 // ❌ PROBLEMATIC: Fixed width causing overflow
 Row(
@@ -45,7 +61,35 @@ Row(
 )
 ```
 
-#### **Pattern 2: Text Overflow Protection**
+#### **✅ Pattern 2: Horizontal Scrolling for Button/Tag Groups**
+```dart
+// ❌ PROBLEMATIC: Multiple buttons/tags without scrolling
+Row(
+  children: [
+    ElevatedButton(child: Text('Button 1')),
+    SizedBox(width: 16),
+    ElevatedButton(child: Text('Button 2')),
+    SizedBox(width: 16),
+    ElevatedButton(child: Text('Button 3')),
+  ]
+)
+
+// ✅ SOLUTION: Horizontal scrolling
+SingleChildScrollView(
+  scrollDirection: Axis.horizontal,
+  child: Row(
+    children: [
+      ElevatedButton(child: Text('Button 1')),
+      SizedBox(width: DS.isExtraSmallScreen(context) ? 4 : 8),
+      ElevatedButton(child: Text('Button 2')),
+      SizedBox(width: DS.isExtraSmallScreen(context) ? 4 : 8),
+      ElevatedButton(child: Text('Button 3')),
+    ]
+  )
+)
+```
+
+#### **✅ Pattern 3: Text Overflow Protection**
 ```dart
 // ✅ ALWAYS include for text in constrained layouts
 Text(

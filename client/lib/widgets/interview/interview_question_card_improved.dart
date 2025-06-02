@@ -219,155 +219,171 @@ class InterviewQuestionCardImproved extends StatelessWidget {
                 const SizedBox(height: DS.spacingM),
                 
                 // Status and action buttons
-                Row(
-                  children: [
-                    // Completion indicator
-                    if (question.isCompleted)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8, 
-                          vertical: 2
-                        ),
-                        margin: const EdgeInsets.only(right: DS.spacingS),
-                        decoration: BoxDecoration(
-                          color: context.isDarkMode
-                              ? const Color(0xFF34D399).withValues(alpha: 0.15)
-                              : Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(
-                            color: context.isDarkMode
-                                ? const Color(0xFF34D399).withValues(alpha: 0.3)
-                                : Colors.green.shade200,
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      // Completion indicator
+                      if (question.isCompleted)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8, 
+                            vertical: 2
                           ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.check_circle,
-                              size: 14,
+                          margin: const EdgeInsets.only(right: DS.spacingS),
+                          decoration: BoxDecoration(
+                            color: context.isDarkMode
+                                ? const Color(0xFF34D399).withValues(alpha: 0.15)
+                                : Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
                               color: context.isDarkMode
-                                  ? const Color(0xFF34D399)
-                                  : Colors.green.shade700,
+                                  ? const Color(0xFF34D399).withValues(alpha: 0.3)
+                                  : Colors.green.shade200,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Completed',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                size: 14,
                                 color: context.isDarkMode
                                     ? const Color(0xFF34D399)
                                     : Colors.green.shade700,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Text(
+                                'Completed',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: context.isDarkMode
+                                      ? const Color(0xFF34D399)
+                                      : Colors.green.shade700,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    // Practice button
-                    TextButton.icon(
-                      onPressed: onPractice,
-                      icon: Icon(
-                        Icons.play_circle_outline,
-                        size: 16,
-                        color: context.isDarkMode ? Colors.white : null,
-                      ),
-                      label: Text(
-                        'Practice',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                      // Practice button
+                      TextButton.icon(
+                        onPressed: onPractice,
+                        icon: Icon(
+                          Icons.play_circle_outline,
+                          size: DS.isExtraSmallScreen(context) ? 14 : 16,
                           color: context.isDarkMode ? Colors.white : null,
                         ),
-                      ),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        foregroundColor: context.primaryColor,
-                        backgroundColor: context.isDarkMode 
-                            ? context.primaryColor.withValues(alpha: 0.2)
-                            : Colors.blue.shade50,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(width: DS.spacingS),
-                    
-                    // View Answer button
-                    TextButton(
-                      onPressed: onViewAnswer,
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        foregroundColor: context.primaryColor,
-                      ),
-                      child: Text(
-                        'View Answer',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: context.primaryColor,
-                        ),
-                      ),
-                    ),
-                    
-                    const Spacer(),
-                    
-                    // Share, Edit, and Delete buttons
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: onShare,
-                          icon: Icon(
-                            Icons.share,
-                            size: 18,
-                            color: context.isDarkMode 
-                                ? Colors.white.withValues(alpha: 0.7)
-                                : Colors.grey.shade500,
+                        label: Text(
+                          'Practice',
+                          style: TextStyle(
+                            fontSize: DS.isExtraSmallScreen(context) ? 12 : 14,
+                            fontWeight: FontWeight.w500,
+                            color: context.isDarkMode ? Colors.white : null,
                           ),
-                          constraints: const BoxConstraints(),
-                          padding: EdgeInsets.zero,
-                          splashRadius: 20,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
-                        
-                        const SizedBox(width: DS.spacingS),
-                        
-                        IconButton(
-                          onPressed: onEdit,
-                          icon: Icon(
-                            Icons.edit,
-                            size: 18,
-                            color: context.isDarkMode 
-                                ? Colors.white.withValues(alpha: 0.7)
-                                : Colors.grey.shade500,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: DS.isExtraSmallScreen(context) ? 6 : 8, 
+                            vertical: 4
                           ),
-                          constraints: const BoxConstraints(),
-                          padding: EdgeInsets.zero,
-                          splashRadius: 20,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          foregroundColor: context.primaryColor,
+                          backgroundColor: context.isDarkMode 
+                              ? context.primaryColor.withValues(alpha: 0.2)
+                              : Colors.blue.shade50,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
-                        
-                        // Delete button (if callback provided)
-                        if (onDelete != null) ...[
-                          const SizedBox(width: DS.spacingS),
+                      ),
+                      
+                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
+                      
+                      // View Answer button
+                      TextButton(
+                        onPressed: onViewAnswer,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: DS.isExtraSmallScreen(context) ? 8 : 12, 
+                            vertical: 4
+                          ),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          foregroundColor: context.primaryColor,
+                        ),
+                        child: Text(
+                          'View Answer',
+                          style: TextStyle(
+                            fontSize: DS.isExtraSmallScreen(context) ? 12 : 14,
+                            fontWeight: FontWeight.w500,
+                            color: context.primaryColor,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                      
+                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacingS : DS.spacingM),
+                      
+                      // Action buttons group
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           IconButton(
-                            onPressed: onDelete,
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              size: 18,
+                            onPressed: onShare,
+                            icon: Icon(
+                              Icons.share,
+                              size: DS.isExtraSmallScreen(context) ? 16 : 18,
+                              color: context.isDarkMode 
+                                  ? Colors.white.withValues(alpha: 0.7)
+                                  : Colors.grey.shade500,
                             ),
-                            color: Colors.red,
                             constraints: const BoxConstraints(),
                             padding: EdgeInsets.zero,
                             splashRadius: 20,
                           ),
+                          
+                          SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
+                          
+                          IconButton(
+                            onPressed: onEdit,
+                            icon: Icon(
+                              Icons.edit,
+                              size: DS.isExtraSmallScreen(context) ? 16 : 18,
+                              color: context.isDarkMode 
+                                  ? Colors.white.withValues(alpha: 0.7)
+                                  : Colors.grey.shade500,
+                            ),
+                            constraints: const BoxConstraints(),
+                            padding: EdgeInsets.zero,
+                            splashRadius: 20,
+                          ),
+                          
+                          // Delete button (if callback provided)
+                          if (onDelete != null) ...[
+                            SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
+                            IconButton(
+                              onPressed: onDelete,
+                              icon: Icon(
+                                Icons.delete_outline,
+                                size: DS.isExtraSmallScreen(context) ? 16 : 18,
+                                color: Colors.red,
+                              ),
+                              constraints: const BoxConstraints(),
+                              padding: EdgeInsets.zero,
+                              splashRadius: 20,
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

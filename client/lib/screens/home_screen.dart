@@ -143,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           // Streak calendar
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: List.generate(7, (index) {
                               // Get the current day of the week
                               final now = DateTime.now();
@@ -204,40 +203,52 @@ class _HomeScreenState extends State<HomeScreen> {
                                 textColor = context.onPrimaryColor;
                               }
 
-                              return Column(
-                                children: [
-                                  Container(
-                                    width: DS.avatarSizeM,
-                                    height: DS.avatarSizeM,
-                                    decoration: BoxDecoration(
-                                      color: bgColor,
-                                      shape: BoxShape.circle,
-                                      border: border,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        _getDayAbbreviation(context, index),
-                                        style: TextStyle(
-                                          fontSize:
-                                              DS.isSmallScreen(context)
-                                                  ? 12
-                                                  : 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: textColor,
+                              return Expanded(
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      width: DS.avatarSizeM,
+                                      height: DS.avatarSizeM,
+                                      constraints: BoxConstraints(
+                                        maxWidth: DS.isExtraSmallScreen(context) ? 28 : 36,
+                                        maxHeight: DS.isExtraSmallScreen(context) ? 28 : 36,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: bgColor,
+                                        shape: BoxShape.circle,
+                                        border: border,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          _getDayAbbreviation(context, index),
+                                          style: TextStyle(
+                                            fontSize: DS.isExtraSmallScreen(context) 
+                                                ? 10 
+                                                : DS.isSmallScreen(context)
+                                                    ? 12
+                                                    : 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: textColor,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  DSSpacing.verticalXS,
-                                  Text(
-                                    isToday
-                                        ? AppLocalizations.of(context).today
-                                        : '',
-                                    style: context.bodySmall?.copyWith(
-                                      color: context.onSurfaceVariantColor,
+                                    DSSpacing.verticalXS,
+                                    Text(
+                                      isToday
+                                          ? AppLocalizations.of(context).today
+                                          : '',
+                                      style: context.bodySmall?.copyWith(
+                                        color: context.onSurfaceVariantColor,
+                                        fontSize: DS.isExtraSmallScreen(context) ? 10 : 12,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               );
                             }),
                           ),

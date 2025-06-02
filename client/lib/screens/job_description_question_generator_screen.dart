@@ -8,6 +8,7 @@ import '../services/interview_service.dart';
 import '../services/id_service.dart';
 import '../utils/theme_utils.dart';
 import '../utils/dialogs/delete_confirmation_dialog.dart';
+import '../utils/design_system.dart';
 import 'interview_practice_screen.dart';
 
 class JobDescriptionQuestionGeneratorScreen extends StatefulWidget {
@@ -670,18 +671,26 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
                     SizedBox(height: _title.isNotEmpty ? 16 : 0),
                     Row(
                       children: [
-                        Text(
-                          'Questions (${_generatedQuestions.length})',
-                          style: context.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            'Questions (${_generatedQuestions.length})',
+                            style: context.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
-                        const Spacer(),
+                        SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacingXs : DS.spacingM),
                         if (_generatedQuestions.isNotEmpty)
                           ElevatedButton.icon(
                             onPressed: _saveAllQuestions,
                             icon: const Icon(Icons.save),
-                            label: const Text('Save All'),
+                            label: Text(
+                              'Save All',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: context.primaryColor,
                               foregroundColor: context.onPrimaryColor,
@@ -1034,107 +1043,118 @@ class _JobDescriptionQuestionGeneratorScreenState extends State<JobDescriptionQu
               ],
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                TextButton.icon(
-                  onPressed: () {
-                    // Practice this question
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => InterviewPracticeScreen(
-                          question: question,
-                          questionList: _generatedQuestions,
-                          currentIndex: _generatedQuestions.indexOf(question),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      // Practice this question
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => InterviewPracticeScreen(
+                            question: question,
+                            questionList: _generatedQuestions,
+                            currentIndex: _generatedQuestions.indexOf(question),
+                          ),
                         ),
-                      ),
-                    ).then((_) {
-                      // Refresh the state when returning from practice
-                      setState(() {});
-                    });
-                  },
-                  icon: const Icon(Icons.play_arrow, size: 16),
-                  label: const Text('Practice'),
-                  style: TextButton.styleFrom(
-                    backgroundColor: context.primaryColor.withOpacityFix(0.1),
-                    foregroundColor: context.primaryColor,
+                      ).then((_) {
+                        // Refresh the state when returning from practice
+                        setState(() {});
+                      });
+                    },
+                    icon: const Icon(Icons.play_arrow, size: 16),
+                    label: Text(
+                      'Practice',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: context.primaryColor.withOpacityFix(0.1),
+                      foregroundColor: context.primaryColor,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                TextButton(
-                  onPressed: () {
-                    // Show answer in a dialog
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        backgroundColor: context.surfaceColor,
-                        title: Text(
-                          'Example Answer',
-                          style: TextStyle(color: context.onSurfaceColor),
-                        ),
-                        content: SingleChildScrollView(
-                          child: Text(
-                            question.answer ?? 'No answer provided',
+                  SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : 8),
+                  TextButton(
+                    onPressed: () {
+                      // Show answer in a dialog
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          backgroundColor: context.surfaceColor,
+                          title: Text(
+                            'Example Answer',
                             style: TextStyle(color: context.onSurfaceColor),
                           ),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
+                          content: SingleChildScrollView(
                             child: Text(
-                              'Close',
-                              style: TextStyle(color: context.primaryColor),
+                              question.answer ?? 'No answer provided',
+                              style: TextStyle(color: context.onSurfaceColor),
                             ),
                           ),
-                        ],
-                      ),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.primaryColor,
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: Text(
+                                'Close',
+                                style: TextStyle(color: context.primaryColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: context.primaryColor,
+                    ),
+                    child: Text(
+                      'View Answer',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   ),
-                  child: const Text('View Answer'),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () {
-                    // Share functionality
-                  },
-                  icon: Icon(
-                    Icons.share,
-                    size: 18,
-                    color: context.onSurfaceVariantColor,
+                  SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacingXs : DS.spacingM),
+                  IconButton(
+                    onPressed: () {
+                      // Share functionality
+                    },
+                    icon: Icon(
+                      Icons.share,
+                      size: 18,
+                      color: context.onSurfaceVariantColor,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () {
-                    _editQuestion(question);
-                  },
-                  icon: Icon(
-                    Icons.edit,
-                    size: 18,
-                    color: context.onSurfaceVariantColor,
+                  SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : 8),
+                  IconButton(
+                    onPressed: () {
+                      _editQuestion(question);
+                    },
+                    icon: Icon(
+                      Icons.edit,
+                      size: 18,
+                      color: context.onSurfaceVariantColor,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () {
-                    _handleDeleteQuestion(question);
-                  },
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    size: 18,
+                  SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : 8),
+                  IconButton(
+                    onPressed: () {
+                      _handleDeleteQuestion(question);
+                    },
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 18,
+                    ),
+                    color: Colors.red,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
-                  color: Colors.red,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

@@ -5,6 +5,7 @@ import '../services/interview_service.dart';
 import '../services/id_service.dart';
 import '../utils/colors.dart';
 import '../utils/category_mapper.dart';
+import '../utils/design_system.dart';
 
 class CreateInterviewQuestionScreen extends StatefulWidget {
   final InterviewQuestion? questionToEdit;
@@ -1169,49 +1170,69 @@ class _CreateInterviewQuestionScreenState
 
         const SizedBox(height: 32),
 
-        // Navigation and save buttons
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            OutlinedButton(
-              onPressed: _previousStep,
-              style: OutlinedButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+        // Navigation and save buttons with overflow protection
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              OutlinedButton(
+                onPressed: _previousStep,
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: DS.isExtraSmallScreen(context) ? 16 : 24, 
+                    vertical: 12
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  side: BorderSide(color: Colors.grey.shade300),
                 ),
-                side: BorderSide(color: Colors.grey.shade300),
+                child: Text(
+                  'Back',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
-              child: Text('Back'),
-            ),
-            Row(
-              children: [
-                OutlinedButton(
-                  onPressed: () => _saveQuestion(asDraft: true),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    side: BorderSide(color: Colors.grey.shade300),
+              SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacingS : DS.spacingL),
+              OutlinedButton(
+                onPressed: () => _saveQuestion(asDraft: true),
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: DS.isExtraSmallScreen(context) ? 12 : 16, 
+                    vertical: 12
                   ),
-                  child: Text('Save as Draft'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () => _saveQuestion(asDraft: false),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('Publish Question'),
+                  side: BorderSide(color: Colors.grey.shade300),
                 ),
-              ],
-            ),
-          ],
+                child: Text(
+                  'Save as Draft',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+              SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : 8),
+              ElevatedButton(
+                onPressed: () => _saveQuestion(asDraft: false),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: DS.isExtraSmallScreen(context) ? 12 : 16, 
+                    vertical: 12
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'Publish Question',
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

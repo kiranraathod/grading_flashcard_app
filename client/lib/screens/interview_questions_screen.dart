@@ -355,121 +355,138 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                 const SizedBox(height: DS.spacingL),
                 
                 // Questions header with count and practice all button
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Questions (${filteredQuestions.length})",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: context.isDarkMode 
-                            ? AppColors.textPrimaryDark 
-                            : AppColors.textPrimary,
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      // Questions count
+                      Text(
+                        "Questions (${filteredQuestions.length})",
+                        style: TextStyle(
+                          fontSize: DS.isExtraSmallScreen(context) ? 14 : 16,
+                          fontWeight: FontWeight.w600,
+                          color: context.isDarkMode 
+                              ? AppColors.textPrimaryDark 
+                              : AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                    ),
-                    
-                    // Practice all, refresh and add buttons
-                    Row(
-                      children: [
-                        // Practice all button
-                        ElevatedButton.icon(
-                          onPressed: filteredQuestions.isNotEmpty
-                              ? () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => InterviewPracticeBatchScreen(
-                                        questions: filteredQuestions,
-                                        categoryName: widget.category,
-                                      ),
+                      
+                      // Responsive spacing
+                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingM),
+                      
+                      // Practice all button
+                      ElevatedButton.icon(
+                        onPressed: filteredQuestions.isNotEmpty
+                            ? () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => InterviewPracticeBatchScreen(
+                                      questions: filteredQuestions,
+                                      categoryName: widget.category,
                                     ),
-                                  ).then((_) {
-                                    // Refresh the questions list when returning
-                                    setState(() {});
-                                  });
-                                }
-                              : null,
-                          icon: const Icon(
-                            Icons.play_circle,
-                            size: 16,
+                                  ),
+                                ).then((_) {
+                                  // Refresh the questions list when returning
+                                  setState(() {});
+                                });
+                              }
+                            : null,
+                        icon: Icon(
+                          Icons.play_circle,
+                          size: DS.isExtraSmallScreen(context) ? 14 : 16,
+                        ),
+                        label: Text(
+                          'Practice All',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: DS.isExtraSmallScreen(context) ? 8 : 12, 
+                            vertical: 4
                           ),
-                          label: Text('Practice All'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            textStyle: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          textStyle: TextStyle(
+                            fontSize: DS.isExtraSmallScreen(context) ? 11 : 13,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        
-                        const SizedBox(width: DS.spacingS),
-                        TextButton.icon(
-                          onPressed: () {
-                            setState(() {
-                              // Reload questions
-                              // Just trigger a refresh - _questions field was removed
-                              // Service will reload questions as needed
-                            });
-                          },
-                          icon: Icon(
-                            Icons.refresh,
-                            size: 16,
+                      ),
+                      
+                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
+                      
+                      // Refresh button
+                      TextButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            // Reload questions
+                            // Just trigger a refresh - _questions field was removed
+                            // Service will reload questions as needed
+                          });
+                        },
+                        icon: Icon(
+                          Icons.refresh,
+                          size: DS.isExtraSmallScreen(context) ? 14 : 16,
+                          color: Colors.blue.shade600,
+                        ),
+                        label: Text(
+                          'Refresh',
+                          style: TextStyle(
+                            fontSize: DS.isExtraSmallScreen(context) ? 11 : 13,
                             color: Colors.blue.shade600,
                           ),
-                          label: Text(
-                            'Refresh',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.blue.shade600,
-                            ),
-                          ),
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
-                        
-                        const SizedBox(width: DS.spacingM),
-                        
-                        TextButton.icon(
-                          onPressed: () {
-                            // Navigate to create interview question screen
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CreateInterviewQuestionScreen(),
-                              ),
-                            ).then((_) {
-                              // Refresh the questions list when returning
-                              setState(() {});
-                            });
-                          },
-                          icon: Icon(
-                            Icons.add_circle_outline,
-                            size: 16,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                      
+                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingM),
+                      
+                      // Add Question button  
+                      TextButton.icon(
+                        onPressed: () {
+                          // Navigate to create interview question screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CreateInterviewQuestionScreen(),
+                            ),
+                          ).then((_) {
+                            // Refresh the questions list when returning
+                            setState(() {});
+                          });
+                        },
+                        icon: Icon(
+                          Icons.add_circle_outline,
+                          size: DS.isExtraSmallScreen(context) ? 14 : 16,
+                          color: Colors.blue.shade600,
+                        ),
+                        label: Text(
+                          'Add Question',
+                          style: TextStyle(
+                            fontSize: DS.isExtraSmallScreen(context) ? 11 : 13,
                             color: Colors.blue.shade600,
                           ),
-                          label: Text(
-                            'Add Question',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.blue.shade600,
-                            ),
-                          ),
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
-                      ],
-                    ),
-                  ],
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 
                 const SizedBox(height: DS.spacingM),

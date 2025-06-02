@@ -559,15 +559,19 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                       ),
                       child: const Icon(Icons.visibility, color: Colors.white, size: 18),
                     ),
-                    const SizedBox(width: DS.spacingS),
-                    Text(
-                      'Example Answer',
-                      style: context.titleMedium?.copyWith(
-                        color: const Color(0xFF3B82F6),
-                        fontWeight: FontWeight.w600,
+                    SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
+                    Expanded(
+                      child: Text(
+                        'Example Answer',
+                        style: context.titleMedium?.copyWith(
+                          color: const Color(0xFF3B82F6),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
-                    const Spacer(),
+                    SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.pop(context),
@@ -620,14 +624,18 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                     child: const Icon(Icons.person, color: Colors.white, size: 14),
                                   ),
                                   const SizedBox(width: DS.spacingXs),
-                                  Text(
-                                    'Your Answer',
-                                    style: context.titleSmall?.copyWith(
-                                      color: const Color(0xFF0D9488),
-                                      fontWeight: FontWeight.w600,
+                                  Expanded(
+                                    child: Text(
+                                      'Your Answer',
+                                      style: context.titleSmall?.copyWith(
+                                        color: const Color(0xFF0D9488),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ),
-                                  const Spacer(),
+                                  SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
@@ -689,14 +697,18 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                   child: const Icon(Icons.lightbulb, color: Colors.white, size: 14),
                                 ),
                                 const SizedBox(width: DS.spacingXs),
-                                Text(
-                                  'Example Answer',
-                                  style: context.titleSmall?.copyWith(
-                                    color: const Color(0xFF3B82F6),
-                                    fontWeight: FontWeight.w600,
+                                Expanded(
+                                  child: Text(
+                                    'Example Answer',
+                                    style: context.titleSmall?.copyWith(
+                                      color: const Color(0xFF3B82F6),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
                                   ),
                                 ),
-                                const Spacer(),
+                                SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
@@ -777,15 +789,19 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                 child: Row(
                   children: [
                     Icon(Icons.lightbulb, color: context.primaryColor),
-                    const SizedBox(width: DS.spacingS),
-                    Text(
-                      'Preparation Tips',
-                      style: context.titleMedium?.copyWith(
-                        color: context.primaryColor,
-                        fontWeight: FontWeight.w600,
+                    SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
+                    Expanded(
+                      child: Text(
+                        'Preparation Tips',
+                        style: context.titleMedium?.copyWith(
+                          color: context.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
-                    const Spacer(),
+                    SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.pop(context),
@@ -1093,20 +1109,24 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                         ),
                       ),
                       
-                      const SizedBox(width: 16),
+                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacingXs : 16),
                       
-                      // Enhanced title
-                      const Text(
-                        'Practice Mode',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                          letterSpacing: -0.5,
+                      // Enhanced title with overflow protection
+                      Expanded(
+                        child: Text(
+                          'Practice Mode',
+                          style: TextStyle(
+                            fontSize: DS.isExtraSmallScreen(context) ? 16 : 20,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F172A),
+                            letterSpacing: -0.5,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                       
-                      const Spacer(),
+                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacingXs : DS.spacingS),
                       
                       // Enhanced tips button
                       Container(
@@ -1234,17 +1254,21 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                         
                         const SizedBox(width: 12),
                         
-                        // Timer text
-                        Text(
-                          'Time: ${_formatTime(_timeTaken)}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF10B981),
+                        // Timer text with overflow protection
+                        Expanded(
+                          child: Text(
+                            'Time: ${_formatTime(_timeTaken)}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF10B981),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                         
-                        const Spacer(),
+                        SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
                         
                         // Word count indicator
                         Container(
@@ -1313,93 +1337,106 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // ✨ ENHANCED Category and difficulty tags with gradients
-                                Row(
-                                  children: [
-                                    // Enhanced category tag with gradient
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: DS.spacingS,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            const Color(0xFF0D9488),
-                                            const Color(0xFF5EEAD4),
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      // Enhanced category tag with gradient
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: DS.isExtraSmallScreen(context) ? 6 : DS.spacingS,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              const Color(0xFF0D9488),
+                                              const Color(0xFF5EEAD4),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(20),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF0D9488).withValues(alpha: 0.2),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
                                           ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
                                         ),
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: const Color(0xFF0D9488).withValues(alpha: 0.2),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
+                                        child: Text(
+                                          _getCategoryName(),
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: DS.isExtraSmallScreen(context) ? 10 : 12,
                                           ),
-                                        ],
-                                      ),
-                                      child: Text(
-                                        _getCategoryName(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12,
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
                                         ),
                                       ),
-                                    ),
 
-                                    const SizedBox(width: DS.spacingS),
+                                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
 
-                                    // Subtopic with enhanced styling
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF64748B).withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        widget.question.subtopic,
-                                        style: context.bodySmall?.copyWith(
-                                          color: const Color(0xFF64748B),
-                                          fontWeight: FontWeight.w500,
+                                      // Subtopic with enhanced styling
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: DS.isExtraSmallScreen(context) ? 6 : 8, 
+                                          vertical: 4
                                         ),
-                                      ),
-                                    ),
-
-                                    const Spacer(),
-
-                                    // Enhanced difficulty tag with gradient
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: DS.spacingS,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: _getDifficultyGradientColors(),
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF64748B).withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: _getDifficultyGradientColors()[0].withValues(alpha: 0.2),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
+                                        child: Text(
+                                          widget.question.subtopic,
+                                          style: context.bodySmall?.copyWith(
+                                            color: const Color(0xFF64748B),
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: DS.isExtraSmallScreen(context) ? 10 : 12,
                                           ),
-                                        ],
-                                      ),
-                                      child: Text(
-                                        _getDifficultyText(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12,
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
                                         ),
                                       ),
-                                    ),
-                                  ],
+
+                                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
+
+                                      // Enhanced difficulty tag with gradient
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: DS.isExtraSmallScreen(context) ? 6 : DS.spacingS,
+                                          vertical: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: _getDifficultyGradientColors(),
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(20),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: _getDifficultyGradientColors()[0].withValues(alpha: 0.2),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Text(
+                                          _getDifficultyText(),
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: DS.isExtraSmallScreen(context) ? 10 : 12,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
 
                                 const SizedBox(height: DS.spacingM),
@@ -1508,24 +1545,32 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                             ),
                                           ),
                                           
-                                          const Spacer(),
+                                          SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingM),
                                           
-                                          // Word count requirement
-                                          Text(
-                                            '${_getWordCount(_userAnswerController.text)} words',
-                                            style: context.bodySmall?.copyWith(
-                                              color: _getAnswerQualityColor(),
-                                              fontWeight: FontWeight.w500,
+                                          // Word count requirement with overflow protection
+                                          Expanded(
+                                            child: Text(
+                                              '${_getWordCount(_userAnswerController.text)} words',
+                                              style: context.bodySmall?.copyWith(
+                                                color: _getAnswerQualityColor(),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
                                             ),
                                           ),
                                           
-                                          const SizedBox(width: DS.spacingXs),
+                                          SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingXs),
                                           
-                                          // Requirement indicator
-                                          Text(
-                                            '(200-300 required)',
-                                            style: context.bodySmall?.copyWith(
-                                              color: context.onSurfaceVariantColor,
+                                          // Requirement indicator with overflow protection
+                                          Flexible(
+                                            child: Text(
+                                              '(200-300 required)',
+                                              style: context.bodySmall?.copyWith(
+                                                color: context.onSurfaceVariantColor,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
                                             ),
                                           ),
                                         ],
@@ -1563,36 +1608,14 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // ✨ ENHANCED Bottom row: Navigation and Grade All with validation
-                        _isSubmittingBatch || _isGrading
-                            ? Container(
-                                padding: const EdgeInsets.all(DS.spacingL),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        const Color(0xFF0D9488),
-                                      ),
-                                    ),
-                                    const SizedBox(height: DS.spacingS),
-                                    Text(
-                                      _isSubmittingBatch ? 'Grading all answers...' : 'Grading your answer...',
-                                      style: context.bodyMedium?.copyWith(
-                                        color: const Color(0xFF0D9488),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : Row(
-                                children: [
-                                  // Previous button (secondary action)
-                                  if (widget.currentIndex > 0) ...[
-                                    Expanded(
-                                      flex: 2,
-                                      child: OutlinedButton.icon(
-                                        onPressed: _moveToPreviousQuestion,
+                        Row(
+                          children: [
+                            // Previous button (secondary action)
+                            if (widget.currentIndex > 0) ...[
+                              Expanded(
+                                flex: 2,
+                                child: OutlinedButton.icon(
+                                  onPressed: _moveToPreviousQuestion,
                                         icon: const Icon(Icons.arrow_back, size: 18),
                                         label: const Text('Previous'),
                                         style: OutlinedButton.styleFrom(
