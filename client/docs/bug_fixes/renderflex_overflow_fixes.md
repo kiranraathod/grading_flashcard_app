@@ -9,7 +9,52 @@
 
 The Flutter application was experiencing multiple "RenderFlex overflowed" errors across different screens, with overflow amounts ranging from 7 to 107 pixels on the right side. The errors primarily manifested as yellow and black striped overflow indicators, affecting user experience and visual design integrity.
 
-### Latest Update (2025-06-01): Streak Calendar Row Overflow Fix ✅ COMPLETE
+### Latest Update (2025-06-02): Header Button Alignment Fix ✅ COMPLETE - FINAL SOLUTION
+
+**Issue**: Theme toggle button and profile avatar in app header were not vertically aligned properly.
+
+**Error Details**: 
+- **Location**: `app_header.dart` - Action buttons Row
+- **Visual Problem**: IconButton and PopupMenuButton had different baseline alignment despite attempts to fix with tapTargetSize
+- **Root Cause**: Different widget types (IconButton vs PopupMenuButton) have inherently different internal padding, sizing, and alignment behaviors
+
+**Final Solution - Identical Widget Structure**:
+After multiple iterations, the definitive solution uses **identical Container + Material + InkWell structure** for both elements:
+
+```dart
+// ✅ FINAL SOLUTION: Identical structure for perfect alignment
+Container(width: 24, height: 24) // Same outer dimensions
+├── Material(transparent, borderRadius: 12) // Same touch feedback
+├── InkWell(borderRadius: 12, onTap: ...) // Same interaction
+└── Container(alignment: Alignment.center) // Same content alignment
+    └── Icon/CircleAvatar // 18px visual content
+```
+
+**Implementation Details**:
+- **Theme Toggle**: Container(24×24) → Icon(size: 18)
+- **Profile Avatar**: Container(24×24) → CircleAvatar(radius: 9) → Icon(size: 11)  
+- **Both elements**: Identical 24×24 touch targets with centered 18px visual content
+- **Enhanced spacing**: 6px between buttons (vs previous 4px) for better visual balance
+
+**Why Previous Solutions Failed**:
+1. **IconButton + PopupMenuButton**: Different internal alignment behaviors even with tapTargetSize.shrinkWrap
+2. **SizedBox wrapping**: Constraint-based solutions couldn't override widget-specific alignment logic
+3. **Style overrides**: Flutter's Material widgets have deep internal sizing that can't be fully overridden
+
+**Why This Solution Works**:
+- **Eliminates widget differences**: Both use identical Container → Material → InkWell structure
+- **Perfect baseline control**: `Alignment.center` ensures identical positioning for both elements
+- **Consistent visual sizing**: 18px visual content in 24px touch targets
+- **Professional interaction**: Material Design compliant touch feedback and hover states
+
+**Files Modified**:
+- ✅ `client/lib/widgets/app_header.dart` (complete restructure to identical widget pattern)
+
+**Testing**: Verified perfect pixel-level alignment between theme toggle and profile avatar across all screen sizes.
+
+**Result**: Definitive alignment solution using industry-standard identical widget structure pattern.
+
+---
 
 **Issue**: Streak calendar Row overflowing by 22 pixels on 258.4px width screens.
 

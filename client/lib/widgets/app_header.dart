@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
 import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
+import '../utils/theme_provider.dart';
 import '../screens/settings_screen.dart';
-import '../widgets/theme_toggle.dart';
 import '../screens/search/search_results_screen.dart';
 
 class AppHeader extends StatefulWidget {
@@ -20,18 +22,6 @@ class AppHeader extends StatefulWidget {
 }
 
 class _AppHeaderState extends State<AppHeader> {
-  // Helper method to navigate to search results
-  void _navigateToSearchResults(BuildContext context, String query) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SearchResultsScreen(
-          initialQuery: query,
-        ),
-      ),
-    );
-  }
-  
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   
@@ -42,8 +32,21 @@ class _AppHeaderState extends State<AppHeader> {
     super.dispose();
   }
   
+  void _navigateToSearchResults(BuildContext context, String query) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchResultsScreen(
+          initialQuery: query,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return Container(
       height: DS.buttonHeightXl,
       padding: const EdgeInsets.symmetric(horizontal: DS.spacingM),
@@ -57,45 +60,40 @@ class _AppHeaderState extends State<AppHeader> {
       ),
       child: Row(
         children: [
-          // Logo/Brand - FIXED: Highly compressed on small screens
-          if (!DS.isExtraSmallScreen(context)) // Hide logo on very small screens
-            Flexible(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.book_outlined,
-                    color: context.primaryColor,
-                    size: DS.iconSizeS,
+          // Logo/Brand Section
+          if (!DS.isExtraSmallScreen(context))
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.book_outlined,
+                  color: context.primaryColor,
+                  size: DS.iconSizeS,
+                ),
+                SizedBox(width: DS.spacingXs),
+                Text(
+                  AppLocalizations.of(context).appTitle,
+                  style: context.titleLarge?.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: context.onSurfaceColor,
                   ),
-                  SizedBox(width: DS.spacingXs),
-                  Flexible(
-                    child: Text(
-                      AppLocalizations.of(context).appTitle,
-                      style: context.titleLarge?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: context.onSurfaceColor,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           
-          if (!DS.isExtraSmallScreen(context)) // Hide spacing on very small screens
+          // Spacing after logo
+          if (!DS.isExtraSmallScreen(context))
             const SizedBox(width: DS.spacingM)
-          else 
+          else
             const SizedBox(width: DS.spacing2xs),
           
-          // Search bar - FIXED: Maximum space utilization
+          // Search Bar
           Expanded(
             child: Container(
-              height: DS.inputHeightL - 12, // 36px total
+              height: 36,
               constraints: BoxConstraints(
-                minWidth: DS.isExtraSmallScreen(context) ? 150 : 200, // Minimum usable width
+                minWidth: DS.isExtraSmallScreen(context) ? 150 : 200,
               ),
               padding: EdgeInsets.symmetric(
                 horizontal: DS.isExtraSmallScreen(context) ? 6 : DS.spacingS,
@@ -110,143 +108,181 @@ class _AppHeaderState extends State<AppHeader> {
                   width: 0.5,
                 ),
               ),
-              child: InkWell(
-                onTap: () {
-                  _searchFocusNode.requestFocus();
-                },
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.search,
-                      color: context.onSurfaceVariantColor,
-                      size: DS.isExtraSmallScreen(context) ? 14 : 16,
-                    ),
-                    SizedBox(width: DS.isExtraSmallScreen(context) ? 4 : DS.spacingXs),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        focusNode: _searchFocusNode,
-                        style: TextStyle(
-                          color: context.onSurfaceColor,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search,
+                    color: context.onSurfaceVariantColor,
+                    size: DS.isExtraSmallScreen(context) ? 14 : 16,
+                  ),
+                  SizedBox(width: DS.isExtraSmallScreen(context) ? 4 : DS.spacingXs),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      style: TextStyle(
+                        color: context.onSurfaceColor,
+                        fontSize: 16,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: AppLocalizations.of(context).search,
+                        hintStyle: TextStyle(
+                          color: context.onSurfaceVariantColor,
                           fontSize: 16,
                         ),
-                        decoration: InputDecoration(
-                          hintText: AppLocalizations.of(context).search,
-                          hintStyle: TextStyle(
-                            color: context.onSurfaceVariantColor,
-                            fontSize: 16,
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                          suffixIcon: _searchController.text.isNotEmpty 
-                            ? IconButton(
-                                icon: Icon(
-                                  Icons.clear,
-                                  color: context.onSurfaceVariantColor,
-                                  size: DS.iconSizeXs,
-                                ),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  _searchFocusNode.unfocus();
-                                },
-                              )
-                            : null,
-                        ),
-                        onChanged: (value) {
-                          // Force update to show/hide clear button
-                          setState(() {});
-                        },
-                        onSubmitted: (value) {
-                          if (value.trim().isNotEmpty) {
-                            _navigateToSearchResults(context, value);
-                          }
-                        },
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                        suffixIcon: _searchController.text.isNotEmpty 
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: context.onSurfaceVariantColor,
+                                size: DS.iconSizeXs,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                _searchFocusNode.unfocus();
+                                setState(() {});
+                              },
+                            )
+                          : null,
                       ),
+                      onChanged: (value) {
+                        setState(() {});
+                      },
+                      onSubmitted: (value) {
+                        if (value.trim().isNotEmpty) {
+                          _navigateToSearchResults(context, value);
+                        }
+                      },
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
           
-          SizedBox(width: DS.isExtraSmallScreen(context) ? 4 : DS.spacingM),
+          // Spacing before actions
+          SizedBox(width: DS.isExtraSmallScreen(context) ? 8 : DS.spacingM),
           
-          // Action buttons - FIXED: Minimal spacing on small screens
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Dark mode toggle - This is the fix for the missing dark icon
-              const ThemeToggleButton(),
-              
-              SizedBox(width: DS.isExtraSmallScreen(context) ? 4 : DS.spacingXs),
-              
-              // Profile dropdown - FIXED: RenderFlex overflow by simplifying design
-              PopupMenuButton<String>(
-                offset: const Offset(0, DS.avatarSizeM),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                ),
-                icon: CircleAvatar(
-                  radius: DS.avatarSizeXs * 0.5, // Reduced size: ~12px radius
-                  backgroundColor: context.primaryColor,
-                  child: Icon(
-                    Icons.person,
-                    color: context.onPrimaryColor,
-                    size: DS.iconSizeXs - 2, // Reduced size: 14px
-                  ),
-                ),
-                itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'profile',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_outline, size: DS.iconSizeXs + 2), // 18px total
-                        const SizedBox(width: DS.spacingXs),
-                        Text(AppLocalizations.of(context).profile),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'settings',
-                    child: Row(
-                      children: [
-                        Icon(Icons.settings_outlined, size: DS.iconSizeXs + 2), // 18px total
-                        const SizedBox(width: DS.spacingXs),
-                        Text(AppLocalizations.of(context).settings),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  PopupMenuItem(
-                    value: 'logout',
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout_outlined, size: DS.iconSizeXs + 2), // 18px total
-                        const SizedBox(width: DS.spacingXs),
-                        Text(AppLocalizations.of(context).logout),
-                      ],
-                    ),
-                  ),
-                ],
-                onSelected: (value) {
-                  switch (value) {
-                    case 'settings':
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                      );
-                      break;
-                    case 'logout':
-                      // Handle logout
-                      break;
-                  }
-                },
-              ),
-            ],
-          ),
+          // Action buttons with perfect alignment
+          _buildActionButtons(context, themeProvider),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionButtons(BuildContext context, ThemeProvider themeProvider) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Theme Toggle Button
+        SizedBox(
+          width: 40,
+          height: 40,
+          child: IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: themeProvider.isDarkMode 
+                  ? Colors.white 
+                  : context.onSurfaceColor,
+            ),
+            icon: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 150),
+              child: Icon(
+                themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                key: ValueKey<bool>(themeProvider.isDarkMode),
+                size: 20,
+              ),
+            ),
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              themeProvider.toggleTheme();
+            },
+            tooltip: themeProvider.isDarkMode
+                ? AppLocalizations.of(context).switchToLightMode
+                : AppLocalizations.of(context).switchToDarkMode,
+          ),
+        ),
+        
+        const SizedBox(width: 8), // Space between buttons
+        
+        // Profile Menu Button  
+        SizedBox(
+          width: 40,
+          height: 40,
+          child: PopupMenuButton<String>(
+            padding: EdgeInsets.zero,
+            offset: const Offset(0, 45),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: context.primaryColor,
+                child: Icon(
+                  Icons.person,
+                  color: context.onPrimaryColor,
+                  size: 18,
+                ),
+              ),
+            ),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_outline, size: 18),
+                    const SizedBox(width: 8),
+                    Text(AppLocalizations.of(context).profile),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Text(AppLocalizations.of(context).settings),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    Text(AppLocalizations.of(context).logout),
+                  ],
+                ),
+              ),
+            ],
+            onSelected: (value) {
+              switch (value) {
+                case 'settings':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                  break;
+                case 'logout':
+                  // Handle logout
+                  break;
+              }
+            },
+          ),
+        ),
+      ],
     );
   }
 }

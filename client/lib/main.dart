@@ -28,13 +28,13 @@ import 'widgets/error_handler.dart';
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize storage service
   await StorageService.initialize();
-  
+
   // Initialize enhanced network infrastructure
   await _initializeNetworkInfrastructure();
-  
+
   runApp(const MyApp());
 }
 
@@ -42,13 +42,13 @@ void main() async {
 Future<void> _initializeNetworkInfrastructure() async {
   try {
     debugPrint('🚀 Initializing Enhanced Network Infrastructure...');
-    
+
     final networkInitializer = NetworkInfrastructureInitializer();
     final success = await networkInitializer.initialize();
-    
+
     if (success) {
       debugPrint('✅ Network infrastructure initialized successfully');
-      
+
       // Log infrastructure status
       final status = networkInitializer.getInfrastructureStatus();
       debugPrint('📊 Network Infrastructure Status:');
@@ -56,13 +56,17 @@ Future<void> _initializeNetworkInfrastructure() async {
         debugPrint('   $key: $value');
       });
     } else {
-      debugPrint('⚠️ Network infrastructure initialization completed with errors:');
+      debugPrint(
+        '⚠️ Network infrastructure initialization completed with errors:',
+      );
       for (final error in networkInitializer.initializationErrors) {
         debugPrint('   ❌ $error');
       }
     }
   } catch (e, stackTrace) {
-    debugPrint('💥 Critical error during network infrastructure initialization: $e');
+    debugPrint(
+      '💥 Critical error during network infrastructure initialization: $e',
+    );
     debugPrint('Stack trace: $stackTrace');
     // Continue with app startup even if network initialization fails
   }
@@ -141,7 +145,7 @@ class MyApp extends StatelessWidget {
               // Enhanced Network Services
               ChangeNotifierProvider(create: (_) => ConnectivityService()),
               ChangeNotifierProvider(create: (_) => SyncStatusTracker()),
-              
+
               // Services as Providers (for backward compatibility)
               ChangeNotifierProvider(create: (_) => flashcardService),
               ChangeNotifierProvider(create: (_) => userService),
@@ -178,40 +182,40 @@ class MyApp extends StatelessWidget {
                       themeProvider,
                       _,
                     ) => TweenAnimationBuilder<double>(
-                        duration: const Duration(milliseconds: 200),
-                        tween: Tween<double>(
-                          begin: themeProvider.isDarkMode ? 1.0 : 0.0,
-                          end: themeProvider.isDarkMode ? 1.0 : 0.0,
-                        ),
-                        builder:
-                            (context, value, child) => MaterialApp(
-                                  title: 'FlashMaster',
-                                  theme: lightTheme,
-                                  darkTheme: darkTheme,
-                                  themeMode: themeProvider.themeMode,
-                                  themeAnimationDuration:
-                                      Duration
-                                          .zero, // Disable theme animation to prevent lag
-                                  home: const HomeScreen(),
-                                  routes: {
-                                    '/job-description-generator':
-                                        (context) =>
-                                            const JobDescriptionQuestionGeneratorScreen(),
-                                    '/data-validation': (context) =>
-                                        const DataValidationScreen(),
-                                  },
-                                  debugShowCheckedModeBanner: false,
-                                  // Localization config
-                                  locale: const Locale('en'),
-                                  localizationsDelegates: const [
-                                    AppLocalizations.delegate,
-                                    GlobalMaterialLocalizations.delegate,
-                                    GlobalWidgetsLocalizations.delegate,
-                                    GlobalCupertinoLocalizations.delegate,
-                                  ],
-                                  supportedLocales: const [Locale('en')],
-                                ),
+                      duration: const Duration(milliseconds: 200),
+                      tween: Tween<double>(
+                        begin: themeProvider.isDarkMode ? 1.0 : 0.0,
+                        end: themeProvider.isDarkMode ? 1.0 : 0.0,
                       ),
+                      builder:
+                          (context, value, child) => MaterialApp(
+                            title: 'FlashMaster',
+                            theme: lightTheme,
+                            darkTheme: darkTheme,
+                            themeMode: themeProvider.themeMode,
+                            themeAnimationDuration:
+                                Duration
+                                    .zero, // Disable theme animation to prevent lag
+                            home: const HomeScreen(),
+                            routes: {
+                              '/job-description-generator':
+                                  (context) =>
+                                      const JobDescriptionQuestionGeneratorScreen(),
+                              '/data-validation':
+                                  (context) => const DataValidationScreen(),
+                            },
+                            debugShowCheckedModeBanner: false,
+                            // Localization config
+                            locale: const Locale('en'),
+                            localizationsDelegates: const [
+                              AppLocalizations.delegate,
+                              GlobalMaterialLocalizations.delegate,
+                              GlobalWidgetsLocalizations.delegate,
+                              GlobalCupertinoLocalizations.delegate,
+                            ],
+                            supportedLocales: const [Locale('en')],
+                          ),
+                    ),
               ),
             ),
           ),
