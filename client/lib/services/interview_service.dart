@@ -142,8 +142,9 @@ class InterviewService extends ChangeNotifier {
       return true;
     }
     
-    // Special: Handle specific subtopic patterns
-    return _isSpecialSubtopicMatch(categoryName, question);
+    // Special: Handle specific subtopic patterns (temporarily disabled)
+    // return _isSpecialSubtopicMatch(categoryName, question);
+    return false;
   }
 
   /// Update question metadata based on server categories
@@ -393,11 +394,11 @@ class InterviewService extends ChangeNotifier {
         return true;
       }
       
-      // ✅ SPECIAL: Handle specific subtopic patterns
-      if (_isSpecialSubtopicMatch(uiCategory, question)) {
-        debugPrint('Subtopic pattern match: ${question.text} (subtopic: ${question.subtopic})');
-        return true;
-      }
+      // ✅ SPECIAL: Handle specific subtopic patterns (temporarily disabled)
+      // if (_isSpecialSubtopicMatch(uiCategory, question)) {
+      //   debugPrint('Subtopic pattern match: ${question.text} (subtopic: ${question.subtopic})');
+      //   return true;
+      // }
       
       return false;
     }).toList();
@@ -421,27 +422,27 @@ class InterviewService extends ChangeNotifier {
     return filteredQuestions;
   }
 
-  // ✅ SIMPLIFIED: Handle special subtopic patterns (much cleaner)
-  bool _isSpecialSubtopicMatch(String uiCategory, InterviewQuestion question) {
-    final subtopicLower = question.subtopic.toLowerCase();
-    
-    switch (uiCategory) {
-      case 'SQL':
-        return subtopicLower.contains('sql') || subtopicLower.contains('database');
-      case 'Python':
-        return subtopicLower.contains('python');
-      case 'Data Analysis':
-        return subtopicLower.contains('data') || subtopicLower.contains('analysis');
-      case 'Machine Learning':
-        return subtopicLower.contains('ml') || subtopicLower.contains('machine learning');
-      case 'Web Development':
-        return subtopicLower.contains('web') || subtopicLower.contains('api');
-      case 'Statistics':
-        return subtopicLower.contains('statistical') || subtopicLower.contains('statistics');
-      default:
-        return false;
-    }
-  }
+  // ✅ SIMPLIFIED: Handle special subtopic patterns (temporarily disabled)
+  // bool _isSpecialSubtopicMatch(String uiCategory, InterviewQuestion question) {
+  //   final subtopicLower = question.subtopic.toLowerCase();
+  //   
+  //   switch (uiCategory) {
+  //     case 'SQL':
+  //       return subtopicLower.contains('sql') || subtopicLower.contains('database');
+  //     case 'Python':
+  //       return subtopicLower.contains('python');
+  //     case 'Data Analysis':
+  //       return subtopicLower.contains('data') || subtopicLower.contains('analysis');
+  //     case 'Machine Learning':
+  //       return subtopicLower.contains('ml') || subtopicLower.contains('machine learning');
+  //     case 'Web Development':
+  //       return subtopicLower.contains('web') || subtopicLower.contains('api');
+  //     case 'Statistics':
+  //       return subtopicLower.contains('statistical') || subtopicLower.contains('statistics');
+  //     default:
+  //       return false;
+  //   }
+  // }
   
   // Get questions by subtopic
   List<InterviewQuestion> getQuestionsBySubtopic(String subtopic) {
@@ -496,13 +497,22 @@ class InterviewService extends ChangeNotifier {
             return false;
           }
         } else {
-          // Use the original category matching logic
+          // ✅ FIX: Map legacy categories to UI categories for proper filtering
+          String targetUICategory = category;
+          
+          // Handle legacy category mapping for filters
+          if (['technical', 'applied', 'behavioral', 'case', 'job'].contains(category)) {
+            targetUICategory = CategoryMapper.mapInternalToUICategory(category);
+            debugPrint('🔧 Mapped legacy filter "$category" to UI category "$targetUICategory"');
+          }
+          
+          // Use the original category matching logic with mapped target
           bool matches = false;
           
           // PRIMARY: Check categoryId field
           if (q.categoryId != null) {
             final serverUICategory = CategoryMapper.mapInternalToUICategory(q.categoryId!);
-            if (serverUICategory == category) {
+            if (serverUICategory == targetUICategory) {
               matches = true;
             }
           }
@@ -510,15 +520,15 @@ class InterviewService extends ChangeNotifier {
           // FALLBACK: Use legacy category mapping
           if (!matches) {
             final mappedCategory = CategoryMapper.getDefaultCategory(q.category);
-            if (mappedCategory == category) {
+            if (mappedCategory == targetUICategory) {
               matches = true;
             }
           }
           
-          // SPECIAL: Handle subtopic patterns
-          if (!matches && _isSpecialSubtopicMatch(category, q)) {
-            matches = true;
-          }
+          // SPECIAL: Handle subtopic patterns (temporarily disabled)
+          // if (!matches && _isSpecialSubtopicMatch(targetUICategory, q)) {
+          //   matches = true;
+          // }
           
           if (!matches) {
             return false;

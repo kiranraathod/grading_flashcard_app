@@ -52,19 +52,25 @@ class RecentViewService {
     bool isCompleted = false,
   }) async {
     try {
+      // ✅ FIX: Use subtopic for navigation instead of generic category
+      final navigationCategory = question.subtopic.isNotEmpty ? question.subtopic : category;
+      
       // Create a recently viewed item with completion status
       final recentItem = RecentlyViewedItem.fromInterviewQuestion(
         questionId: question.id,
-        category: category,
+        category: category, // Keep original category for parentId
         question: question.text,
-        categoryTitle: category,
+        categoryTitle: navigationCategory, // 🔧 USE SUBTOPIC for navigation
         isCompleted: isCompleted, // Track completion status
       );
       
       // Add to storage
       await _addRecentItem(recentItem);
       
-      debugPrint('Recorded interview question view: ${question.id}, completed: $isCompleted');
+      debugPrint('🔧 Recorded interview question view: ${question.id}');
+      debugPrint('   Original category: $category');
+      debugPrint('   Navigation target: $navigationCategory');
+      debugPrint('   Completed: $isCompleted');
     } catch (e) {
       debugPrint('Error recording interview question view: $e');
     }

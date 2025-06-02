@@ -250,7 +250,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       context.read<RecentViewBloc>().add(
         RecordInterviewQuestionView(
           question: widget.question,
-          category: widget.question.category,
+          category: widget.question.subtopic.isNotEmpty ? widget.question.subtopic : widget.question.category, // 🔧 Use subtopic for better navigation
         ),
       );
       debugPrint('Recorded interview question view from submitSingleAnswer');
@@ -276,7 +276,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       context.read<RecentViewBloc>().add(
         RecordInterviewQuestionView(
           question: widget.question,
-          category: widget.question.category,
+          category: widget.question.subtopic.isNotEmpty ? widget.question.subtopic : widget.question.category, // 🔧 Use subtopic for better navigation
           isCompleted: true,
         ),
       );
@@ -1057,7 +1057,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
           context.read<RecentViewBloc>().add(
             RecordInterviewQuestionView(
               question: widget.question,
-              category: widget.question.category,
+              category: widget.question.subtopic.isNotEmpty ? widget.question.subtopic : widget.question.category, // 🔧 Use subtopic for better navigation
             ),
           );
         });

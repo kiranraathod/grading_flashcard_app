@@ -6,11 +6,14 @@ import '../../blocs/recent_view/recent_view_bloc.dart';
 import '../../blocs/recent_view/recent_view_event.dart';
 import '../../blocs/recent_view/recent_view_state.dart';
 import '../../models/recently_viewed_item.dart';
+import '../../models/interview_question.dart';
 import '../../utils/colors.dart';
 import '../../utils/design_system.dart';
 import '../../screens/study_screen.dart';
 import '../../screens/interview_questions_screen.dart';
+import '../../screens/interview_practice_screen.dart';
 import '../../services/flashcard_service.dart';
+import '../../services/interview_service.dart';
 
 class RecentTabContent extends StatefulWidget {
   const RecentTabContent({super.key});
@@ -611,7 +614,7 @@ class _RecentTabContentState extends State<RecentTabContent>
                 const SizedBox(width: 8),
                 Flexible(
                   child: ElevatedButton(
-                    onPressed: () => _navigateToItem(item),
+                    onPressed: () => _practiceItem(item), // ✅ FIXED: Use practice method for Practice button
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
                           isFlashcard ? AppColors.primary : Colors.purple,
@@ -806,16 +809,134 @@ class _RecentTabContentState extends State<RecentTabContent>
         );
       }
     } else {
-      // Navigate to interview questions screen with the category
+      // ✅ FIX: Navigate to interview questions screen with subtopic support
+      debugPrint('🔧 Navigating to interview questions with category: "${item.parentTitle}"');
+      
+      // Check if this looks like a subtopic (has spaces/specific naming) vs generic category
+      final isSubtopic = _isSubtopicNavigation(item.parentTitle);
+      
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder:
-              (context) => InterviewQuestionsScreen(category: item.parentTitle),
+          builder: (context) => InterviewQuestionsScreen(
+            category: item.parentTitle,
+            isSubtopic: isSubtopic, // 🔧 NEW: Pass subtopic flag
+          ),
         ),
       );
 
       // Explicitly refresh the list after returning
       _refreshRecentItems();
     }
+  }
+
+  /// ✅ NEW: Navigate directly to practice mode for interview questions
+  void _practiceItem(RecentlyViewedItem item) async {
+    if (item.type == RecentItemType.flashcard) {
+      // For flashcards, practice is the same as regular navigation (study mode)
+      _navigateToItem(item);
+    } else {
+      // For interview questions, navigate directly to practice mode
+      debugPrint('🔧 Starting practice mode for interview question: "${item.question}"');
+      debugPrint('🔧 Recent item ID: "${item.id}"');
+      debugPrint('🔧 Recent item parentId: "${item.parentId}"');
+      debugPrint('🔧 Recent item parentTitle: "${item.parentTitle}"');
+      
+      // Get the interview service to find the specific question
+      final interviewService = Provider.of<InterviewService>(
+        context,
+        listen: false,
+      );
+      
+      // 🔍 DEBUG: Let's see what questions are available
+      final allQuestions = interviewService.questions;
+      debugPrint('🔧 Total questions in service: ${allQuestions.length}');
+      
+      // 🔍 DEBUG: Look for questions with similar text
+      final matchingQuestions = allQuestions.where((q) => 
+        q.text.toLowerCase().contains('missing data') ||
+        q.text.toLowerCase().contains('dataset')
+      ).toList();
+      debugPrint('🔧 Found ${matchingQuestions.length} questions with similar text:');
+      for (var q in matchingQuestions) {
+        debugPrint('   ID: "${q.id}" - Question: "${q.text}"');
+      }
+      
+      // Find the question by ID
+      InterviewQuestion? foundQuestion = interviewService.getQuestionById(item.id);
+      debugPrint('🔧 Question found by ID "${item.id}": ${foundQuestion != null}');
+      
+      // 🔧 FALLBACK: If not found by ID, try to find by question text
+      if (foundQuestion == null) {
+        debugPrint('🔧 Question not found by ID, trying to find by text...');
+        try {
+          foundQuestion = allQuestions.firstWhere(
+            (q) => q.text.trim() == item.question.trim(),
+          );
+          debugPrint('🔧 Question found by text: true');
+          debugPrint('🔧 Found question with ID: "${foundQuestion.id}"');
+        } catch (e) {
+          debugPrint('🔧 Question found by text: false');
+          foundQuestion = null;
+        }
+      }
+      
+      final question = foundQuestion; // Get non-nullable reference
+      if (question != null) {
+        // Navigate directly to practice screen with this single question
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => InterviewPracticeScreen(
+              question: question,
+              questionList: [question],  // Create a list with only this question
+              currentIndex: 0,  // Set index to 0 since it's the only question
+            ),
+          ),
+        );
+
+        // Explicitly refresh the list after returning
+        _refreshRecentItems();
+      } else {
+        // Show error - question not found
+        debugPrint('❌ Question still not found after all attempts');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Interview question not found. ID: "${item.id}"'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Debug Info',
+              textColor: Colors.white,
+              onPressed: () {
+                debugPrint('🔧 DEBUG INFO:');
+                debugPrint('   Recent Item ID: "${item.id}"');
+                debugPrint('   Question Text: "${item.question}"');
+                debugPrint('   Total Questions: ${allQuestions.length}');
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+  
+  /// ✅ NEW: Determine if navigation target is a subtopic vs generic category
+  bool _isSubtopicNavigation(String category) {
+    // Generic categories (filter IDs)
+    const genericCategories = [
+      'all', 'technical', 'applied', 'case', 'behavioral', 'job'
+    ];
+    
+    // If it's a generic category, it's not a subtopic
+    if (genericCategories.contains(category.toLowerCase())) {
+      return false;
+    }
+    
+    // If it contains spaces or specific naming patterns, it's likely a subtopic
+    if (category.contains(' ') || category.contains('Development') || 
+        category.contains('Analysis') || category.contains('Learning')) {
+      return true;
+    }
+    
+    // Default to subtopic navigation for anything else
+    return true;
   }
 }

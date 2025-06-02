@@ -313,7 +313,7 @@ class _InterviewResultScreenState extends State<InterviewResultScreen> {
         context.read<RecentViewBloc>().add(
           RecordInterviewQuestionView(
             question: question,
-            category: widget.answer.category,
+            category: question.subtopic.isNotEmpty ? question.subtopic : widget.answer.category, // 🔧 Use subtopic for better navigation
           ),
         );
         debugPrint('Recorded interview question view from InterviewResultScreen');

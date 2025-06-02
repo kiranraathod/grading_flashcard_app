@@ -43,8 +43,54 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
   void initState() {
     super.initState();
     // Initialize active category from widget parameter if provided
-    _activeCategory = widget.category;
+    _activeCategory = _mapRecenTabCategoryToFilterId(widget.category);
+    debugPrint('🔧 CATEGORY MAPPING: "${widget.category}" → "$_activeCategory"');
     // InterviewService will be provided in didChangeDependencies
+  }
+  
+  /// ✅ NEW: Map category from Recent tab to proper filter ID
+  String _mapRecenTabCategoryToFilterId(String category) {
+    // Handle direct matches (most common case)
+    const filterIds = ['all', 'technical', 'applied', 'case', 'behavioral', 'job'];
+    if (filterIds.contains(category)) {
+      return category;
+    }
+    
+    // Handle UI display names to filter IDs
+    switch (category.toLowerCase()) {
+      case 'technical knowledge':
+        return 'technical';
+      case 'applied skills':
+        return 'applied';
+      case 'case studies':
+        return 'case';
+      case 'behavioral questions':
+        return 'behavioral';
+      case 'job-specific':
+        return 'job';
+      // ✅ NEW: Handle subtopic-to-category mapping for recent items
+      case 'api development':
+      case 'web development':
+        return 'job';
+      case 'data analysis':
+      case 'data cleaning & preprocessing':
+        return 'technical';
+      case 'machine learning':
+      case 'ml algorithms':
+        return 'applied';
+      case 'sql & database':
+      case 'sql':
+        return 'technical';
+      case 'python fundamentals':
+      case 'python':
+        return 'technical';
+      case 'statistical analysis':
+      case 'statistics':
+        return 'case';
+      default:
+        debugPrint('⚠️ Unknown category "$category", defaulting to "all"');
+        return 'all';
+    }
   }
 
   @override
@@ -72,50 +118,16 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
       isSubtopic: widget.isSubtopic, // Pass the isSubtopic flag
     );
     
-    // ✅ ADDED: Debug validation to verify count consistency
+    // ✅ SIMPLIFIED: Essential debugging for filtering issues
     if (_activeCategory != 'all') {
-      debugPrint('=== COUNT VALIDATION FOR: $_activeCategory ===');
-      debugPrint('Filtered questions count: ${filteredQuestions.length}');
+      final allQuestions = _interviewService!.questions;
+      debugPrint('=== FILTER DEBUG: $_activeCategory ===');
+      debugPrint('Total questions: ${allQuestions.length}');
+      debugPrint('Filtered result: ${filteredQuestions.length}');
       
-      // Show breakdown by matching logic
-      int categoryIdMatches = 0;
-      int legacyMatches = 0;
-      int subtopicMatches = 0;
-      
-      for (final q in filteredQuestions) {
-        bool categoryIdMatch = false;
-        bool legacyMatch = false;
-        bool subtopicMatch = false;
-        
-        if (q.categoryId != null) {
-          final serverUICategory = CategoryMapper.mapInternalToUICategory(q.categoryId!);
-          if (serverUICategory == _activeCategory) {
-            categoryIdMatch = true;
-            categoryIdMatches++;
-          }
-        }
-        
-        if (!categoryIdMatch) {
-          final mappedCategory = CategoryMapper.getDefaultCategory(q.category);
-          if (mappedCategory == _activeCategory) {
-            legacyMatch = true;
-            legacyMatches++;
-          }
-        }
-        
-        if (!categoryIdMatch && !legacyMatch) {
-          if (_isSpecialSubtopicMatch(_activeCategory, q)) {
-            subtopicMatch = true;
-            subtopicMatches++;
-          }
-        }
-        
-        debugPrint('${q.id}: categoryId=$categoryIdMatch, legacy=$legacyMatch, subtopic=$subtopicMatch');
+      if (filteredQuestions.isEmpty && allQuestions.isNotEmpty) {
+        debugPrint('🚨 NO MATCHES - Sample question: ${allQuestions.first.categoryId} → ${CategoryMapper.mapInternalToUICategory(allQuestions.first.categoryId ?? '')}');
       }
-      
-      debugPrint('Breakdown - CategoryId: $categoryIdMatches, Legacy: $legacyMatches, Subtopic: $subtopicMatches');
-      debugPrint('Expected server count should match categoryId matches: $categoryIdMatches');
-      debugPrint('=== END VALIDATION ===');
     }
     
     return filteredQuestions;
@@ -161,26 +173,27 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
   }
   
   // Helper method to check special subtopic matches (same as service)
-  bool _isSpecialSubtopicMatch(String uiCategory, InterviewQuestion question) {
-    final subtopicLower = question.subtopic.toLowerCase();
-    
-    switch (uiCategory) {
-      case 'SQL':
-        return subtopicLower.contains('sql') || subtopicLower.contains('database');
-      case 'Python':
-        return subtopicLower.contains('python');
-      case 'Data Analysis':
-        return subtopicLower.contains('data') || subtopicLower.contains('analysis');
-      case 'Machine Learning':
-        return subtopicLower.contains('ml') || subtopicLower.contains('machine learning');
-      case 'Web Development':
-        return subtopicLower.contains('web') || subtopicLower.contains('api');
-      case 'Statistics':
-        return subtopicLower.contains('statistical') || subtopicLower.contains('statistics');
-      default:
-        return false;
-    }
-  }
+  // UNUSED: Kept for potential future use
+  // bool _isSpecialSubtopicMatch(String uiCategory, InterviewQuestion question) {
+  //   final subtopicLower = question.subtopic.toLowerCase();
+  //   
+  //   switch (uiCategory) {
+  //     case 'SQL':
+  //       return subtopicLower.contains('sql') || subtopicLower.contains('database');
+  //     case 'Python':
+  //       return subtopicLower.contains('python');
+  //     case 'Data Analysis':
+  //       return subtopicLower.contains('data') || subtopicLower.contains('analysis');
+  //     case 'Machine Learning':
+  //       return subtopicLower.contains('ml') || subtopicLower.contains('machine learning');
+  //     case 'Web Development':
+  //       return subtopicLower.contains('web') || subtopicLower.contains('api');
+  //     case 'Statistics':
+  //       return subtopicLower.contains('statistical') || subtopicLower.contains('statistics');
+  //     default:
+  //       return false;
+  //   }
+  // }
   
   // Calculate progress for the user using the service
   (int, int) _calculateProgress() {
