@@ -43,8 +43,14 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
   void initState() {
     super.initState();
     // Initialize active category from widget parameter if provided
-    _activeCategory = _mapRecenTabCategoryToFilterId(widget.category);
-    debugPrint('🔧 CATEGORY MAPPING: "${widget.category}" → "$_activeCategory"');
+    // ✅ FIX: Don't map category when it's a subtopic - use original name
+    if (widget.isSubtopic) {
+      _activeCategory = widget.category; // Use subtopic name directly
+      debugPrint('🔧 SUBTOPIC MODE: Using "${widget.category}" as subtopic (no mapping)');
+    } else {
+      _activeCategory = _mapRecenTabCategoryToFilterId(widget.category);
+      debugPrint('🔧 CATEGORY MAPPING: "${widget.category}" → "$_activeCategory"');
+    }
     // InterviewService will be provided in didChangeDependencies
   }
   
