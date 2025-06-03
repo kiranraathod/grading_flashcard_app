@@ -9,10 +9,18 @@ Welcome to the documentation for the Flashcard Application. This directory conta
 
 ## Table of Contents
 
-1. [Theme Documentation](#theme-documentation)
-2. [Feature Implementation Guides](#feature-implementation-guides)
-3. [UI Improvements](#ui-improvements)
-4. [Bug Fixes](#bug-fixes)
+1. [Performance Optimization](#performance-optimization)
+2. [Theme Documentation](#theme-documentation)
+3. [Feature Implementation Guides](#feature-implementation-guides)
+4. [UI Improvements](#ui-improvements)
+5. [Bug Fixes](#bug-fixes)
+
+## Performance Optimization
+
+Documentation for storage and performance improvements across the application.
+
+- **[UserService Hive Migration](performance_optimization/userservice_hive_migration.md)** - Complete migration from SharedPreferences to Hive for UserService
+- **[UserService Migration Complete](performance_optimization/userservice_migration_complete.md)** - Implementation completion summary and validation
 
 ## Theme Documentation
 

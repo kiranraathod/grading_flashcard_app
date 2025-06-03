@@ -64,13 +64,44 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
     if (_formKey.currentState!.validate()) {
       final flashcardService = Provider.of<FlashcardService>(context, listen: false);
 
-      List<Flashcard> flashcards = _terms.map((term) {
-        return Flashcard(
-          id: IdService.flashcard(),
-          question: term['term']!.text,
-          answer: term['definition']!.text,
-        );
-      }).toList();
+      List<Flashcard> flashcards;
+      
+      if (_isEditMode && widget.editSet != null) {
+        // When editing, preserve the original flashcard IDs and states
+        flashcards = [];
+        for (int i = 0; i < _terms.length; i++) {
+          if (i < widget.editSet!.flashcards.length) {
+            // Update existing flashcard - preserve ID and states
+            final originalCard = widget.editSet!.flashcards[i];
+            debugPrint('Updating flashcard ${originalCard.id}: "${_terms[i]['term']!.text}" -> "${_terms[i]['definition']!.text}"');
+            debugPrint('Preserving states - isCompleted: ${originalCard.isCompleted}, isMarkedForReview: ${originalCard.isMarkedForReview}');
+            
+            flashcards.add(Flashcard(
+              id: originalCard.id,  // KEEP ORIGINAL ID
+              question: _terms[i]['term']!.text,
+              answer: _terms[i]['definition']!.text,
+              isCompleted: originalCard.isCompleted,  // PRESERVE STATE
+              isMarkedForReview: originalCard.isMarkedForReview,  // PRESERVE STATE
+            ));
+          } else {
+            // This is a new flashcard added during edit
+            flashcards.add(Flashcard(
+              id: IdService.flashcard(),
+              question: _terms[i]['term']!.text,
+              answer: _terms[i]['definition']!.text,
+            ));
+          }
+        }
+      } else {
+        // Creating new flashcards
+        flashcards = _terms.map((term) {
+          return Flashcard(
+            id: IdService.flashcard(),
+            question: term['term']!.text,
+            answer: term['definition']!.text,
+          );
+        }).toList();
+      }
 
       if (_isEditMode) {
         // Update existing set

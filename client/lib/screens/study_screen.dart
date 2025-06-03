@@ -246,9 +246,9 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
               IconButton(
                 icon: const Icon(Icons.edit),
                 tooltip: AppLocalizations.of(context).editSet,
-                onPressed: () {
+                onPressed: () async {
                   bloc.add(EditFlashcardSetRequested());
-                  Navigator.push(
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => CreateFlashcardScreen(
@@ -256,6 +256,13 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                       ),
                     ),
                   );
+                  
+                  // After returning from edit screen, refresh the flashcard set in StudyBloc
+                  final updatedSet = widget.flashcardService.getFlashcardSet(state.flashcardSet!.id);
+                  if (updatedSet != null) {
+                    bloc.add(UpdateFlashcardSet(flashcardSet: updatedSet));
+                    debugPrint('StudyBloc updated with edited flashcard set');
+                  }
                 },
               ),
               // Bookmark button
@@ -278,10 +285,10 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
               ),
               // More options
               PopupMenuButton<String>(
-                onSelected: (value) {
+                onSelected: (value) async {
                   if (value == 'edit') {
                     bloc.add(EditFlashcardSetRequested());
-                    Navigator.push(
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => CreateFlashcardScreen(
@@ -289,6 +296,13 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                         ),
                       ),
                     );
+                    
+                    // After returning from edit screen, refresh the flashcard set in StudyBloc
+                    final updatedSet = widget.flashcardService.getFlashcardSet(state.flashcardSet!.id);
+                    if (updatedSet != null) {
+                      bloc.add(UpdateFlashcardSet(flashcardSet: updatedSet));
+                      debugPrint('StudyBloc updated with edited flashcard set');
+                    }
                   }
                 },
                 itemBuilder: (context) => [

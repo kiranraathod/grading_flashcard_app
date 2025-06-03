@@ -157,6 +157,18 @@ class FlashcardService extends ChangeNotifier {
       debugPrint('Updating flashcard set ${set.id}: ${set.title}');
       debugPrint('Found at index $index in sets list');
       
+      // Debug: Show what's being updated
+      debugPrint('Number of flashcards: ${set.flashcards.length}');
+      if (set.flashcards.isNotEmpty) {
+        debugPrint('First flashcard - ID: ${set.flashcards[0].id}, Answer: ${set.flashcards[0].answer}');
+        
+        // Compare with existing data
+        if (_sets[index].flashcards.isNotEmpty) {
+          debugPrint('OLD Answer: ${_sets[index].flashcards[0].answer}');
+          debugPrint('NEW Answer: ${set.flashcards[0].answer}');
+        }
+      }
+      
       // Count completed flashcards for logging
       int completedCount = set.flashcards.where((card) => card.isCompleted).length;
       debugPrint('Completed cards: $completedCount/${set.flashcards.length}');

@@ -21,6 +21,7 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     on<NextFlashcardRequested>(_onNextFlashcardRequested);
     on<PreviousFlashcardRequested>(_onPreviousFlashcardRequested);
     on<EditFlashcardSetRequested>(_onEditFlashcardSetRequested);
+    on<UpdateFlashcardSet>(_onUpdateFlashcardSet);
   }
 
   void _onStudyStarted(StudyStarted event, Emitter<StudyState> emit) {
@@ -216,5 +217,22 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
   ) {
     // No state change needed for this event
     // Navigation to edit screen will be handled in the UI
+  }
+
+  void _onUpdateFlashcardSet(
+    UpdateFlashcardSet event,
+    Emitter<StudyState> emit,
+  ) {
+    // Update the flashcard set while preserving the current index and other state
+    emit(
+      state.copyWith(
+        flashcardSet: event.flashcardSet,
+        // Preserve the current index if it's still valid
+        currentIndex: state.currentIndex < event.flashcardSet.flashcards.length 
+          ? state.currentIndex 
+          : 0,
+      ),
+    );
+    debugPrint('Updated flashcard set while preserving study progress');
   }
 }

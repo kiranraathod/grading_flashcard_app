@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 /// Simple storage service using industry-standard Hive database
@@ -15,13 +16,24 @@ class StorageService {
   
   /// Save flashcard sets data (atomic operation with built-in race protection)
   static Future<void> saveFlashcardSets(List<Map<String, dynamic>> sets) async {
+    debugPrint('StorageService: Saving ${sets.length} flashcard sets to Hive');
+    if (sets.isNotEmpty && sets[0]['flashcards'] != null && sets[0]['flashcards'].isNotEmpty) {
+      debugPrint('StorageService: First set first flashcard answer: ${sets[0]['flashcards'][0]['answer']}');
+    }
     await _appBox.put('flashcard_sets', sets);
   }
   
   /// Get flashcard sets data
   static List<Map<String, dynamic>>? getFlashcardSets() {
     final data = _appBox.get('flashcard_sets');
-    return data?.cast<Map<String, dynamic>>();
+    final result = data?.cast<Map<String, dynamic>>();
+    
+    debugPrint('StorageService: Loading ${result?.length ?? 0} flashcard sets from Hive');
+    if (result != null && result.isNotEmpty && result[0]['flashcards'] != null && result[0]['flashcards'].isNotEmpty) {
+      debugPrint('StorageService: First set first flashcard answer: ${result[0]['flashcards'][0]['answer']}');
+    }
+    
+    return result;
   }
   
   /// Save interview questions data (atomic operation with built-in race protection)

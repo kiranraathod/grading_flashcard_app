@@ -32,6 +32,9 @@ void main() async {
   // Initialize storage service
   await StorageService.initialize();
 
+  // Initialize user service (depends on Hive being initialized)
+  await UserService.initialize();
+
   // Initialize enhanced network infrastructure
   await _initializeNetworkInfrastructure();
 

@@ -37,7 +37,7 @@ class FlashcardSet {
       isDraft: isDraft ?? this.isDraft,
       rating: rating ?? this.rating,
       ratingCount: ratingCount ?? this.ratingCount,
-      flashcards: flashcards ?? this.flashcards,
+      flashcards: flashcards ?? List<Flashcard>.from(this.flashcards), // DEEP COPY
       lastUpdated: lastUpdated ?? this.lastUpdated,
     );
   }

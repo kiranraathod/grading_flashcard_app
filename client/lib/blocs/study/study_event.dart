@@ -49,3 +49,12 @@ class NextFlashcardRequested extends StudyEvent {}
 class PreviousFlashcardRequested extends StudyEvent {}
 
 class EditFlashcardSetRequested extends StudyEvent {}
+
+class UpdateFlashcardSet extends StudyEvent {
+  final FlashcardSet flashcardSet;
+  
+  const UpdateFlashcardSet({required this.flashcardSet});
+  
+  @override
+  List<Object?> get props => [flashcardSet];
+}
