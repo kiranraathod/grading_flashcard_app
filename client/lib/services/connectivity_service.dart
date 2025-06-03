@@ -64,10 +64,10 @@ class ConnectivityService extends ChangeNotifier {
   bool _isOnline = false;
   final List<NetworkQuality> _qualityHistory = [];
   
-  // Configuration
-  static const int maxQualityHistorySize = 20;
-  static const Duration qualityCheckInterval = Duration(seconds: 30);
-  static const Duration healthCheckInterval = Duration(minutes: 2);
+  // Configuration - OPTIMIZED FOR POOR NETWORKS
+  static const int maxQualityHistorySize = 10;               // Reduced memory usage
+  static const Duration qualityCheckInterval = Duration(minutes: 5);   // Much less frequent
+  static const Duration healthCheckInterval = Duration(minutes: 10);   // Reduced overhead
   
   // Getters
   NetworkStatus get currentStatus => _currentStatus;

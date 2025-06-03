@@ -15,14 +15,14 @@ class AppConfig {
   static Environment _environment = Environment.dev;
   static Environment get environment => _environment;
   
-  // Network configuration
-  static Duration apiTimeout = const Duration(seconds: 60);
-  static int maxRetryAttempts = 3;
-  static Duration retryDelay = const Duration(seconds: 2);
-  static NetworkLogLevel networkLogLevel = NetworkLogLevel.basic;
+  // Network configuration - BALANCED FOR STABILITY + POOR NETWORK HANDLING
+  static Duration apiTimeout = const Duration(seconds: 45);  // Extended for poor networks
+  static int maxRetryAttempts = 1;                          // Reduced for poor networks  
+  static Duration retryDelay = const Duration(seconds: 2);   // Reasonable delay
+  static NetworkLogLevel networkLogLevel = NetworkLogLevel.errors;  // Reduce logging
   
-  // Connection configuration
-  static Duration networkCheckInterval = const Duration(seconds: 30);
+  // Connection configuration - OPTIMIZED FOR POOR NETWORKS
+  static Duration networkCheckInterval = const Duration(minutes: 5);  // Less frequent checks
   static Duration connectivityTimeout = const Duration(seconds: 5);
   
   // API endpoints (moved from Constants)

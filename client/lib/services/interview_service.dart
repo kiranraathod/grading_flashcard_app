@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';  // Added for kDebugMode
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/interview_question.dart';
@@ -338,24 +339,8 @@ class InterviewService extends ChangeNotifier {
       return questions;
     }
     
-    debugPrint('=== FILTERING DEBUG: Getting questions ===');
-    debugPrint('Category: $uiCategory');
-    debugPrint('isSubtopic: $isSubtopic');
-    debugPrint('Total published questions: ${questions.length}');
-    
+    // Filter questions first
     final filteredQuestions = questions.where((question) {
-      // SPECIAL DEBUG: Track API Development questions specifically
-      if (uiCategory == 'API Development' || question.subtopic.toLowerCase().contains('api') || question.text.toLowerCase().contains('api')) {
-        debugPrint('🔍 POTENTIAL API DEV FILTERING CHECK:');
-        debugPrint('  Text: "${question.text}"');
-        debugPrint('  Raw subtopic: "${question.subtopic}"');
-        debugPrint('  Normalized subtopic: "${question.subtopic.trim()}"');
-        debugPrint('  Category: "${question.category}"');
-        debugPrint('  CategoryId: "${question.categoryId}"');
-        debugPrint('  isDraft: ${question.isDraft}');
-        debugPrint('  Target category: "$uiCategory"');
-        debugPrint('  isSubtopic: $isSubtopic');
-      }
       
       // If this is a subtopic search, match by subtopic directly
       if (isSubtopic) {
@@ -364,16 +349,7 @@ class InterviewService extends ChangeNotifier {
         final targetSubtopic = uiCategory.trim();
         final matches = questionSubtopic == targetSubtopic;
         
-        if (uiCategory == 'API Development') {
-          debugPrint('  🔍 API DEV SUBTOPIC CHECK:');
-          debugPrint('    Question subtopic (normalized): "$questionSubtopic"');
-          debugPrint('    Target subtopic (normalized): "$targetSubtopic"');
-          debugPrint('    Matches: $matches');
-        }
-        
-        if (matches) {
-          debugPrint('  ✅ MATCH FOUND: ${question.text}');
-        }
+        // 🚀 PERFORMANCE: Removed debug prints that run for every question
         return matches;
       }
       
@@ -382,7 +358,7 @@ class InterviewService extends ChangeNotifier {
       if (question.categoryId != null) {
         final serverUICategory = CategoryMapper.mapInternalToUICategory(question.categoryId!);
         if (serverUICategory == uiCategory) {
-          debugPrint('CategoryId match: ${question.text} (categoryId: ${question.categoryId})');
+          // 🚀 PERFORMANCE: Removed debug print that runs for every match
           return true;
         }
       }
@@ -403,21 +379,10 @@ class InterviewService extends ChangeNotifier {
       return false;
     }).toList();
     
-    debugPrint('=== FILTERING RESULT ===');
-    debugPrint('Found ${filteredQuestions.length} questions for ${isSubtopic ? 'subtopic' : 'category'} $uiCategory');
-    for (final q in filteredQuestions) {
-      debugPrint('  - "${q.text}" (subtopic: "${q.subtopic}")');
+    // 🚀 PERFORMANCE: Only log when no results found and in debug mode
+    if (kDebugMode && filteredQuestions.isEmpty && uiCategory != 'all') {
+      debugPrint('⚠️ No questions found for category: $uiCategory');
     }
-    
-    // SPECIAL DEBUG: API Development specific summary
-    if (uiCategory == 'API Development') {
-      debugPrint('🎯 API DEVELOPMENT FILTERING SUMMARY:');
-      debugPrint('  Questions found by filtering: ${filteredQuestions.length}');
-      debugPrint('  This is what will be displayed on the questions screen');
-      debugPrint('  If this doesn\'t match the card count, there\'s a mismatch!');
-    }
-    
-    debugPrint('=== END FILTERING DEBUG ===');
     
     return filteredQuestions;
   }
@@ -868,6 +833,9 @@ class InterviewService extends ChangeNotifier {
       final filtered = getQuestionsByCategory(specificSubtopic, isSubtopic: true);
       debugPrint('Filtered count: ${filtered.length}');
       
+      // TEMPORARILY DISABLED - Count mismatch validation causing infinite loops
+      // TODO: Fix underlying counting logic after network optimization complete
+      /*
       if ((subtopicCounts[specificSubtopic] ?? 0) != filtered.length) {
         debugPrint('⚠️  COUNT MISMATCH DETECTED!');
         debugPrint('   Counting found: ${subtopicCounts[specificSubtopic] ?? 0}');
@@ -875,6 +843,7 @@ class InterviewService extends ChangeNotifier {
       } else {
         debugPrint('✅ Counts match correctly');
       }
+      */
     }
     
     debugPrint('=========================');

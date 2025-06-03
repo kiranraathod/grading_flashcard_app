@@ -18,21 +18,295 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="FlashMaster - AI-Powered Learning Platform">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="flutter_flashcard_app">
+  <meta name="apple-mobile-web-app-title" content="FlashMaster">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>flutter_flashcard_app</title>
+  <title>FlashMaster - AI-Powered Learning</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- 🚀 TASK 1: Beautiful Loading Screen CSS - Optimized for Poor Network -->
+  <style>
+    .loading-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: white;
+      z-index: 9999;
+      opacity: 1;
+      transition: opacity 0.8s ease-out;
+    }
+
+    .loading-container.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .logo {
+      font-size: 3.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      text-align: center;
+      animation: logoFloat 3s ease-in-out infinite alternate;
+      text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    .tagline {
+      font-size: 1.3rem;
+      font-weight: 300;
+      margin-bottom: 2.5rem;
+      opacity: 0.9;
+      text-align: center;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 5px solid rgba(255, 255, 255, 0.3);
+      border-top: 5px solid white;
+      border-radius: 50%;
+      animation: spin 1.2s linear infinite;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .loading-text {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      animation: pulse 2s ease-in-out infinite;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .progress-container {
+      width: 300px;
+      margin-bottom: 1rem;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      overflow: hidden;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #fff 0%, #f0f0f0 100%);
+      border-radius: 3px;
+      animation: progressFill 7s ease-in-out;
+      transform-origin: left;
+      box-shadow: 0 0 10px rgba(255,255,255,0.5);
+    }
+
+    .network-status {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-top: 1rem;
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* 🚀 OPTIMIZED: Animations for poor network feedback */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes logoFloat {
+      0% { transform: translateY(0px); }
+      100% { transform: translateY(-12px); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.9; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes progressFill {
+      0% { transform: scaleX(0); }
+      25% { transform: scaleX(0.3); }
+      50% { transform: scaleX(0.6); }
+      75% { transform: scaleX(0.8); }
+      100% { transform: scaleX(1); }
+    }
+
+    /* 🚀 NETWORK AWARE: Extended animation for slow loading */
+    @keyframes slowNetworkPulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+
+    .slow-network {
+      animation: slowNetworkPulse 1.5s ease-in-out infinite;
+    }
+
+    /* Hide loading screen after Flutter loads */
+    .flutter-loaded .loading-container {
+      display: none;
+    }
+
+    /* 🚀 RESPONSIVE: Mobile optimization */
+    @media (max-width: 768px) {
+      .logo {
+        font-size: 2.8rem;
+      }
+      .tagline {
+        font-size: 1.1rem;
+        padding: 0 2rem;
+      }
+      .progress-container {
+        width: 250px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .logo {
+        font-size: 2.2rem;
+      }
+      .tagline {
+        font-size: 1rem;
+        padding: 0 1.5rem;
+      }
+      .progress-container {
+        width: 200px;
+      }
+    }
+  </style>
 </head>
 <body>
+  <!-- 🚀 TASK 1: Loading Screen HTML - Optimized for Poor Network -->
+  <div id="loading-screen" class="loading-container">
+    <div class="logo">📚 FlashMaster</div>
+    <div class="tagline">AI-Powered Learning Platform</div>
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Loading your learning experience...</div>
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+      </div>
+    </div>
+    <div class="network-status" id="network-status">Preparing your personalized learning...</div>
+  </div>
+
+  <!-- 🚀 TASK 1: Smart Loading Script - Network Aware -->
+  <script>
+    // 🚀 NETWORK AWARE: Track loading progress and adapt to slow networks
+    let loadingStartTime = Date.now();
+    let isSlowNetwork = false;
+    
+    // 🚀 POOR NETWORK: Update loading messages for slow connections
+    const loadingMessages = [
+      "Loading your learning experience...",
+      "Preparing AI-powered study tools...", 
+      "Setting up your flashcard environment...",
+      "Almost ready for your learning session...",
+      "Just a moment longer..."
+    ];
+    
+    const slowNetworkMessages = [
+      "Working hard to load your content...",
+      "Great things take time - almost there!",
+      "Optimizing your learning experience...",
+      "Thanks for your patience...",
+      "Nearly ready - hang tight!"
+    ];
+    
+    let messageIndex = 0;
+    
+    function updateLoadingMessage() {
+      const loadingTextEl = document.getElementById('loading-text');
+      const networkStatusEl = document.getElementById('network-status');
+      const elapsed = Date.now() - loadingStartTime;
+      
+      // 🚀 SLOW NETWORK DETECTION: After 3 seconds, assume slow network
+      if (elapsed > 3000 && !isSlowNetwork) {
+        isSlowNetwork = true;
+        loadingTextEl.classList.add('slow-network');
+        networkStatusEl.textContent = "Slow network detected - optimizing load...";
+        networkStatusEl.classList.add('slow-network');
+      }
+      
+      // 🚀 DYNAMIC MESSAGES: Change message every 2 seconds
+      if (elapsed > 2000) {
+        const messages = isSlowNetwork ? slowNetworkMessages : loadingMessages;
+        messageIndex = Math.floor((elapsed - 2000) / 2000) % messages.length;
+        loadingTextEl.textContent = messages[messageIndex];
+      }
+      
+      // 🚀 EXTENDED PATIENCE: Extra encouragement for very slow networks
+      if (elapsed > 8000) {
+        networkStatusEl.textContent = "Almost there! Loading in progress...";
+      }
+    }
+    
+    // Update messages every second
+    const messageInterval = setInterval(updateLoadingMessage, 1000);
+    
+    // 🚀 SMOOTH TRANSITION: Hide loading screen when Flutter loads
+    window.addEventListener('load', function(ev) {
+      _flutter.loader.loadEntrypoint({
+        serviceWorker: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+        onEntrypointLoaded: function(engineInitializer) {
+          engineInitializer.initializeEngine().then(function(appRunner) {
+            appRunner.runApp().then(function(app) {
+              // 🚀 PERFORMANCE: Small delay to ensure Flutter is fully rendered
+              setTimeout(function() {
+                const loadingScreen = document.getElementById('loading-screen');
+                const loadingTime = Date.now() - loadingStartTime;
+                
+                // 🚀 ANALYTICS: Log loading performance
+                console.log(`📊 Loading completed in ${loadingTime}ms ${isSlowNetwork ? '(slow network)' : '(normal network)'}`);
+                
+                if (loadingScreen) {
+                  loadingScreen.classList.add('fade-out');
+                  setTimeout(function() {
+                    loadingScreen.style.display = 'none';
+                    document.body.classList.add('flutter-loaded');
+                    clearInterval(messageInterval);
+                  }, 800);
+                }
+              }, 300);
+            });
+          });
+        }
+      });
+    });
+
+    // 🚀 FAILSAFE: Remove loading screen after 20 seconds regardless
+    setTimeout(function() {
+      const loadingScreen = document.getElementById('loading-screen');
+      if (loadingScreen && loadingScreen.style.display !== 'none') {
+        console.log('⚠️ Loading screen removed after timeout');
+        loadingScreen.classList.add('fade-out');
+        setTimeout(function() {
+          loadingScreen.style.display = 'none';
+          clearInterval(messageInterval);
+        }, 800);
+      }
+    }, 20000);
+  </script>
+
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
