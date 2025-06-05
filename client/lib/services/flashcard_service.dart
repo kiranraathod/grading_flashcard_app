@@ -3,11 +3,13 @@ import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
 import 'default_data_service.dart';
 import 'storage_service.dart';
+import 'reliable_operation_service.dart';
 import 'dart:async';
 
 class FlashcardService extends ChangeNotifier {
   final List<FlashcardSet> _sets = [];
   final DefaultDataService _defaultDataService = DefaultDataService();
+  final ReliableOperationService _reliableOps = ReliableOperationService();
   
   List<FlashcardSet> get sets => List.unmodifiable(_sets);
   
@@ -15,273 +17,240 @@ class FlashcardService extends ChangeNotifier {
     _loadSets();
   }
 
+  /// Load sets with reliable operation patterns
   Future<void> _loadSets() async {
-    try {
-      final setsData = StorageService.getFlashcardSets();
+    await _reliableOps.withFallback(
+      primary: () async {
+        final setsData = StorageService.getFlashcardSets();
 
-      if (setsData != null && setsData.isNotEmpty) {
-        _sets.clear();
-        for (final data in setsData) {
-          _sets.add(FlashcardSet.fromJson(data));
+        if (setsData != null && setsData.isNotEmpty) {
+          _sets.clear();
+          for (final data in setsData) {
+            _sets.add(FlashcardSet.fromJson(data));
+          }
+          debugPrint('Loaded ${_sets.length} flashcard sets from storage using StorageService');
+        } else {
+          debugPrint('No saved sets found, loading default data from server...');
+          await _loadDefaultData();
         }
-        debugPrint('Loaded ${_sets.length} flashcard sets from storage using StorageService');
-      } else {
-        // Load default data from server if no saved sets
-        debugPrint('No saved sets found, loading default data from server...');
+        
+        notifyListeners();
+      },
+      fallback: () async {
+        debugPrint('Error loading flashcard sets, falling back to default data');
         await _loadDefaultData();
-      }
-      
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading flashcard sets: $e');
-      // Load default data from server if error
-      await _loadDefaultData();
-    }
+      },
+      operationName: 'load_flashcard_sets',
+    );
   }
 
+  /// Load default data with cascading fallback strategy
   Future<void> _loadDefaultData() async {
-    try {
-      debugPrint('Loading default flashcard sets from server...');
-      final defaultSets = await _defaultDataService.loadDefaultFlashcardSets();
-      
-      _sets.clear();
-      _sets.addAll(defaultSets);
-      
-      debugPrint('Loaded ${defaultSets.length} default flashcard sets from server');
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error loading default data from server: $e');
-      // If server fails, create a minimal fallback set
-      _loadMinimalFallbackData();
-    }
-  }
-
-  void _loadMinimalFallbackData() {
-    debugPrint('Loading minimal fallback data...');
-    _sets.clear();
-    
-    // Try to load from server with minimal dataset even if main load failed
-    _loadMinimalServerFallback();
-  }
-
-  Future<void> _loadMinimalServerFallback() async {
-    try {
-      debugPrint('Attempting to load minimal server fallback data...');
-      // Try to get at least one default set from server with minimal configuration
-      final defaultSets = await _defaultDataService.loadDefaultFlashcardSets();
-      
-      if (defaultSets.isNotEmpty) {
+    await _reliableOps.withFallback(
+      primary: () async {
+        debugPrint('Loading default flashcard sets from server...');
+        final defaultSets = await _defaultDataService.loadDefaultFlashcardSets();
+        
+        _sets.clear();
         _sets.addAll(defaultSets);
-        debugPrint('Loaded ${defaultSets.length} minimal sets from server fallback');
-      } else {
-        // Only if server completely fails, create absolute minimal offline set
-        _createOfflineOnlyFallback();
-      }
-    } catch (e) {
-      debugPrint('Server fallback also failed: $e, creating offline-only fallback');
-      _createOfflineOnlyFallback();
-    }
-    
-    notifyListeners();
+        
+        debugPrint('Loaded ${defaultSets.length} default flashcard sets from server');
+        notifyListeners();
+      },
+      fallback: () async {
+        debugPrint('Server failed, creating minimal fallback data');
+        _loadMinimalFallbackData();
+      },
+      operationName: 'load_default_flashcard_data',
+    );
   }
 
-  void _createOfflineOnlyFallback() {
-    // Create a truly minimal offline-only set as last resort
-    _sets.add(
-      FlashcardSet(
-        id: 'offline-minimal-001',
-        title: 'Offline Mode (Limited)',
-        description: 'Minimal content available in offline mode',
-        isDraft: false,
-        rating: 4.0,
-        ratingCount: 0,
-        flashcards: [
-          Flashcard(
-            id: '1',
-            question: 'What is data analysis?',
-            answer: 'Data analysis is the process of examining data to discover patterns and insights.',
-            isCompleted: false,
-          ),
-          Flashcard(
-            id: '2',
-            question: 'What is machine learning?',
-            answer: 'Machine learning is a type of AI that enables computers to learn from data.',
-            isCompleted: false,
-          ),
-        ],
-      ),
+  /// Create minimal fallback data safely
+  void _loadMinimalFallbackData() {
+    _reliableOps.safelySync(
+      operation: () {
+        debugPrint('Loading minimal fallback data...');
+        _sets.clear();
+        _loadMinimalServerFallback();
+      },
+      operationName: 'load_minimal_fallback_data',
+    );
+  }
+
+  /// Attempt minimal server fallback with safe offline creation
+  Future<void> _loadMinimalServerFallback() async {
+    await _reliableOps.withFallback(
+      primary: () async {
+        debugPrint('Attempting to load minimal server fallback data...');
+        final defaultSets = await _defaultDataService.loadDefaultFlashcardSets();
+        
+        if (defaultSets.isNotEmpty) {
+          _sets.addAll(defaultSets);
+          debugPrint('Loaded ${defaultSets.length} minimal sets from server fallback');
+        } else {
+          _createOfflineOnlyFallback();
+        }
+      },
+      fallback: () async {
+        debugPrint('Server fallback also failed, creating offline-only fallback');
+        _createOfflineOnlyFallback();
+      },
+      operationName: 'load_minimal_server_fallback',
     );
     
-    debugPrint('Created offline-only fallback with minimal content');
-  }
-
-  Future<void> _saveSets() async {
-    try {
-      // Log set details before saving
-      for (final set in _sets) {
-        debugPrint('Saving set: ${set.id} - ${set.title}');
-        // Count completed flashcards for each set
-        final completedCount = set.flashcards.where((card) => card.isCompleted).length;
-        debugPrint('Set ${set.id} has $completedCount/${set.flashcards.length} completed cards');
-      }
-      
-      // Save using simple StorageService
-      final setsData = _sets.map((set) => set.toJson()).toList();
-      await StorageService.saveFlashcardSets(setsData);
-      
-      debugPrint('Flashcard sets saved successfully');
-      
-      // Verify the data was saved correctly
-      final savedSetsData = StorageService.getFlashcardSets();
-      if (savedSetsData != null) {
-        debugPrint('Verified saved data: ${savedSetsData.length} sets found in storage');
-      } else {
-        debugPrint('WARNING: Failed to verify saved data!');
-      }
-    } catch (e) {
-      debugPrint('Error saving flashcard sets: $e');
-      // Re-throw for proper error handling
-      throw Exception('Failed to save flashcard sets: $e');
-    }
-  }
-
-  Future<void> createFlashcardSet(FlashcardSet set) async {
-    _sets.add(set);
-    await _saveSets();
     notifyListeners();
   }
 
-  Future<void> updateFlashcardSet(FlashcardSet set) async {
-    final index = _sets.indexWhere((s) => s.id == set.id);
-    if (index >= 0) {
-      debugPrint('Updating flashcard set ${set.id}: ${set.title}');
-      debugPrint('Found at index $index in sets list');
-      
-      // Debug: Show what's being updated
-      debugPrint('Number of flashcards: ${set.flashcards.length}');
-      if (set.flashcards.isNotEmpty) {
-        debugPrint('First flashcard - ID: ${set.flashcards[0].id}, Answer: ${set.flashcards[0].answer}');
-        
-        // Compare with existing data
-        if (_sets[index].flashcards.isNotEmpty) {
-          debugPrint('OLD Answer: ${_sets[index].flashcards[0].answer}');
-          debugPrint('NEW Answer: ${set.flashcards[0].answer}');
-        }
-      }
-      
-      // Count completed flashcards for logging
-      int completedCount = set.flashcards.where((card) => card.isCompleted).length;
-      debugPrint('Completed cards: $completedCount/${set.flashcards.length}');
-      
-      // Create a fresh copy with the current timestamp
-      final updatedSet = set.copyWith(
-        lastUpdated: DateTime.now(),
-      );
-      
-      _sets[index] = updatedSet;
-      await _saveSets();
-      
-      // Force UI refresh
-      notifyListeners();
-      debugPrint('Flashcard set updated and saved: ${set.id}');
-    } else {
-      debugPrint('Error: Could not find flashcard set with ID ${set.id}');
-    }
+  /// Create absolute minimal offline fallback
+  void _createOfflineOnlyFallback() {
+    _reliableOps.safelySync(
+      operation: () {
+        _sets.add(
+          FlashcardSet(
+            id: 'offline-minimal-001',
+            title: 'Offline Mode (Limited)',
+            description: 'Minimal content available in offline mode',
+            isDraft: false,
+            rating: 4.0,
+            ratingCount: 0,
+            flashcards: [
+              Flashcard(
+                id: '1',
+                question: 'Welcome to FlashMaster',
+                answer: 'This is a demo flashcard available in offline mode.',
+                isCompleted: false,
+              ),
+            ],
+          ),
+        );
+        debugPrint('Created minimal offline-only fallback set');
+      },
+      operationName: 'create_offline_fallback',
+    );
   }
 
-  Future<void> deleteFlashcardSet(String id) async {
-    _sets.removeWhere((set) => set.id == id);
-    await _saveSets();
-    notifyListeners();
-  }
-  
-  FlashcardSet? getFlashcardSet(String id) {
-    try {
-      return _sets.firstWhere((set) => set.id == id);
-    } catch (e) {
-      return null;
-    }
-  }
-  
-  // Update the rating of a flashcard set
-  Future<void> rateFlashcardSet(String id, double rating) async {
-    final index = _sets.indexWhere((s) => s.id == id);
-    if (index >= 0) {
-      final set = _sets[index];
-      final newRatingCount = set.ratingCount + 1;
-      final newRating = ((set.rating * set.ratingCount) + rating) / newRatingCount;
-      
-      _sets[index] = set.copyWith(
-        rating: newRating,
-        ratingCount: newRatingCount,
-      );
-      
-      await _saveSets();
-      notifyListeners();
-    }
-  }
-  
-  // Clear all flashcard sets (for testing)
-  Future<void> clearAllSets() async {
-    _sets.clear();
-    await _saveSets();
-    notifyListeners();
-  }
-  
-  // Public method to reload sets from storage
+  /// Reload sets with reliable operation
   Future<void> reloadSets() async {
-    debugPrint('Explicitly reloading flashcard sets from storage');
-    await _loadSets();
-  }
-  
-  // Search methods for the search feature
-  Future<List<FlashcardSet>> searchDecks(String query) async {
-    final normalizedQuery = query.toLowerCase().trim();
-    
-    // Return an empty list if the query is too short
-    if (normalizedQuery.length < 3) {
-      return [];
-    }
-    
-    return _sets.where((set) {
-      // Search in title, description, and flashcard content
-      final titleMatch = set.title.toLowerCase().contains(normalizedQuery);
-      final descriptionMatch = set.description.toLowerCase().contains(normalizedQuery);
-      
-      // Check if any flashcards match the query
-      final hasMatchingFlashcards = set.flashcards.any((card) {
-        return card.question.toLowerCase().contains(normalizedQuery) ||
-               card.answer.toLowerCase().contains(normalizedQuery);
-      });
-      
-      return titleMatch || descriptionMatch || hasMatchingFlashcards;
-    }).toList();
+    await _reliableOps.safely(
+      operation: () => _loadSets(),
+      operationName: 'reload_sets',
+    );
   }
 
-  Future<List<Flashcard>> searchCards(String query) async {
-    final normalizedQuery = query.toLowerCase().trim();
-    final results = <Flashcard>[];
-    
-    // Return an empty list if the query is too short
-    if (normalizedQuery.length < 3) {
-      return results;
-    }
-    
-    for (final set in _sets) {
-      final matchingCards = set.flashcards.where((card) {
-        return card.question.toLowerCase().contains(normalizedQuery) ||
-               card.answer.toLowerCase().contains(normalizedQuery);
-      }).toList();
-      
-      // Add extra information to each card for display in search results
-      for (final card in matchingCards) {
-        // We can't modify the cards directly, so we're collecting them for now
-        // In a real implementation, we'd want to wrap this in a SearchResultItem class 
-        // that contains both the card and its parent set information
-        results.add(card);
-      }
-    }
-    
-    return results;
+  /// Add set with reliable storage
+  Future<void> addSet(FlashcardSet set) async {
+    await _reliableOps.safely(
+      operation: () async {
+        _sets.add(set);
+        await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
+        notifyListeners();
+        debugPrint('Added flashcard set: ${set.title}');
+      },
+      operationName: 'add_flashcard_set',
+    );
   }
+
+  /// Update set with reliable storage
+  Future<void> updateSet(FlashcardSet updatedSet) async {
+    await _reliableOps.safely(
+      operation: () async {
+        final index = _sets.indexWhere((set) => set.id == updatedSet.id);
+        if (index >= 0) {
+          _sets[index] = updatedSet;
+          await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
+          notifyListeners();
+          debugPrint('Updated flashcard set: ${updatedSet.title}');
+        }
+      },
+      operationName: 'update_flashcard_set',
+    );
+  }
+
+  /// Delete set with reliable storage
+  Future<void> deleteSet(FlashcardSet set) async {
+    await _reliableOps.safely(
+      operation: () async {
+        _sets.removeWhere((s) => s.id == set.id);
+        await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
+        notifyListeners();
+        debugPrint('Deleted flashcard set: ${set.title}');
+      },
+      operationName: 'delete_flashcard_set',
+    );
+  }
+
+  /// Get set by ID with safe operation
+  FlashcardSet? getSetById(String id) {
+    return _reliableOps.safelySync(
+      operation: () => _sets.firstWhere((set) => set.id == id),
+      defaultValue: null,
+      operationName: 'get_set_by_id',
+    );
+  }
+
+  /// Search sets with default empty result
+  List<FlashcardSet> searchSets(String query) {
+    return _reliableOps.safelySync(
+      operation: () {
+        if (query.isEmpty) return _sets;
+        return _sets.where((set) => 
+          set.title.toLowerCase().contains(query.toLowerCase()) ||
+          set.description.toLowerCase().contains(query.toLowerCase())
+        ).toList();
+      },
+      defaultValue: <FlashcardSet>[],
+      operationName: 'search_sets',
+    ) ?? <FlashcardSet>[];
+  }
+
+  /// Search cards across all sets with default empty result
+  List<Flashcard> searchCards(String query) {
+    return _reliableOps.safelySync(
+      operation: () {
+        if (query.isEmpty) return <Flashcard>[];
+        
+        final cards = <Flashcard>[];
+        for (final set in _sets) {
+          for (final card in set.flashcards) {
+            if (card.question.toLowerCase().contains(query.toLowerCase()) ||
+                card.answer.toLowerCase().contains(query.toLowerCase())) {
+              cards.add(card);
+            }
+          }
+        }
+        return cards;
+      },
+      defaultValue: <Flashcard>[],
+      operationName: 'search_cards',
+    ) ?? <Flashcard>[];
+  }
+
+  // ==============================================
+  // COMPATIBILITY ALIASES (Backward Compatibility)
+  // ==============================================
+  
+  /// Compatibility alias: updateFlashcardSet → updateSet
+  Future<void> updateFlashcardSet(FlashcardSet set) => updateSet(set);
+  
+  /// Compatibility alias: deleteFlashcardSet (supports both String ID and FlashcardSet)
+  Future<void> deleteFlashcardSet(dynamic setOrId) async {
+    if (setOrId is String) {
+      // Handle legacy String ID calls
+      final set = getSetById(setOrId);
+      if (set != null) {
+        await deleteSet(set);
+      }
+    } else if (setOrId is FlashcardSet) {
+      await deleteSet(setOrId);
+    }
+  }
+  
+  /// Compatibility alias: getFlashcardSet → getSetById
+  FlashcardSet? getFlashcardSet(String id) => getSetById(id);
+  
+  /// Compatibility alias: createFlashcardSet → addSet
+  Future<void> createFlashcardSet(FlashcardSet set) => addSet(set);
+  
+  /// Compatibility alias: searchDecks → searchSets
+  List<FlashcardSet> searchDecks(String query) => searchSets(query);
 }

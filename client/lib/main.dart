@@ -24,21 +24,92 @@ import 'services/sync_status_tracker.dart';
 import 'blocs/recent_view/recent_view_bloc.dart';
 import 'blocs/search/search_bloc.dart';
 import 'widgets/error_handler.dart';
+import 'services/initialization_coordinator.dart';
+import 'services/reliable_operation_service.dart';
+import 'services/cache_manager.dart';
 
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize storage service
-  await StorageService.initialize();
+  // Initialize System Stabilization
+  await _initializeSystemStabilization();
 
-  // Initialize user service (depends on Hive being initialized)
-  await UserService.initialize();
+  runApp(MyApp());
+}
 
-  // Initialize enhanced network infrastructure
-  await _initializeNetworkInfrastructure();
-
-  runApp(const MyApp());
+/// Initialize System Stabilization with coordinated service initialization
+Future<void> _initializeSystemStabilization() async {
+  final coordinator = InitializationCoordinator();
+  final reliableOps = ReliableOperationService();
+  
+  debugPrint('🚀 Initializing System Stabilization...');
+  
+  // Register services with dependencies
+  coordinator.registerService('StorageService');
+  coordinator.registerService('UserService', dependencies: ['StorageService']);
+  coordinator.registerService('CacheManager');
+  coordinator.registerService('NetworkInfrastructure');
+  
+  // Initialize storage service first
+  await reliableOps.withFallback(
+    primary: () async {
+      coordinator.markServiceInitializing('StorageService');
+      await StorageService.initialize();
+      coordinator.markServiceInitialized('StorageService');
+    },
+    fallback: () async {
+      coordinator.markServiceFailed('StorageService', 'Storage initialization failed');
+      debugPrint('⚠️ Storage service initialization failed, using memory-only storage');
+    },
+    operationName: 'storage_service_initialization',
+  );
+  
+  // Initialize user service (depends on storage)
+  await reliableOps.withFallback(
+    primary: () async {
+      await coordinator.waitForService('StorageService');
+      coordinator.markServiceInitializing('UserService');
+      await UserService.initialize();
+      coordinator.markServiceInitialized('UserService');
+    },
+    fallback: () async {
+      coordinator.markServiceFailed('UserService', 'User service initialization failed');
+      debugPrint('⚠️ User service initialization failed, using default user');
+    },
+    operationName: 'user_service_initialization',
+  );
+  
+  // Initialize cache manager
+  await reliableOps.safely(
+    operation: () async {
+      coordinator.markServiceInitializing('CacheManager');
+      final cacheManager = CacheManager();
+      await cacheManager.initialize();
+      coordinator.markServiceInitialized('CacheManager');
+    },
+    operationName: 'cache_manager_initialization',
+  );
+  
+  // Initialize network infrastructure
+  await reliableOps.safely(
+    operation: () async {
+      coordinator.markServiceInitializing('NetworkInfrastructure');
+      await _initializeNetworkInfrastructure();
+      coordinator.markServiceInitialized('NetworkInfrastructure');
+    },
+    operationName: 'network_infrastructure_initialization',
+  );
+  
+  // Report initialization status
+  final report = coordinator.getInitializationReport();
+  debugPrint('📊 System Stabilization Initialization Report:');
+  report.forEach((service, status) {
+    final statusIcon = status == ServiceStatus.initialized ? '✅' : '❌';
+    debugPrint('   $statusIcon $service: $status');
+  });
+  
+  debugPrint('✅ System Stabilization Complete');
 }
 
 /// Initialize the enhanced network infrastructure
@@ -75,8 +146,15 @@ Future<void> _initializeNetworkInfrastructure() async {
   }
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Map<String, dynamic> _services = {};
 
   // Theme change analytics
   static void _logThemeChange(ThemeMode oldMode, ThemeMode newMode) {
@@ -96,6 +174,42 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: _initializeServices(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Initializing FlashMaster...'),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        
+        if (snapshot.hasError) {
+          return MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: Text('Error initializing app: ${snapshot.error}'),
+              ),
+            ),
+          );
+        }
+        
+        return _buildMainApp();
+      },
+    );
+  }
+  
+  Future<void> _initializeServices() async {
     // Create and register services
     final apiService = ApiService();
     final speechToTextService = SpeechToTextService();
@@ -105,6 +219,35 @@ class MyApp extends StatelessWidget {
     final interviewService = InterviewService();
     final recentViewService = RecentViewService();
     final jobDescriptionService = JobDescriptionService();
+
+    // Initialize InterviewService and wait for completion
+    debugPrint('🔧 Initializing InterviewService...');
+    await interviewService.initialize();
+    debugPrint('✅ InterviewService initialized with ${interviewService.questions.length} questions');
+
+    // Store services for use in _buildMainApp
+    _services = {
+      'api': apiService,
+      'speechToText': speechToTextService,
+      'flashcard': flashcardService,
+      'user': userService,
+      'network': networkService,
+      'interview': interviewService,
+      'recentView': recentViewService,
+      'jobDescription': jobDescriptionService,
+    };
+  }
+  
+  Widget _buildMainApp() {
+    // Get services from stored map
+    final apiService = _services['api'] as ApiService;
+    final speechToTextService = _services['speechToText'] as SpeechToTextService;
+    final flashcardService = _services['flashcard'] as FlashcardService;
+    final userService = _services['user'] as UserService;
+    final networkService = _services['network'] as NetworkService;
+    final interviewService = _services['interview'] as InterviewService;
+    final recentViewService = _services['recentView'] as RecentViewService;
+    final jobDescriptionService = _services['jobDescription'] as JobDescriptionService;
 
     // Create global instances of BLoCs to be shared across all screens
     final recentViewBloc = RecentViewBloc(recentViewService: recentViewService);
@@ -150,10 +293,10 @@ class MyApp extends StatelessWidget {
               ChangeNotifierProvider(create: (_) => SyncStatusTracker()),
 
               // Services as Providers (for backward compatibility)
-              ChangeNotifierProvider(create: (_) => flashcardService),
-              ChangeNotifierProvider(create: (_) => userService),
-              ChangeNotifierProvider(create: (_) => networkService),
-              ChangeNotifierProvider(create: (_) => interviewService),
+              ChangeNotifierProvider.value(value: flashcardService),
+              ChangeNotifierProvider.value(value: userService),
+              ChangeNotifierProvider.value(value: networkService),
+              ChangeNotifierProvider.value(value: interviewService),
 
               // Theme provider with callback support
               ChangeNotifierProvider(

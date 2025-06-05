@@ -53,9 +53,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       final query = event.query;
       
       // Execute searches in parallel
-      final deckResults = await _flashcardService.searchDecks(query);
-      final cardResults = await _flashcardService.searchCards(query);
-      final questionResults = await _interviewService.searchQuestions(query);
+      final deckResults = _flashcardService.searchDecks(query);
+      final cardResults = _flashcardService.searchCards(query);
+      final questionResults = _interviewService.searchQuestions(query);
       
       final hasResults = deckResults.isNotEmpty || 
                         cardResults.isNotEmpty || 

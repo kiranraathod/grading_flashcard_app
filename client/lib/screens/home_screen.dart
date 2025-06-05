@@ -62,11 +62,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Handle delete flashcard set with confirmation
-  Future<void> _handleDeleteFlashcardSet(BuildContext context, FlashcardSet set) async {
+  Future<void> _handleDeleteFlashcardSet(
+    BuildContext context,
+    FlashcardSet set,
+  ) async {
     // Get references before any async operation
-    final flashcardService = Provider.of<FlashcardService>(context, listen: false);
+    final flashcardService = Provider.of<FlashcardService>(
+      context,
+      listen: false,
+    );
     final scaffoldMessenger = ScaffoldMessenger.of(context);
-    
+
     final confirmed = await DeleteConfirmationDialog.show(
       context,
       itemName: set.title,
@@ -76,7 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (confirmed) {
       try {
         await flashcardService.deleteFlashcardSet(set.id);
-        
+
         if (mounted) {
           scaffoldMessenger.showSnackBar(
             SnackBar(
@@ -210,8 +216,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                       width: DS.avatarSizeM,
                                       height: DS.avatarSizeM,
                                       constraints: BoxConstraints(
-                                        maxWidth: DS.isExtraSmallScreen(context) ? 28 : 36,
-                                        maxHeight: DS.isExtraSmallScreen(context) ? 28 : 36,
+                                        maxWidth:
+                                            DS.isExtraSmallScreen(context)
+                                                ? 28
+                                                : 36,
+                                        maxHeight:
+                                            DS.isExtraSmallScreen(context)
+                                                ? 28
+                                                : 36,
                                       ),
                                       decoration: BoxDecoration(
                                         color: bgColor,
@@ -222,9 +234,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                         child: Text(
                                           _getDayAbbreviation(context, index),
                                           style: TextStyle(
-                                            fontSize: DS.isExtraSmallScreen(context) 
-                                                ? 10 
-                                                : DS.isSmallScreen(context)
+                                            fontSize:
+                                                DS.isExtraSmallScreen(context)
+                                                    ? 10
+                                                    : DS.isSmallScreen(context)
                                                     ? 12
                                                     : 14,
                                             fontWeight: FontWeight.bold,
@@ -242,7 +255,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                           : '',
                                       style: context.bodySmall?.copyWith(
                                         color: context.onSurfaceVariantColor,
-                                        fontSize: DS.isExtraSmallScreen(context) ? 10 : 12,
+                                        fontSize:
+                                            DS.isExtraSmallScreen(context)
+                                                ? 10
+                                                : 12,
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                       maxLines: 1,
@@ -322,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             CrossAxisAlignment
                                 .start, // Align everything to the left
                         children: [
-                          // Tabs row - FIXED: RenderFlex overflow by adding horizontal scrolling  
+                          // Tabs row - FIXED: RenderFlex overflow by adding horizontal scrolling
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Container(
@@ -335,240 +351,246 @@ class _HomeScreenState extends State<HomeScreen> {
                                     MainAxisSize
                                         .min, // Don't expand beyond needed
                                 children: [
-                                    // Decks tab
-                                    InkWell(
-                                      onTap: () {
-                                        setState(() {
-                                          _activeTab = 'Decks';
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: DS.spacingM,
-                                          vertical: DS.spacingXs,
-                                        ),
-                                        decoration: BoxDecoration(
+                                  // Decks tab
+                                  InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _activeTab = 'Decks';
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: DS.spacingM,
+                                        vertical: DS.spacingXs,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            _activeTab == 'Decks'
+                                                ? context.surfaceColor
+                                                : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border:
+                                            _activeTab == 'Decks' &&
+                                                    context.isDarkMode
+                                                ? Border.all(
+                                                  color: context.primaryColor
+                                                      .withValues(alpha: 0.2),
+                                                  width: 1,
+                                                )
+                                                : null,
+                                        boxShadow:
+                                            _activeTab == 'Decks'
+                                                ? [
+                                                  BoxShadow(
+                                                    color:
+                                                        context.isDarkMode
+                                                            ? context
+                                                                .primaryColor
+                                                                .withValues(
+                                                                  alpha: 0.1,
+                                                                )
+                                                            : Colors.grey
+                                                                .withOpacityFix(
+                                                                  0.1,
+                                                                ),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ]
+                                                : null,
+                                      ),
+                                      child: Text(
+                                        AppLocalizations.of(context).decksTab,
+                                        style: context.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.w500,
                                           color:
                                               _activeTab == 'Decks'
-                                                  ? context.surfaceColor
-                                                  : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          border:
-                                              _activeTab == 'Decks' &&
-                                                      context.isDarkMode
-                                                  ? Border.all(
-                                                    color: context.primaryColor
-                                                        .withValues(alpha: 0.2),
-                                                    width: 1,
-                                                  )
-                                                  : null,
-                                          boxShadow:
-                                              _activeTab == 'Decks'
-                                                  ? [
-                                                    BoxShadow(
-                                                      color:
-                                                          context.isDarkMode
-                                                              ? context
-                                                                  .primaryColor
-                                                                  .withValues(
-                                                                    alpha: 0.1,
-                                                                  )
-                                                              : Colors.grey
-                                                                  .withOpacityFix(
-                                                                    0.1,
-                                                                  ),
-                                                      blurRadius: 4,
-                                                      offset: const Offset(
-                                                        0,
-                                                        2,
-                                                      ),
-                                                    ),
-                                                  ]
-                                                  : null,
-                                        ),
-                                        child: Text(
-                                          AppLocalizations.of(context).decksTab,
-                                          style: context.bodyMedium?.copyWith(
-                                            fontWeight: FontWeight.w500,
-                                            color:
-                                                _activeTab == 'Decks'
-                                                    ? context.primaryColor
-                                                    : context.isDarkMode
-                                                        ? context.onSurfaceColor.withValues(alpha: 0.9) // WCAG AA compliant contrast for dark mode
-                                                        : context.onSurfaceColor.withValues(alpha: 0.8), // WCAG AA compliant contrast for light mode
-                                          ),
+                                                  ? context.primaryColor
+                                                  : context.isDarkMode
+                                                  ? context.onSurfaceColor
+                                                      .withValues(
+                                                        alpha: 0.9,
+                                                      ) // WCAG AA compliant contrast for dark mode
+                                                  : context.onSurfaceColor
+                                                      .withValues(
+                                                        alpha: 0.8,
+                                                      ), // WCAG AA compliant contrast for light mode
                                         ),
                                       ),
                                     ),
+                                  ),
 
-                                    // Interview Questions tab with arrow
-                                    Stack(
-                                      children: [
-                                        InkWell(
-                                          onTap: () {
-                                            setState(() {
-                                              _activeTab =
-                                                  'Interview Questions';
-                                            });
-                                          },
-                                          child: Container(
-                                            padding: EdgeInsets.symmetric(
-                                              horizontal: DS.spacingM,
-                                              vertical: DS.spacingXs,
+                                  // Interview Questions tab with arrow
+                                  Stack(
+                                    children: [
+                                      InkWell(
+                                        onTap: () {
+                                          setState(() {
+                                            _activeTab = 'Interview Questions';
+                                          });
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: DS.spacingM,
+                                            vertical: DS.spacingXs,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                _activeTab ==
+                                                        'Interview Questions'
+                                                    ? context.surfaceColor
+                                                    : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
                                             ),
-                                            decoration: BoxDecoration(
+                                            border:
+                                                _activeTab ==
+                                                            'Interview Questions' &&
+                                                        context.isDarkMode
+                                                    ? Border.all(
+                                                      color: context
+                                                          .primaryColor
+                                                          .withValues(
+                                                            alpha: 0.2,
+                                                          ),
+                                                      width: 1,
+                                                    )
+                                                    : null,
+                                            boxShadow:
+                                                _activeTab ==
+                                                        'Interview Questions'
+                                                    ? [
+                                                      BoxShadow(
+                                                        color:
+                                                            context.isDarkMode
+                                                                ? context
+                                                                    .primaryColor
+                                                                    .withValues(
+                                                                      alpha:
+                                                                          0.1,
+                                                                    )
+                                                                : Colors.grey
+                                                                    .withOpacityFix(
+                                                                      0.1,
+                                                                    ),
+                                                        blurRadius: 4,
+                                                        offset: const Offset(
+                                                          0,
+                                                          2,
+                                                        ),
+                                                      ),
+                                                    ]
+                                                    : null,
+                                          ),
+                                          child: Text(
+                                            AppLocalizations.of(
+                                              context,
+                                            ).interviewQuestionsTab,
+                                            style: context.bodyMedium?.copyWith(
+                                              fontWeight: FontWeight.w500,
                                               color:
                                                   _activeTab ==
                                                           'Interview Questions'
-                                                      ? context.surfaceColor
-                                                      : Colors.transparent,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border:
-                                                  _activeTab ==
-                                                              'Interview Questions' &&
-                                                          context.isDarkMode
-                                                      ? Border.all(
-                                                        color: context
-                                                            .primaryColor
-                                                            .withValues(
-                                                              alpha: 0.2,
-                                                            ),
-                                                        width: 1,
-                                                      )
-                                                      : null,
-                                              boxShadow:
-                                                  _activeTab ==
-                                                          'Interview Questions'
-                                                      ? [
-                                                        BoxShadow(
-                                                          color:
-                                                              context.isDarkMode
-                                                                  ? context
-                                                                      .primaryColor
-                                                                      .withValues(
-                                                                        alpha:
-                                                                            0.1,
-                                                                      )
-                                                                  : Colors.grey
-                                                                      .withOpacityFix(
-                                                                        0.1,
-                                                                      ),
-                                                          blurRadius: 4,
-                                                          offset: const Offset(
-                                                            0,
-                                                            2,
-                                                          ),
-                                                        ),
-                                                      ]
-                                                      : null,
+                                                      ? context.primaryColor
+                                                      : context.isDarkMode
+                                                      ? context.onSurfaceColor
+                                                          .withValues(
+                                                            alpha: 0.9,
+                                                          ) // WCAG AA compliant contrast for dark mode
+                                                      : context.onSurfaceColor
+                                                          .withValues(
+                                                            alpha: 0.8,
+                                                          ), // WCAG AA compliant contrast for light mode
                                             ),
-                                            child: Text(
-                                              AppLocalizations.of(
-                                                context,
-                                              ).interviewQuestionsTab,
-                                              style: context.bodyMedium?.copyWith(
-                                                fontWeight: FontWeight.w500,
-                                                color:
-                                                    _activeTab ==
-                                                            'Interview Questions'
-                                                        ? context.primaryColor
-                                                        : context.isDarkMode
-                                                            ? context.onSurfaceColor.withValues(alpha: 0.9) // WCAG AA compliant contrast for dark mode
-                                                            : context.onSurfaceColor.withValues(alpha: 0.8), // WCAG AA compliant contrast for light mode
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-
-                                        // Arrow indicator (only show when tab is active)
-                                        if (_activeTab == 'Interview Questions')
-                                          Positioned(
-                                            top: -15,
-                                            right: 20,
-                                            child: CustomPaint(
-                                              size: const Size(20, 15),
-                                              painter: ArrowPainter(
-                                                color: context.errorColor,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-
-                                    // Recent tab
-                                    InkWell(
-                                      onTap: () {
-                                        setState(() {
-                                          _activeTab = 'Recent';
-                                        });
-                                      },
-                                      child: Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: DS.spacingM,
-                                          vertical: DS.spacingXs,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              _activeTab == 'Recent'
-                                                  ? context.surfaceColor
-                                                  : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          border:
-                                              _activeTab == 'Recent' &&
-                                                      context.isDarkMode
-                                                  ? Border.all(
-                                                    color: context.primaryColor
-                                                        .withValues(alpha: 0.2),
-                                                    width: 1,
-                                                  )
-                                                  : null,
-                                          boxShadow:
-                                              _activeTab == 'Recent'
-                                                  ? [
-                                                    BoxShadow(
-                                                      color:
-                                                          context.isDarkMode
-                                                              ? context
-                                                                  .primaryColor
-                                                                  .withValues(
-                                                                    alpha: 0.1,
-                                                                  )
-                                                              : Colors.grey
-                                                                  .withOpacityFix(
-                                                                    0.1,
-                                                                  ),
-                                                      blurRadius: 4,
-                                                      offset: const Offset(
-                                                        0,
-                                                        2,
-                                                      ),
-                                                    ),
-                                                  ]
-                                                  : null,
-                                        ),
-                                        child: Text(
-                                          AppLocalizations.of(
-                                            context,
-                                          ).recentTab,
-                                          style: context.bodyMedium?.copyWith(
-                                            fontWeight: FontWeight.w500,
-                                            color:
-                                                _activeTab == 'Recent'
-                                                    ? context.primaryColor
-                                                    : context.isDarkMode
-                                                        ? context.onSurfaceColor.withValues(alpha: 0.9) // WCAG AA compliant contrast for dark mode
-                                                        : context.onSurfaceColor.withValues(alpha: 0.8), // WCAG AA compliant contrast for light mode
                                           ),
                                         ),
                                       ),
+
+                                      // Arrow indicator (only show when tab is active)
+                                      if (_activeTab == 'Interview Questions')
+                                        Positioned(
+                                          top: -15,
+                                          right: 20,
+                                          child: CustomPaint(
+                                            size: const Size(20, 15),
+                                            painter: ArrowPainter(
+                                              color: context.errorColor,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+
+                                  // Recent tab
+                                  InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _activeTab = 'Recent';
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: DS.spacingM,
+                                        vertical: DS.spacingXs,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            _activeTab == 'Recent'
+                                                ? context.surfaceColor
+                                                : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border:
+                                            _activeTab == 'Recent' &&
+                                                    context.isDarkMode
+                                                ? Border.all(
+                                                  color: context.primaryColor
+                                                      .withValues(alpha: 0.2),
+                                                  width: 1,
+                                                )
+                                                : null,
+                                        boxShadow:
+                                            _activeTab == 'Recent'
+                                                ? [
+                                                  BoxShadow(
+                                                    color:
+                                                        context.isDarkMode
+                                                            ? context
+                                                                .primaryColor
+                                                                .withValues(
+                                                                  alpha: 0.1,
+                                                                )
+                                                            : Colors.grey
+                                                                .withOpacityFix(
+                                                                  0.1,
+                                                                ),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ]
+                                                : null,
+                                      ),
+                                      child: Text(
+                                        AppLocalizations.of(context).recentTab,
+                                        style: context.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.w500,
+                                          color:
+                                              _activeTab == 'Recent'
+                                                  ? context.primaryColor
+                                                  : context.isDarkMode
+                                                  ? context.onSurfaceColor
+                                                      .withValues(
+                                                        alpha: 0.9,
+                                                      ) // WCAG AA compliant contrast for dark mode
+                                                  : context.onSurfaceColor
+                                                      .withValues(
+                                                        alpha: 0.8,
+                                                      ), // WCAG AA compliant contrast for light mode
+                                        ),
+                                      ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -990,25 +1012,30 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       // Check if widget is still mounted before using context
       if (!mounted) return <String, int>{};
-      
+
       // Get local question counts from InterviewService (now using subtopics)
-      final interviewService = Provider.of<InterviewService>(context, listen: false);
+      final interviewService = Provider.of<InterviewService>(
+        context,
+        listen: false,
+      );
       final localCounts = _calculateLocalCategoryCounts(interviewService);
-      
+
       // Also get server questions directly to extract their subtopics
-      final serverQuestions = await _defaultDataService.loadDefaultInterviewQuestions();
+      final serverQuestions =
+          await _defaultDataService.loadDefaultInterviewQuestions();
       final serverSubtopicCounts = <String, int>{};
-      
+
       debugPrint('=== COUNTING DEBUG: Server Questions ===');
       debugPrint('Total server questions: ${serverQuestions.length}');
-      
+
       for (final question in serverQuestions) {
         // FIXED: Normalize subtopic consistently (same as local counting)
         final rawSubtopic = question.subtopic;
         final normalizedSubtopic = rawSubtopic.trim();
-        
+
         // SPECIAL DEBUG: Track API Development questions specifically
-        if (normalizedSubtopic.toLowerCase().contains('api') || question.text.toLowerCase().contains('api')) {
+        if (normalizedSubtopic.toLowerCase().contains('api') ||
+            question.text.toLowerCase().contains('api')) {
           debugPrint('🔍 POTENTIAL API DEV SERVER QUESTION:');
           debugPrint('  Text: "${question.text}"');
           debugPrint('  Raw subtopic: "$rawSubtopic"');
@@ -1017,99 +1044,119 @@ class _HomeScreenState extends State<HomeScreen> {
           debugPrint('  CategoryId: "${question.categoryId}"');
           debugPrint('  isDraft: ${question.isDraft}');
         }
-        
+
         if (normalizedSubtopic.isNotEmpty) {
-          serverSubtopicCounts[normalizedSubtopic] = (serverSubtopicCounts[normalizedSubtopic] ?? 0) + 1;
+          serverSubtopicCounts[normalizedSubtopic] =
+              (serverSubtopicCounts[normalizedSubtopic] ?? 0) + 1;
           if (normalizedSubtopic == 'API Development') {
-            debugPrint('  ✅ Added SERVER question to "API Development": "${question.text}"');
+            debugPrint(
+              '  ✅ Added SERVER question to "API Development": "${question.text}"',
+            );
           }
         }
       }
-      
+
       // Combine server and local subtopic counts
       final combinedCounts = Map<String, int>.from(serverSubtopicCounts);
       for (final entry in localCounts.entries) {
-        combinedCounts[entry.key] = (combinedCounts[entry.key] ?? 0) + entry.value;
+        combinedCounts[entry.key] =
+            (combinedCounts[entry.key] ?? 0) + entry.value;
       }
-      
+
       // 🔧 QUICK FIX: Verify counts using actual filtering to ensure accuracy
       // Check if widget is still mounted before using context again
       if (!mounted) return <String, int>{};
-      
+
       final verifiedCounts = <String, int>{};
-      
+
       for (final entry in combinedCounts.entries) {
         final subtopic = entry.key;
         // Get the actual count by filtering (same logic as clicking the card)
-        final actualQuestions = interviewService.getQuestionsByCategory(subtopic, isSubtopic: true);
+        final actualQuestions = interviewService.getQuestionsByCategory(
+          subtopic,
+          isSubtopic: true,
+        );
         final actualCount = actualQuestions.length;
-        
+
         verifiedCounts[subtopic] = actualCount;
-        
+
         // Debug only major mismatches
         if (entry.value != actualCount) {
-          debugPrint('⚠️  COUNT MISMATCH for $subtopic: calculated=${entry.value}, actual=$actualCount');
+          debugPrint(
+            '⚠️  COUNT MISMATCH for $subtopic: calculated=${entry.value}, actual=$actualCount',
+          );
         }
       }
-      
+
       debugPrint('Server subtopic counts: $serverSubtopicCounts');
       debugPrint('Local subtopic counts: $localCounts');
       debugPrint('Combined subtopic counts: $combinedCounts');
       debugPrint('Verified subtopic counts: $verifiedCounts');
-      
+
       // SPECIAL DEBUG: API Development specific summary
       final serverApiCount = serverSubtopicCounts['API Development'] ?? 0;
       final localApiCount = localCounts['API Development'] ?? 0;
       final combinedApiCount = combinedCounts['API Development'] ?? 0;
       final verifiedApiCount = verifiedCounts['API Development'] ?? 0;
-      
+
       debugPrint('🎯 API DEVELOPMENT COUNT SUMMARY:');
       debugPrint('  Server count: $serverApiCount');
       debugPrint('  Local count: $localApiCount');
       debugPrint('  Combined count: $combinedApiCount');
       debugPrint('  Verified count: $verifiedApiCount');
       debugPrint('  Using verified count for display: $verifiedApiCount');
-      
+
       return verifiedCounts;
     } catch (e) {
       debugPrint('Failed to load subtopic counts: $e');
-      
+
       // Check if widget is still mounted before using context
       if (!mounted) return <String, int>{};
-      
+
       // Fallback: Use only local counts if server fails, but verify them too
-      final fallbackInterviewService = Provider.of<InterviewService>(context, listen: false);
-      final localCounts = _calculateLocalCategoryCounts(fallbackInterviewService);
-      
+      final fallbackInterviewService = Provider.of<InterviewService>(
+        context,
+        listen: false,
+      );
+      final localCounts = _calculateLocalCategoryCounts(
+        fallbackInterviewService,
+      );
+
       // Verify local counts using actual filtering
       final verifiedLocalCounts = <String, int>{};
       for (final entry in localCounts.entries) {
         final subtopic = entry.key;
-        final actualCount = fallbackInterviewService.getQuestionsByCategory(subtopic, isSubtopic: true).length;
+        final actualCount =
+            fallbackInterviewService
+                .getQuestionsByCategory(subtopic, isSubtopic: true)
+                .length;
         verifiedLocalCounts[subtopic] = actualCount;
       }
-      
+
       return verifiedLocalCounts;
     }
   }
-  
+
   /// Calculate question counts from local InterviewService - UPDATED: Use subtopics instead of categories
-  Map<String, int> _calculateLocalCategoryCounts(InterviewService interviewService) {
+  Map<String, int> _calculateLocalCategoryCounts(
+    InterviewService interviewService,
+  ) {
     final localCounts = <String, int>{};
-    
+
     // Get all published questions
     final publishedQuestions = interviewService.questions;
-    
+
     debugPrint('=== COUNTING DEBUG: Local Questions ===');
     debugPrint('Total published questions: ${publishedQuestions.length}');
-    
+
     for (final question in publishedQuestions) {
       // FIXED: Normalize subtopic consistently (trim + toLowerCase for case-insensitive comparison)
       final rawSubtopic = question.subtopic;
       final normalizedSubtopic = rawSubtopic.trim();
-      
+
       // SPECIAL DEBUG: Track API Development questions specifically
-      if (normalizedSubtopic.toLowerCase().contains('api') || question.text.toLowerCase().contains('api')) {
+      if (normalizedSubtopic.toLowerCase().contains('api') ||
+          question.text.toLowerCase().contains('api')) {
         debugPrint('🔍 POTENTIAL API DEV LOCAL QUESTION:');
         debugPrint('  Text: "${question.text}"');
         debugPrint('  Raw subtopic: "$rawSubtopic"');
@@ -1118,19 +1165,24 @@ class _HomeScreenState extends State<HomeScreen> {
         debugPrint('  CategoryId: "${question.categoryId}"');
         debugPrint('  isDraft: ${question.isDraft}');
       }
-      
+
       if (normalizedSubtopic.isNotEmpty) {
-        localCounts[normalizedSubtopic] = (localCounts[normalizedSubtopic] ?? 0) + 1;
+        localCounts[normalizedSubtopic] =
+            (localCounts[normalizedSubtopic] ?? 0) + 1;
         if (normalizedSubtopic == 'API Development') {
-          debugPrint('  ✅ Added LOCAL question to "API Development": "${question.text}"');
+          debugPrint(
+            '  ✅ Added LOCAL question to "API Development": "${question.text}"',
+          );
         }
       } else {
         // Fallback for questions without subtopic
         localCounts['General'] = (localCounts['General'] ?? 0) + 1;
-        debugPrint('  - Added to General category, new count: ${localCounts['General']}');
+        debugPrint(
+          '  - Added to General category, new count: ${localCounts['General']}',
+        );
       }
     }
-    
+
     debugPrint('Final local subtopic counts: $localCounts');
     debugPrint('=== END COUNTING DEBUG ===');
     return localCounts;
@@ -1157,29 +1209,40 @@ class _HomeScreenState extends State<HomeScreen> {
           for (final entry in snapshot.data!.entries) {
             if (entry.value > 0) {
               subtopics.add({
-                'title': entry.key, 
-                'count': entry.value, 
-                'isCustom': !_isStandardSubtopic(entry.key) // Check if it's a standard or custom subtopic
+                'title': entry.key,
+                'count': entry.value,
+                'isCustom':
+                    !_isStandardSubtopic(
+                      entry.key,
+                    ), // Check if it's a standard or custom subtopic
               });
             }
           }
-          
+
           // Sort subtopics alphabetically for better organization
-          subtopics.sort((a, b) => a['title'].toString().compareTo(b['title'].toString()));
-              
+          subtopics.sort(
+            (a, b) => a['title'].toString().compareTo(b['title'].toString()),
+          );
+
           debugPrint('Displaying ${subtopics.length} subtopics');
-          debugPrint('Subtopics with counts: ${subtopics.map((s) => '${s['title']}: ${s['count']}').join(', ')}');
+          debugPrint(
+            'Subtopics with counts: ${subtopics.map((s) => '${s['title']}: ${s['count']}').join(', ')}',
+          );
         } else {
           // Fallback subtopics (only standard ones)
           subtopics = [
-            {'title': 'Data Cleaning & Preprocessing', 'count': 0, 'isCustom': false},
+            {
+              'title': 'Data Cleaning & Preprocessing',
+              'count': 0,
+              'isCustom': false,
+            },
             {'title': 'Statistical Analysis', 'count': 0, 'isCustom': false},
             {'title': 'ML Algorithms', 'count': 0, 'isCustom': false},
             {'title': 'Model Evaluation', 'count': 0, 'isCustom': false},
             {'title': 'SQL & Database', 'count': 0, 'isCustom': false},
             {'title': 'Python Fundamentals', 'count': 0, 'isCustom': false},
           ];
-          
+
           debugPrint('Using fallback subtopics due to server issue');
         }
 
@@ -1201,7 +1264,11 @@ class _HomeScreenState extends State<HomeScreen> {
           itemCount: subtopics.length,
           itemBuilder: (context, index) {
             final subtopic = subtopics[index];
-            return _buildCategoryChip(subtopic['title'], subtopic['count'], subtopic['isCustom'] ?? false);
+            return _buildCategoryChip(
+              subtopic['title'],
+              subtopic['count'],
+              subtopic['isCustom'] ?? false,
+            );
           },
         );
       },
@@ -1213,11 +1280,11 @@ class _HomeScreenState extends State<HomeScreen> {
     // List of standard subtopics that come from the server
     final standardSubtopics = {
       'Data Cleaning & Preprocessing',
-      'Statistical Analysis', 
+      'Statistical Analysis',
       'Data Analysis',
       'Data Quality',
       'ML Algorithms',
-      'Model Evaluation', 
+      'Model Evaluation',
       'ML Fundamentals',
       'Optimization',
       'SQL & Database',
@@ -1231,7 +1298,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'HTTP Methods',
       'Web Security',
       'Statistical Theory',
-      'Hypothesis Testing', 
+      'Hypothesis Testing',
       'Statistical Significance',
     };
     return standardSubtopics.contains(subtopic);
@@ -1245,10 +1312,12 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => InterviewQuestionsScreen(
-              category: title, // Now passing subtopic name instead of main category
-              isSubtopic: true, // Add flag to indicate this is a subtopic
-            ),
+            builder:
+                (context) => InterviewQuestionsScreen(
+                  category:
+                      title, // Now passing subtopic name instead of main category
+                  isSubtopic: true, // Add flag to indicate this is a subtopic
+                ),
           ),
         );
       },
@@ -1262,9 +1331,14 @@ class _HomeScreenState extends State<HomeScreen> {
           color: context.surfaceColor,
           borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
           border: Border.all(
-            color: isCustom
-                ? context.colorScheme.outline.withValues(alpha: 0.7) // More prominent border for custom
-                : context.colorScheme.outline.withValues(alpha: 0.5), // Standard border for server subtopics
+            color:
+                isCustom
+                    ? context.colorScheme.outline.withValues(
+                      alpha: 0.7,
+                    ) // More prominent border for custom
+                    : context.colorScheme.outline.withValues(
+                      alpha: 0.5,
+                    ), // Standard border for server subtopics
           ),
         ),
         child: Column(
@@ -1372,5 +1446,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
 }

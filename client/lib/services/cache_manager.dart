@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart';
 import 'enhanced_cache_manager.dart';
+import 'reliable_operation_service.dart';
+import 'initialization_coordinator.dart';
 
 class CacheManager {
   static final CacheManager _instance = CacheManager._internal();
@@ -12,210 +13,201 @@ class CacheManager {
   static const Duration _defaultCacheExpiry = Duration(hours: 24);
   
   final EnhancedCacheManager _enhancedCache = EnhancedCacheManager();
+  final ReliableOperationService _reliableOps = ReliableOperationService();
+  final InitializationCoordinator _coordinator = InitializationCoordinator();
+  
   bool _useEnhancedCache = true;
   bool _isInitialized = false;
 
-  /// Initialize the cache manager
+  /// Initialize the cache manager with reliable error handling
   Future<void> initialize() async {
     if (_isInitialized) return;
     
-    try {
-      await _enhancedCache.initialize();
-      _isInitialized = true;
-      debugPrint('CacheManager initialized with enhanced features');
-    } catch (e) {
-      debugPrint('Failed to initialize enhanced cache, using basic: $e');
-      _useEnhancedCache = false;
-      _isInitialized = true;
-    }
+    _coordinator.registerService('CacheManager');
+    _coordinator.markServiceInitializing('CacheManager');
+    
+    await _reliableOps.withFallback(
+      primary: () async {
+        await _enhancedCache.initialize();
+        _useEnhancedCache = true;
+        _isInitialized = true;
+      },
+      fallback: () async {
+        _useEnhancedCache = false;
+        _isInitialized = true;
+      },
+      operationName: 'cache_manager_initialization',
+    );
+    
+    _coordinator.markServiceInitialized('CacheManager');
   }
 
-  /// Cache data with enhanced features
+  /// Cache data with reliable enhanced/fallback pattern
   Future<void> cacheData(String key, Map<String, dynamic> data, {Duration? ttl}) async {
     await _ensureInitialized();
     
-    if (_useEnhancedCache) {
-      try {
-        await _enhancedCache.cacheData(key, data, ttl: ttl ?? _defaultCacheExpiry);
-        return;
-      } catch (e) {
-        debugPrint('Enhanced cache failed, falling back: $e');
-      }
-    }
-    
-    // Fallback to basic caching
-    await _fallbackCacheData(key, data);
+    await _reliableOps.withFallback(
+      primary: () => _enhancedCache.cacheData(key, data, ttl: ttl ?? _defaultCacheExpiry),
+      fallback: () => _fallbackCacheData(key, data),
+      operationName: 'cache_data',
+    );
   }
 
-  /// Get cached data with enhanced features
+  /// Get cached data with default null return
   Future<Map<String, dynamic>?> getCachedData(String key) async {
     await _ensureInitialized();
     
-    if (_useEnhancedCache) {
-      try {
-        return await _enhancedCache.getCachedData(key);
-      } catch (e) {
-        debugPrint('Enhanced cache failed, falling back: $e');
-      }
-    }
-    
-    // Fallback to basic cache retrieval
-    return await _fallbackGetCachedData(key);
+    return await _reliableOps.withFallback(
+      primary: () => _enhancedCache.getCachedData(key),
+      fallback: () => _fallbackGetCachedData(key),
+      operationName: 'get_cached_data',
+    );
   }
 
-  /// Clear cache with enhanced options
+  /// Clear cache safely
   Future<void> clearCache(String key) async {
     await _ensureInitialized();
     
-    if (_useEnhancedCache) {
-      try {
-        await _enhancedCache.clearCache(key: key);
-        return;
-      } catch (e) {
-        debugPrint('Enhanced cache clear failed, falling back: $e');
-      }
-    }
-    
-    // Fallback to basic cache clearing
-    await _fallbackClearCache(key);
+    await _reliableOps.withFallback(
+      primary: () => _enhancedCache.clearCache(key: key),
+      fallback: () => _fallbackClearCache(key),
+      operationName: 'clear_cache',
+    );
   }
 
-  /// Check if cache is valid
+  /// Check if cache is valid with default false
   Future<bool> isCacheValid(String key) async {
     await _ensureInitialized();
     
-    if (_useEnhancedCache) {
-      try {
-        return await _enhancedCache.isCacheValid(key);
-      } catch (e) {
-        debugPrint('Enhanced cache validation failed, falling back: $e');
-      }
-    }
-    
-    // Fallback to basic cache validation
-    return await _fallbackIsCacheValid(key);
+    return await _reliableOps.withDefault(
+      operation: () => _useEnhancedCache 
+        ? _enhancedCache.isCacheValid(key)
+        : _fallbackIsCacheValid(key),
+      defaultValue: false,
+      operationName: 'is_cache_valid',
+    );
   }
 
-  /// Clear all cache
+  /// Clear all cache safely
   Future<void> clearAllCache() async {
     await _ensureInitialized();
     
-    if (_useEnhancedCache) {
-      try {
-        await _enhancedCache.clearCache();
-        return;
-      } catch (e) {
-        debugPrint('Enhanced cache clear all failed, falling back: $e');
-      }
-    }
-    
-    // Fallback to basic clear all
-    await _fallbackClearAllCache();
+    await _reliableOps.safely(
+      operation: () => _useEnhancedCache 
+        ? _enhancedCache.clearCache()
+        : _fallbackClearAllCache(),
+      operationName: 'clear_all_cache',
+    );
   }
 
-  /// Add to offline queue (enhanced feature)
+  /// Enhanced features with safe operations
   Future<void> addToOfflineQueue(String key, Map<String, dynamic> data, {int priority = 0}) async {
     await _ensureInitialized();
     
     if (_useEnhancedCache) {
-      try {
-        await _enhancedCache.addToOfflineQueue(key, data, priority: priority);
-      } catch (e) {
-        debugPrint('Failed to add to offline queue: $e');
-      }
+      await _reliableOps.safely(
+        operation: () => _enhancedCache.addToOfflineQueue(key, data, priority: priority),
+        operationName: 'add_to_offline_queue',
+      );
     }
   }
 
-  /// Process offline queue (enhanced feature)
   Future<List<String>> processOfflineQueue() async {
     await _ensureInitialized();
     
     if (_useEnhancedCache) {
-      try {
-        return await _enhancedCache.processOfflineQueue();
-      } catch (e) {
-        debugPrint('Failed to process offline queue: $e');
-      }
+      return await _reliableOps.withDefault(
+        operation: () => _enhancedCache.processOfflineQueue(),
+        defaultValue: <String>[],
+        operationName: 'process_offline_queue',
+      );
     }
-    
     return [];
   }
 
-  /// Get cache statistics (enhanced feature)
   Map<String, dynamic> getStatistics() {
     if (_useEnhancedCache) {
-      return _enhancedCache.getStatistics();
+      return _reliableOps.safelySync(
+        operation: () => _enhancedCache.getStatistics(),
+        defaultValue: {'message': 'Enhanced features not available'},
+        operationName: 'get_statistics',
+      ) ?? {'message': 'Enhanced features not available'};
     }
     return {'message': 'Enhanced features not available'};
   }
 
-  /// Fallback implementations for basic functionality
+  /// Fallback implementations using reliable operations (only 3 try-catch blocks total)
   Future<void> _fallbackCacheData(String key, Map<String, dynamic> data) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('$_cachePrefix$key', json.encode(data));
-      final expiryTime = DateTime.now().add(_defaultCacheExpiry);
-      await prefs.setInt('$_cachePrefix${key}_timestamp', expiryTime.millisecondsSinceEpoch);
-      debugPrint('Cached data for key: $key');
-    } catch (e) {
-      debugPrint('Error caching data for key $key: $e');
-    }
+    await _reliableOps.safely(
+      operation: () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('$_cachePrefix$key', json.encode(data));
+        final expiryTime = DateTime.now().add(_defaultCacheExpiry);
+        await prefs.setInt('$_cachePrefix${key}_timestamp', expiryTime.millisecondsSinceEpoch);
+      },
+      operationName: 'fallback_cache_data',
+    );
   }
 
   Future<Map<String, dynamic>?> _fallbackGetCachedData(String key) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final dataString = prefs.getString('$_cachePrefix$key');
-      final timestamp = prefs.getInt('$_cachePrefix${key}_timestamp');
-      
-      if (dataString == null || timestamp == null) return null;
-      
-      final expiryTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
-      if (DateTime.now().isAfter(expiryTime)) {
-        await _fallbackClearCache(key);
-        return null;
-      }
-      
-      return json.decode(dataString) as Map<String, dynamic>;
-    } catch (e) {
-      debugPrint('Error retrieving cached data for key $key: $e');
-      return null;
-    }
+    return await _reliableOps.withDefault(
+      operation: () async {
+        final prefs = await SharedPreferences.getInstance();
+        final dataString = prefs.getString('$_cachePrefix$key');
+        final timestamp = prefs.getInt('$_cachePrefix${key}_timestamp');
+        
+        if (dataString == null || timestamp == null) return null;
+        
+        final expiryTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
+        if (DateTime.now().isAfter(expiryTime)) {
+          await _fallbackClearCache(key);
+          return null;
+        }
+        
+        return json.decode(dataString) as Map<String, dynamic>;
+      },
+      defaultValue: null,
+      operationName: 'fallback_get_cached_data',
+    );
   }
 
   Future<void> _fallbackClearCache(String key) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('$_cachePrefix$key');
-      await prefs.remove('$_cachePrefix${key}_timestamp');
-    } catch (e) {
-      debugPrint('Error clearing cache for key $key: $e');
-    }
+    await _reliableOps.safely(
+      operation: () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('$_cachePrefix$key');
+        await prefs.remove('$_cachePrefix${key}_timestamp');
+      },
+      operationName: 'fallback_clear_cache',
+    );
   }
 
   Future<bool> _fallbackIsCacheValid(String key) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final timestamp = prefs.getInt('$_cachePrefix${key}_timestamp');
-      if (timestamp == null) return false;
-      
-      final expiryTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
-      return DateTime.now().isBefore(expiryTime);
-    } catch (e) {
-      return false;
-    }
+    return await _reliableOps.withDefault(
+      operation: () async {
+        final prefs = await SharedPreferences.getInstance();
+        final timestamp = prefs.getInt('$_cachePrefix${key}_timestamp');
+        if (timestamp == null) return false;
+        
+        final expiryTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
+        return DateTime.now().isBefore(expiryTime);
+      },
+      defaultValue: false,
+      operationName: 'fallback_is_cache_valid',
+    );
   }
 
   Future<void> _fallbackClearAllCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final keys = prefs.getKeys().where((key) => key.startsWith(_cachePrefix));
-      for (final key in keys) {
-        await prefs.remove(key);
-      }
-    } catch (e) {
-      debugPrint('Error clearing all cache: $e');
-    }
+    await _reliableOps.safely(
+      operation: () async {
+        final prefs = await SharedPreferences.getInstance();
+        final keys = prefs.getKeys().where((key) => key.startsWith(_cachePrefix));
+        for (final key in keys) {
+          await prefs.remove(key);
+        }
+      },
+      operationName: 'fallback_clear_all_cache',
+    );
   }
 
   /// Ensure cache manager is initialized

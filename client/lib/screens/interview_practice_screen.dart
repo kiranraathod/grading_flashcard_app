@@ -88,7 +88,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     // ✅ STEP 2: Check global service storage
     else {
       savedAnswer = _interviewService.getUserAnswer(widget.question.id);
-      if (savedAnswer != null && savedAnswer.isNotEmpty) {
+      if (savedAnswer.isNotEmpty) {
         // ✅ SYNC: Copy from global to local for future access
         _userAnswers[widget.question.id] = savedAnswer;
         debugPrint(
@@ -98,7 +98,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     }
 
     // ✅ STEP 3: Load into UI
-    if (savedAnswer != null && savedAnswer.isNotEmpty) {
+    if (savedAnswer.isNotEmpty) {
       _userAnswerController.text = savedAnswer;
       debugPrint(
         '✓ Loaded into text controller: "${_userAnswerController.text}"',
@@ -341,7 +341,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     // Then, pull any global answers that might not be in local storage
     for (final question in widget.questionList) {
       final globalAnswer = _interviewService.getUserAnswer(question.id);
-      if (globalAnswer != null && globalAnswer.isNotEmpty) {
+      if (globalAnswer.isNotEmpty) {
         if (!_userAnswers.containsKey(question.id) ||
             _userAnswers[question.id]!.isEmpty) {
           _userAnswers[question.id] = globalAnswer;
@@ -362,7 +362,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     // Ensure we haven't missed any from global storage
     for (final question in widget.questionList) {
       final globalAnswer = _interviewService.getUserAnswer(question.id);
-      if (globalAnswer != null && globalAnswer.trim().isNotEmpty) {
+      if (globalAnswer.trim().isNotEmpty) {
         // Use global answer if local is empty or doesn't exist
         if (!allAnswers.containsKey(question.id) ||
             allAnswers[question.id]!.trim().isEmpty) {
@@ -950,8 +950,8 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       final localAnswer = _userAnswers[question.id];
       final globalAnswer = _interviewService.getUserAnswer(question.id);
 
-      String? answer = localAnswer ?? globalAnswer;
-      if (answer != null) {
+      String answer = localAnswer ?? globalAnswer;
+      if (answer.isNotEmpty) {
         final wordCount = _getWordCount(answer);
         if (wordCount >= 200 && wordCount <= 300) {
           count++;

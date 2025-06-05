@@ -217,7 +217,7 @@ class _InterviewPracticeBatchScreenState extends State<InterviewPracticeBatchScr
       for (final question in widget.questions) {
         final userAnswer = _interviewService.getUserAnswer(question.id);
         
-        if (userAnswer != null && userAnswer.trim().isNotEmpty) {
+        if (userAnswer.trim().isNotEmpty) {
           answers.add(InterviewAnswer(
             questionId: question.id,
             questionText: question.text,

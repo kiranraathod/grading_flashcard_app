@@ -121,7 +121,6 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
       category: _activeCategory,
       difficulty: _activeDifficulty,
       searchQuery: _searchController.text,
-      isSubtopic: widget.isSubtopic, // Pass the isSubtopic flag
     );
     
     // ✅ SIMPLIFIED: Essential debugging for filtering issues
@@ -208,7 +207,13 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
     }
     
     final stats = _interviewService!.getProgressStats();
-    return (stats['completed'] as int, stats['total'] as int);
+    final completedValue = stats['completed'];
+    final totalValue = stats['total'];
+    
+    final completed = (completedValue is int) ? completedValue : 0;
+    final total = (totalValue is int) ? totalValue : 0;
+    
+    return (completed, total);
   }
   
   @override
