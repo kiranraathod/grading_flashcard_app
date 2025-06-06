@@ -27,10 +27,32 @@ import 'widgets/error_handler.dart';
 import 'services/initialization_coordinator.dart';
 import 'services/reliable_operation_service.dart';
 import 'services/cache_manager.dart';
+import 'services/guest_session_service.dart';
+import 'services/supabase_auth_service.dart';
+import 'services/usage_gate_service.dart';
+import 'utils/config.dart';
+
+/// Configure Supabase with production credentials
+void configureSupabase() {
+  AppConfig.setSupabaseConfig(
+    url: 'https://saxopupmwfcfjxuflfrx.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNheG9wdXBtd2ZjZmp4dWZsZnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxOTU1NjgsImV4cCI6MjA2NDc3MTU2OH0.1RdIw1v9FG76LJz7SNZY5YW51dcRP4XVCPCBLRgTXVU',
+  );
+
+  // Enable authentication for testing (you can disable these via debug panel)
+  AppConfig.enableUsageLimits = true;
+  AppConfig.enforceAuthentication = true;
+
+  debugPrint('✅ Supabase configured successfully');
+  debugPrint('🔐 Authentication features enabled for testing');
+}
 
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Configure Supabase BEFORE system initialization
+  configureSupabase();
 
   // Initialize System Stabilization
   await _initializeSystemStabilization();
@@ -49,6 +71,9 @@ Future<void> _initializeSystemStabilization() async {
   coordinator.registerService('StorageService');
   coordinator.registerService('UserService', dependencies: ['StorageService']);
   coordinator.registerService('CacheManager');
+  coordinator.registerService('GuestSessionService');
+  coordinator.registerService('SupabaseAuthService');
+  coordinator.registerService('UsageGateService', dependencies: ['GuestSessionService', 'SupabaseAuthService']);
   coordinator.registerService('NetworkInfrastructure');
   
   // Initialize storage service first
@@ -89,6 +114,48 @@ Future<void> _initializeSystemStabilization() async {
       coordinator.markServiceInitialized('CacheManager');
     },
     operationName: 'cache_manager_initialization',
+  );
+  
+  // Initialize guest session service (for anonymous users)
+  await reliableOps.withFallback(
+    primary: () async {
+      coordinator.markServiceInitializing('GuestSessionService');
+      final guestSession = GuestSessionService();
+      await guestSession.initialize();
+      coordinator.markServiceInitialized('GuestSessionService');
+    },
+    fallback: () async {
+      coordinator.markServiceFailed('GuestSessionService', 'Guest session initialization failed');
+      debugPrint('⚠️ Guest session service initialization failed, using default session');
+    },
+    operationName: 'guest_session_initialization',
+  );
+  
+  // Initialize Supabase authentication service
+  await reliableOps.withFallback(
+    primary: () async {
+      coordinator.markServiceInitializing('SupabaseAuthService');
+      final authService = SupabaseAuthService();
+      await authService.initialize();
+      coordinator.markServiceInitialized('SupabaseAuthService');
+    },
+    fallback: () async {
+      coordinator.markServiceFailed('SupabaseAuthService', 'Supabase auth initialization failed');
+      debugPrint('⚠️ Supabase auth service initialization failed, using guest-only mode');
+    },
+    operationName: 'supabase_auth_initialization',
+  );
+  
+  // Initialize usage gate service (depends on guest session and auth services)
+  await reliableOps.safely(
+    operation: () async {
+      await coordinator.waitForService('GuestSessionService');
+      await coordinator.waitForService('SupabaseAuthService');
+      coordinator.markServiceInitializing('UsageGateService');
+      final usageGate = UsageGateService();
+      coordinator.markServiceInitialized('UsageGateService');
+    },
+    operationName: 'usage_gate_initialization',
   );
   
   // Initialize network infrastructure
@@ -297,6 +364,11 @@ class _MyAppState extends State<MyApp> {
               ChangeNotifierProvider.value(value: userService),
               ChangeNotifierProvider.value(value: networkService),
               ChangeNotifierProvider.value(value: interviewService),
+
+              // Authentication Services
+              ChangeNotifierProvider.value(value: GuestSessionService()),
+              ChangeNotifierProvider.value(value: SupabaseAuthService()),
+              ChangeNotifierProvider.value(value: UsageGateService()),
 
               // Theme provider with callback support
               ChangeNotifierProvider(

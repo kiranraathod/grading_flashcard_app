@@ -76,6 +76,20 @@ class AppConfig {
   static const String flashcardSetsKey = 'flashcard_sets';
   static const String userStreakKey = 'weeklyStreak';
   
+  // Authentication configuration - FEATURE FLAGS FOR TESTING
+  static bool enableUsageLimits = false;           // Disabled for testing
+  static bool enforceAuthentication = false;       // Disabled for testing
+  static int guestUsageLimit = 3;                  // Actions before auth required
+  static const String guestSessionKey = 'guest_session_id';
+  
+  // Supabase configuration (to be set after project creation)
+  static String supabaseUrl = '';
+  static String supabaseAnonKey = '';
+  
+  // Authentication settings
+  static Duration authTimeout = const Duration(seconds: 30);
+  static const String authRedirectUrl = 'io.supabase.flashmaster://login-callback/';
+  
   // Initialize configuration based on environment
   static void initialize() {
     _environment = _determineEnvironment();
@@ -192,6 +206,10 @@ class AppConfig {
     Duration? connectivityTimeout,
     Map<String, String>? endpoints,
     String? apiBaseUrlOverride,
+    // Authentication test overrides
+    bool? enableUsageLimits,
+    bool? enforceAuthentication,
+    int? guestUsageLimit,
   }) {
     if (environment != null) _environment = environment;
     if (apiTimeout != null) AppConfig.apiTimeout = apiTimeout;
@@ -206,6 +224,29 @@ class AppConfig {
         ...endpoints,
       };
     }
+    // Authentication overrides
+    if (enableUsageLimits != null) AppConfig.enableUsageLimits = enableUsageLimits;
+    if (enforceAuthentication != null) AppConfig.enforceAuthentication = enforceAuthentication;
+    if (guestUsageLimit != null) AppConfig.guestUsageLimit = guestUsageLimit;
+  }
+  
+  // Authentication configuration methods
+  static void enableAuthenticationForTesting() {
+    enableUsageLimits = true;
+    enforceAuthentication = true;
+    debugPrint('Authentication features enabled for testing');
+  }
+  
+  static void disableAuthenticationForTesting() {
+    enableUsageLimits = false;
+    enforceAuthentication = false;
+    debugPrint('Authentication features disabled for testing');
+  }
+  
+  static void setSupabaseConfig({required String url, required String anonKey}) {
+    supabaseUrl = url;
+    supabaseAnonKey = anonKey;
+    debugPrint('Supabase configuration updated');
   }
   
   // Log network activity based on current log level setting
