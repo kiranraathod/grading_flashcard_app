@@ -152,7 +152,7 @@ Future<void> _initializeSystemStabilization() async {
       await coordinator.waitForService('GuestSessionService');
       await coordinator.waitForService('SupabaseAuthService');
       coordinator.markServiceInitializing('UsageGateService');
-      final usageGate = UsageGateService();
+      UsageGateService(); // Initialize singleton
       coordinator.markServiceInitialized('UsageGateService');
     },
     operationName: 'usage_gate_initialization',

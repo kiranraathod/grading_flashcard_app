@@ -1,9 +1,12 @@
-// FlashMaster Supabase Configuration - PRODUCTION ACTIVE
-// Last Updated: 2025-06-06
+# FlashMaster Supabase Configuration - PRODUCTION ACTIVE
 
-// In your Flutter app, this configuration is ALREADY IMPLEMENTED in main.dart
-// This file serves as documentation of the active configuration
+**Last Updated**: 2025-06-06
 
+## Current Configuration
+
+In your Flutter app, this configuration is **ALREADY IMPLEMENTED** in `main.dart`. This file serves as documentation of the active configuration.
+
+```dart
 void configureSupabase() {
   AppConfig.setSupabaseConfig(
     url: 'https://saxopupmwfcfjxuffrx.supabase.co',  // ACTIVE PROJECT URL
@@ -17,10 +20,13 @@ void configureSupabase() {
   debugPrint('✅ Supabase configured successfully');
   debugPrint('🔐 Authentication features enabled for testing');
 }
+```
 
-// STATUS: IMPLEMENTATION COMPLETE ✅
-// - Supabase project: DEPLOYED
-// - Database functions: TESTED
-// - Google OAuth: CONFIGURED  
-// - Flutter integration: ACTIVE
-// - Ready for: END-TO-END TESTING
+## Status
+
+✅ **IMPLEMENTATION COMPLETE**
+- **Supabase project**: DEPLOYED
+- **Database functions**: TESTED
+- **Google OAuth**: CONFIGURED  
+- **Flutter integration**: ACTIVE
+- **Ready for**: END-TO-END TESTING

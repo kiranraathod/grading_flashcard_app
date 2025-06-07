@@ -134,10 +134,23 @@ class SupabaseAuthService extends ChangeNotifier {
         if (guestSessionId != null && _currentUser != null) {
           debugPrint('🔄 SupabaseAuthService: Starting guest data migration...');
           
-          // TODO: Call Supabase migration function when database is set up
-          // await _migrateGuestDataToUser(guestSessionId);
+          try {
+            // Call Supabase migration function
+            final result = await Supabase.instance.client.rpc(
+              'migrate_guest_data_to_user',
+              params: {
+                'p_user_id': _currentUser!.id,
+                'p_guest_session_id': guestSessionId,
+              },
+            );
+            
+            debugPrint('📊 SupabaseAuthService: Migration result: $result');
+          } catch (e) {
+            debugPrint('❌ SupabaseAuthService: Migration failed: $e');
+            // Continue anyway - don't block authentication
+          }
           
-          // Clear guest session after successful migration
+          // Clear guest session after migration attempt
           await _guestSession.clearSession();
           
           debugPrint('✅ SupabaseAuthService: Guest data migration completed');

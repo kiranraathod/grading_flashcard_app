@@ -67,7 +67,7 @@ class AuthenticatedAction extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: Colors.red.withOpacity(0.8),
+          color: Colors.red.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
@@ -80,7 +80,7 @@ class AuthenticatedAction extends StatelessWidget {
 
   Widget _buildAuthOverlay(BuildContext context) {
     return Container(
-      color: Colors.black.withOpacity(0.3),
+      color: Colors.black.withValues(alpha: 0.3),
       child: const Center(
         child: Icon(Icons.lock, color: Colors.white, size: 48),
       ),
