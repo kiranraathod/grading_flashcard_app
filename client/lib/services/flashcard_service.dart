@@ -3,7 +3,11 @@ import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
 import 'default_data_service.dart';
 import 'storage_service.dart';
+import 'hybrid_storage_service.dart';
+import 'guest_session_service.dart';
+import 'supabase_auth_service.dart';
 import 'reliable_operation_service.dart';
+import '../utils/config.dart';
 import 'dart:async';
 
 class FlashcardService extends ChangeNotifier {
@@ -11,37 +15,116 @@ class FlashcardService extends ChangeNotifier {
   final DefaultDataService _defaultDataService = DefaultDataService();
   final ReliableOperationService _reliableOps = ReliableOperationService();
   
+  // ===== PHASE 1 ENHANCEMENT: HYBRID STORAGE INTEGRATION =====
+  final HybridStorageService _hybridStorage = HybridStorageService();
+  final GuestSessionService _guestSession = GuestSessionService();
+  final SupabaseAuthService _auth = SupabaseAuthService();
+  
+  // Enhanced state tracking
+  bool _isInitialized = false;
+  bool _useHybridStorage = false;
+  DateTime? _lastLoadTime;
+  
+  // Enhanced getters
   List<FlashcardSet> get sets => List.unmodifiable(_sets);
+  bool get isInitialized => _isInitialized;
+  bool get useHybridStorage => _useHybridStorage;
+  DateTime? get lastLoadTime => _lastLoadTime;
+  
+  // Hybrid storage delegation getters
+  bool get isSyncing => _hybridStorage.isSyncing;
+  bool get isOnline => _hybridStorage.isOnline;
+  bool get hasPendingOperations => _hybridStorage.hasPendingOperations;
   
   FlashcardService() {
-    _loadSets();
+    _initialize();
+  }
+  
+  /// Enhanced initialization with hybrid storage support
+  Future<void> _initialize() async {
+    await _reliableOps.safely(
+      operation: () async {
+        debugPrint('🚀 Initializing enhanced FlashcardService...');
+        
+        // Initialize hybrid storage if Supabase is configured
+        if (AppConfig.supabaseUrl.isNotEmpty) {
+          try {
+            await _hybridStorage.initialize();
+            _useHybridStorage = true;
+            debugPrint('✅ Hybrid storage enabled');
+            
+            // Listen to authentication changes for data migration
+            _auth.addListener(_onAuthenticationChanged);
+            
+            // Listen to hybrid storage changes
+            _hybridStorage.addListener(_onHybridStorageChanged);
+            
+          } catch (e) {
+            debugPrint('⚠️ Hybrid storage initialization failed, using local storage: $e');
+            _useHybridStorage = false;
+          }
+        } else {
+          debugPrint('📱 Supabase not configured, using local storage only');
+          _useHybridStorage = false;
+        }
+        
+        // Load initial data
+        await _loadSets();
+        
+        _isInitialized = true;
+        debugPrint('✅ FlashcardService initialization complete');
+      },
+      operationName: 'flashcard_service_initialization',
+    );
   }
 
-  /// Load sets with reliable operation patterns
+  /// Enhanced load sets with hybrid storage support
   Future<void> _loadSets() async {
     await _reliableOps.withFallback(
       primary: () async {
-        final setsData = StorageService.getFlashcardSets();
-
-        if (setsData != null && setsData.isNotEmpty) {
+        if (_useHybridStorage) {
+          // Use hybrid storage (local + Supabase)
+          debugPrint('📚 Loading flashcard sets via hybrid storage...');
+          final hybridSets = await _hybridStorage.loadFlashcardSets();
+          
           _sets.clear();
-          for (final data in setsData) {
-            _sets.add(FlashcardSet.fromJson(data));
-          }
-          debugPrint('Loaded ${_sets.length} flashcard sets from storage using StorageService');
+          _sets.addAll(hybridSets);
+          _lastLoadTime = DateTime.now();
+          
+          debugPrint('✅ Loaded ${_sets.length} flashcard sets via hybrid storage');
         } else {
-          debugPrint('No saved sets found, loading default data from server...');
-          await _loadDefaultData();
+          // Fallback to original local storage method
+          debugPrint('📱 Loading flashcard sets via local storage...');
+          await _loadSetsFromLocalStorage();
         }
         
         notifyListeners();
       },
       fallback: () async {
-        debugPrint('Error loading flashcard sets, falling back to default data');
-        await _loadDefaultData();
+        debugPrint('❌ Primary load failed, falling back to local storage');
+        await _loadSetsFromLocalStorage();
       },
-      operationName: 'load_flashcard_sets',
+      operationName: 'load_flashcard_sets_enhanced',
     );
+  }
+  
+  /// Original load method preserved for backward compatibility
+  Future<void> _loadSetsFromLocalStorage() async {
+    final setsData = StorageService.getFlashcardSets();
+
+    if (setsData != null && setsData.isNotEmpty) {
+      _sets.clear();
+      for (final data in setsData) {
+        _sets.add(FlashcardSet.fromJson(data));
+      }
+      _lastLoadTime = DateTime.now();
+      debugPrint('✅ Loaded ${_sets.length} flashcard sets from local storage');
+    } else {
+      debugPrint('📭 No saved sets found, loading default data from server...');
+      await _loadDefaultData();
+    }
+    
+    notifyListeners();
   }
 
   /// Load default data with cascading fallback strategy
@@ -129,53 +212,89 @@ class FlashcardService extends ChangeNotifier {
     );
   }
 
-  /// Reload sets with reliable operation
-  Future<void> reloadSets() async {
-    await _reliableOps.safely(
-      operation: () => _loadSets(),
-      operationName: 'reload_sets',
-    );
-  }
-
-  /// Add set with reliable storage
+  /// Enhanced add set with hybrid storage support
   Future<void> addSet(FlashcardSet set) async {
     await _reliableOps.safely(
       operation: () async {
-        _sets.add(set);
-        await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
+        if (_useHybridStorage) {
+          // Use hybrid storage for authenticated/guest user support
+          debugPrint('➕ Adding flashcard set via hybrid storage: ${set.title}');
+          final addedSet = await _hybridStorage.addFlashcardSet(set);
+          
+          // Update local cache
+          final existingIndex = _sets.indexWhere((s) => s.id == addedSet.id);
+          if (existingIndex >= 0) {
+            _sets[existingIndex] = addedSet;
+          } else {
+            _sets.add(addedSet);
+          }
+        } else {
+          // Fallback to original local storage method
+          debugPrint('➕ Adding flashcard set via local storage: ${set.title}');
+          _sets.add(set);
+          await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
+        }
+        
         notifyListeners();
-        debugPrint('Added flashcard set: ${set.title}');
+        debugPrint('✅ Added flashcard set: ${set.title}');
       },
-      operationName: 'add_flashcard_set',
+      operationName: 'add_flashcard_set_enhanced',
     );
   }
 
-  /// Update set with reliable storage
+  /// Enhanced update set with hybrid storage support
   Future<void> updateSet(FlashcardSet updatedSet) async {
     await _reliableOps.safely(
       operation: () async {
-        final index = _sets.indexWhere((set) => set.id == updatedSet.id);
-        if (index >= 0) {
-          _sets[index] = updatedSet;
-          await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
-          notifyListeners();
-          debugPrint('Updated flashcard set: ${updatedSet.title}');
+        if (_useHybridStorage) {
+          // Use hybrid storage for sync support
+          debugPrint('✏️ Updating flashcard set via hybrid storage: ${updatedSet.title}');
+          final resultSet = await _hybridStorage.updateFlashcardSet(updatedSet);
+          
+          // Update local cache
+          final index = _sets.indexWhere((set) => set.id == updatedSet.id);
+          if (index >= 0) {
+            _sets[index] = resultSet;
+          }
+        } else {
+          // Fallback to original local storage method
+          debugPrint('✏️ Updating flashcard set via local storage: ${updatedSet.title}');
+          final index = _sets.indexWhere((set) => set.id == updatedSet.id);
+          if (index >= 0) {
+            _sets[index] = updatedSet;
+            await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
+          }
         }
+        
+        notifyListeners();
+        debugPrint('✅ Updated flashcard set: ${updatedSet.title}');
       },
-      operationName: 'update_flashcard_set',
+      operationName: 'update_flashcard_set_enhanced',
     );
   }
 
-  /// Delete set with reliable storage
+  /// Enhanced delete set with hybrid storage support
   Future<void> deleteSet(FlashcardSet set) async {
     await _reliableOps.safely(
       operation: () async {
-        _sets.removeWhere((s) => s.id == set.id);
-        await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
+        if (_useHybridStorage) {
+          // Use hybrid storage for sync support
+          debugPrint('🗑️ Deleting flashcard set via hybrid storage: ${set.title}');
+          await _hybridStorage.deleteFlashcardSet(set.id);
+          
+          // Update local cache
+          _sets.removeWhere((s) => s.id == set.id);
+        } else {
+          // Fallback to original local storage method
+          debugPrint('🗑️ Deleting flashcard set via local storage: ${set.title}');
+          _sets.removeWhere((s) => s.id == set.id);
+          await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
+        }
+        
         notifyListeners();
-        debugPrint('Deleted flashcard set: ${set.title}');
+        debugPrint('✅ Deleted flashcard set: ${set.title}');
       },
-      operationName: 'delete_flashcard_set',
+      operationName: 'delete_flashcard_set_enhanced',
     );
   }
 
@@ -226,6 +345,161 @@ class FlashcardService extends ChangeNotifier {
   }
 
   // ==============================================
+  // PHASE 1 ENHANCEMENT: AUTHENTICATION INTEGRATION
+  // ==============================================
+  
+  /// Handle authentication state changes for data migration
+  void _onAuthenticationChanged() {
+    if (_auth.isAuthenticated && _useHybridStorage) {
+      debugPrint('🔐 User authenticated, checking for data migration...');
+      _handleUserAuthentication();
+    } else if (!_auth.isAuthenticated) {
+      debugPrint('👤 User signed out, switching to guest mode...');
+      _handleUserSignOut();
+    }
+  }
+  
+  /// Handle hybrid storage changes (sync status, connectivity, etc.)
+  void _onHybridStorageChanged() {
+    // Notify listeners when hybrid storage state changes
+    notifyListeners();
+  }
+  
+  /// Handle user authentication (potential data migration)
+  Future<void> _handleUserAuthentication() async {
+    await _reliableOps.safely(
+      operation: () async {
+        final userId = _auth.currentUser?.id;
+        final guestSessionId = _guestSession.currentSessionId;
+        
+        if (userId != null && guestSessionId != null) {
+          debugPrint('🔄 Starting data migration for new authenticated user...');
+          
+          // Trigger data migration via hybrid storage
+          final migrationResult = await _hybridStorage.syncWithRemote();
+          
+          if (migrationResult.success) {
+            debugPrint('✅ Data migration completed successfully');
+            // Reload sets to get migrated data
+            await _loadSets();
+          } else {
+            debugPrint('⚠️ Data migration had issues: ${migrationResult.errors}');
+          }
+        }
+      },
+      operationName: 'handle_user_authentication',
+    );
+  }
+  
+  /// Handle user sign out
+  Future<void> _handleUserSignOut() async {
+    await _reliableOps.safely(
+      operation: () async {
+        debugPrint('👤 Handling user sign out...');
+        
+        // Reload sets for guest session
+        await _loadSets();
+      },
+      operationName: 'handle_user_sign_out',
+    );
+  }
+  
+  // ==============================================
+  // ENHANCED PUBLIC METHODS
+  // ==============================================
+  
+  /// Enhanced reload with hybrid storage support
+  Future<void> reloadSets() async {
+    if (_useHybridStorage) {
+      // Force refresh hybrid storage
+      await _hybridStorage.refresh();
+    }
+    
+    await _reliableOps.safely(
+      operation: () => _loadSets(),
+      operationName: 'reload_sets_enhanced',
+    );
+  }
+  
+  /// Manual sync with remote storage (if available)
+  Future<bool> syncWithRemote() async {
+    if (!_useHybridStorage) {
+      debugPrint('⚠️ Hybrid storage not available for sync');
+      return false;
+    }
+    
+    return await _reliableOps.withFallback(
+      primary: () async {
+        debugPrint('🔄 Manual sync with remote storage...');
+        final result = await _hybridStorage.syncWithRemote();
+        
+        if (result.success) {
+          // Reload local cache after successful sync
+          await _loadSets();
+          debugPrint('✅ Manual sync completed successfully');
+          return true;
+        } else {
+          debugPrint('❌ Manual sync failed: ${result.errors}');
+          return false;
+        }
+      },
+      fallback: () async {
+        debugPrint('❌ Manual sync operation failed');
+        return false;
+      },
+      operationName: 'manual_sync_with_remote',
+    );
+  }
+  
+  /// Get sync status information
+  Map<String, dynamic> getSyncStatus() {
+    if (!_useHybridStorage) {
+      return {
+        'hybridStorageEnabled': false,
+        'syncSupported': false,
+        'localOnly': true,
+      };
+    }
+    
+    return {
+      'hybridStorageEnabled': true,
+      'syncSupported': true,
+      'localOnly': false,
+      'isOnline': isOnline,
+      'isSyncing': isSyncing,
+      'hasPendingOperations': hasPendingOperations,
+      'lastLoadTime': lastLoadTime?.toIso8601String(),
+      'hybridStorageStatus': _hybridStorage.getSyncStatus(),
+    };
+  }
+  
+  /// Force switch to local-only mode (for testing/debugging)
+  void forceLocalMode() {
+    if (_useHybridStorage) {
+      debugPrint('🔧 Forcing local-only mode...');
+      _useHybridStorage = false;
+      _hybridStorage.removeListener(_onHybridStorageChanged);
+      notifyListeners();
+    }
+  }
+  
+  /// Re-enable hybrid storage (if Supabase is configured)
+  Future<void> enableHybridStorage() async {
+    if (!_useHybridStorage && AppConfig.supabaseUrl.isNotEmpty) {
+      try {
+        debugPrint('🔧 Re-enabling hybrid storage...');
+        await _hybridStorage.initialize();
+        _useHybridStorage = true;
+        _hybridStorage.addListener(_onHybridStorageChanged);
+        await _loadSets();
+        debugPrint('✅ Hybrid storage re-enabled successfully');
+      } catch (e) {
+        debugPrint('❌ Failed to re-enable hybrid storage: $e');
+      }
+    }
+  }
+  
+  // ==============================================
   // COMPATIBILITY ALIASES (Backward Compatibility)
   // ==============================================
   
@@ -253,4 +527,20 @@ class FlashcardService extends ChangeNotifier {
   
   /// Compatibility alias: searchDecks → searchSets
   List<FlashcardSet> searchDecks(String query) => searchSets(query);
+  
+  // ==============================================
+  // CLEANUP AND DISPOSAL
+  // ==============================================
+  
+  @override
+  void dispose() {
+    // Clean up listeners to prevent memory leaks
+    if (_useHybridStorage) {
+      _hybridStorage.removeListener(_onHybridStorageChanged);
+    }
+    _auth.removeListener(_onAuthenticationChanged);
+    
+    debugPrint('🧹 FlashcardService disposed');
+    super.dispose();
+  }
 }

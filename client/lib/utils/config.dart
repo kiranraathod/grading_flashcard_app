@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode, debugPrint;
 
 // Environment enum for different application environments
 enum Environment { dev, staging, prod }
@@ -76,11 +76,15 @@ class AppConfig {
   static const String flashcardSetsKey = 'flashcard_sets';
   static const String userStreakKey = 'weeklyStreak';
   
-  // Authentication configuration - FEATURE FLAGS FOR TESTING
-  static bool enableUsageLimits = false;           // Disabled for testing
-  static bool enforceAuthentication = false;       // Disabled for testing
+  // Authentication configuration - ENHANCED USAGE LIMITS
+  static bool enableUsageLimits = true;            // Enabled for production
+  static bool enforceAuthentication = true;        // Enabled for production  
+  static bool debugSkipAuth = false;               // Debug flag to skip auth when provider issues exist
   static int guestUsageLimit = 3;                  // Actions before auth required
+  static int authenticatedUserLimit = 6;           // Actual limit for authenticated users
+  static bool showUnlimitedForAuth = true;         // Show "unlimited" in UI for auth users
   static const String guestSessionKey = 'guest_session_id';
+  static const String authUserUsageKey = 'auth_user_usage_count';
   
   // Supabase configuration (to be set after project creation)
   static String supabaseUrl = '';
@@ -88,7 +92,35 @@ class AppConfig {
   
   // Authentication settings
   static Duration authTimeout = const Duration(seconds: 30);
-  static const String authRedirectUrl = 'io.supabase.flashmaster://login-callback/';
+  
+  // Dynamic redirect URL based on environment
+  static String get authRedirectUrl {
+    if (kIsWeb) {
+      // For web development - dynamically detect current port
+      if (kDebugMode) {
+        // Try to get current port from window.location
+        try {
+          // This will be set during app initialization
+          return _currentWebUrl ?? 'http://localhost:59143';
+        } catch (e) {
+          return 'http://localhost:59143'; // Fallback
+        }
+      }
+      return 'http://localhost:59143'; // Production default
+    } else {
+      // For mobile apps
+      return 'io.supabase.flashmaster://login-callback/';
+    }
+  }
+  
+  // Current web URL for dynamic port detection
+  static String? _currentWebUrl;
+  
+  // Set current web URL (called during app initialization)
+  static void setCurrentWebUrl(String url) {
+    _currentWebUrl = url;
+    debugPrint('🔧 OAuth redirect URL set to: $url');
+  }
   
   // Initialize configuration based on environment
   static void initialize() {

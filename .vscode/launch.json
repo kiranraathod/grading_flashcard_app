@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FlashMaster (Chrome - Port 3000)",
+      "type": "dart",
+      "request": "launch",
+      "program": "client/lib/main.dart",
+      "deviceId": "chrome",
+      "args": [
+        "--web-port=3000"
+      ]
+    },
+    {
+      "name": "FlashMaster (Debug)",
+      "type": "dart",
+      "request": "launch",
+      "program": "client/lib/main.dart"
+    }
+  ]
+}

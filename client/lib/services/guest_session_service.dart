@@ -1,9 +1,10 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/config.dart';
 import 'reliable_operation_service.dart';
+import '../widgets/authentication_popup.dart';
 
 /// GuestSessionService manages anonymous user sessions and usage tracking
 /// 
@@ -217,5 +218,23 @@ class GuestSessionService extends ChangeNotifier {
       'limitsEnabled': AppConfig.enableUsageLimits,
       'authRequired': AppConfig.enforceAuthentication,
     };
+  }
+
+  /// Force check and trigger authentication if needed
+  void forceAuthenticationCheck(BuildContext context) async {
+    if (hasReachedLimit) {
+      debugPrint('🚨 GuestSessionService: Forcing authentication check');
+      
+      // Use a post frame callback to ensure UI is ready
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const AuthenticationPopup(),
+          );
+        }
+      });
+    }
   }
 }

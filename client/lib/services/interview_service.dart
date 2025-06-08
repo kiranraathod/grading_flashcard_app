@@ -17,18 +17,32 @@ class InterviewService extends ChangeNotifier {
   // Map to store user answers (questionId -> answer text)
   final Map<String, String> _userAnswers = {};
   
-  // Constructor - automatically initialize
-  InterviewService() {
-    _initializeAsync();
-  }
+  // Constructor - NO automatic initialization to prevent hanging
+  InterviewService();
   
-  // Async initialization
+  // Async initialization with timeout and robust error handling
   Future<void> _initializeAsync() async {
     if (!_isInitialized) {
-      debugPrint('🔧 InterviewService: Auto-initializing...');
-      await loadQuestionsFromStorage();
-      _isInitialized = true;
-      debugPrint('✅ InterviewService: Initialization complete with ${_questions.length} questions');
+      debugPrint('🔧 InterviewService: Initializing...');
+      try {
+        // Add timeout to prevent infinite loading
+        await loadQuestionsFromStorage().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            debugPrint('⏰ InterviewService: Initialization timed out, using fallback');
+            _questions = _createFallbackQuestions();
+            notifyListeners();
+          },
+        );
+        _isInitialized = true;
+        debugPrint('✅ InterviewService: Initialization complete with ${_questions.length} questions');
+      } catch (e) {
+        debugPrint('❌ InterviewService: Initialization failed: $e');
+        _questions = _createFallbackQuestions();
+        _isInitialized = true;
+        notifyListeners();
+        debugPrint('✅ InterviewService: Using fallback questions due to initialization error');
+      }
     }
   }
   

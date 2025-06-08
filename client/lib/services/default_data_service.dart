@@ -49,16 +49,26 @@ class DefaultDataService extends ChangeNotifier {
       if (category != null) queryParams['category'] = category;
       if (difficulty != null) queryParams['difficulty'] = difficulty;
 
+      // Add timeout to prevent hanging
       final response = await _httpClient.get('/api/default-data/interview-questions',
-          queryParams: queryParams.isNotEmpty ? queryParams : null);
+          queryParams: queryParams.isNotEmpty ? queryParams : null)
+          .timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {
+              debugPrint('⏰ HTTP request timed out for interview questions');
+              throw Exception('Request timed out');
+            },
+          );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         await _cache.cacheData(cacheKey, {'data': data});
         return _parseInterviewQuestions(data);
       }
+      debugPrint('❌ Server returned status ${response.statusCode} for interview questions');
       return [];
     } catch (e) {
+      debugPrint('❌ Failed to load interview questions: $e');
       return [];
     }
   }

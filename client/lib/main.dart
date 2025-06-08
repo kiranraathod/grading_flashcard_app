@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:flutter/foundation.dart';
+import 'package:web/web.dart' as web;
 import 'screens/home_screen.dart';
 import 'screens/job_description_question_generator_screen.dart';
 import 'screens/data_validation_screen.dart';
@@ -31,20 +33,32 @@ import 'services/guest_session_service.dart';
 import 'services/supabase_auth_service.dart';
 import 'services/usage_gate_service.dart';
 import 'utils/config.dart';
+import 'services/authenticated_user_usage_service.dart';
+import 'widgets/authentication_popup.dart';
 
 /// Configure Supabase with production credentials
 void configureSupabase() {
   AppConfig.setSupabaseConfig(
     url: 'https://saxopupmwfcfjxuflfrx.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNheG9wdXBtd2ZjZmp4dWZsZnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxOTU1NjgsImV4cCI6MjA2NDc3MTU2OH0.1RdIw1v9FG76LJz7SNZY5YW51dcRP4XVCPCBLRgTXVU',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNheG9wdXBtd2ZjZmp4dWZsZnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxOTU1NjgsImV4cCI6MjA2NDc3MTU2OH0.1RdIw1v9FG76LJz7SNZY5YW51dcRP4XVCPCBLRgTXVU',
   );
 
   // Enable authentication for testing (you can disable these via debug panel)
   AppConfig.enableUsageLimits = true;
   AppConfig.enforceAuthentication = true;
 
+  // TEMPORARY: Enable debug skip auth when Google OAuth provider has issues
+  // Set to true to skip authentication during development/testing
+  AppConfig.debugSkipAuth = false; // Enable authentication for testing
+
   debugPrint('✅ Supabase configured successfully');
   debugPrint('🔐 Authentication features enabled for testing');
+  if (AppConfig.debugSkipAuth) {
+    debugPrint(
+      '⚠️ DEBUG: Authentication bypass enabled - for development only!',
+    );
+  }
 }
 
 void main() async {
@@ -53,6 +67,16 @@ void main() async {
 
   // Configure Supabase BEFORE system initialization
   configureSupabase();
+
+  // Dynamic port detection for OAuth redirect URL
+  if (kIsWeb && kDebugMode) {
+    try {
+      final currentUrl = '${web.window.location.protocol}//${web.window.location.host}';
+      AppConfig.setCurrentWebUrl(currentUrl);
+    } catch (e) {
+      debugPrint('⚠️ Could not detect current URL, using default: $e');
+    }
+  }
 
   // Initialize System Stabilization
   await _initializeSystemStabilization();
@@ -64,18 +88,21 @@ void main() async {
 Future<void> _initializeSystemStabilization() async {
   final coordinator = InitializationCoordinator();
   final reliableOps = ReliableOperationService();
-  
+
   debugPrint('🚀 Initializing System Stabilization...');
-  
+
   // Register services with dependencies
   coordinator.registerService('StorageService');
   coordinator.registerService('UserService', dependencies: ['StorageService']);
   coordinator.registerService('CacheManager');
   coordinator.registerService('GuestSessionService');
   coordinator.registerService('SupabaseAuthService');
-  coordinator.registerService('UsageGateService', dependencies: ['GuestSessionService', 'SupabaseAuthService']);
+  coordinator.registerService(
+    'UsageGateService',
+    dependencies: ['GuestSessionService', 'SupabaseAuthService'],
+  );
   coordinator.registerService('NetworkInfrastructure');
-  
+
   // Initialize storage service first
   await reliableOps.withFallback(
     primary: () async {
@@ -84,12 +111,17 @@ Future<void> _initializeSystemStabilization() async {
       coordinator.markServiceInitialized('StorageService');
     },
     fallback: () async {
-      coordinator.markServiceFailed('StorageService', 'Storage initialization failed');
-      debugPrint('⚠️ Storage service initialization failed, using memory-only storage');
+      coordinator.markServiceFailed(
+        'StorageService',
+        'Storage initialization failed',
+      );
+      debugPrint(
+        '⚠️ Storage service initialization failed, using memory-only storage',
+      );
     },
     operationName: 'storage_service_initialization',
   );
-  
+
   // Initialize user service (depends on storage)
   await reliableOps.withFallback(
     primary: () async {
@@ -99,12 +131,15 @@ Future<void> _initializeSystemStabilization() async {
       coordinator.markServiceInitialized('UserService');
     },
     fallback: () async {
-      coordinator.markServiceFailed('UserService', 'User service initialization failed');
+      coordinator.markServiceFailed(
+        'UserService',
+        'User service initialization failed',
+      );
       debugPrint('⚠️ User service initialization failed, using default user');
     },
     operationName: 'user_service_initialization',
   );
-  
+
   // Initialize cache manager
   await reliableOps.safely(
     operation: () async {
@@ -115,7 +150,7 @@ Future<void> _initializeSystemStabilization() async {
     },
     operationName: 'cache_manager_initialization',
   );
-  
+
   // Initialize guest session service (for anonymous users)
   await reliableOps.withFallback(
     primary: () async {
@@ -125,12 +160,17 @@ Future<void> _initializeSystemStabilization() async {
       coordinator.markServiceInitialized('GuestSessionService');
     },
     fallback: () async {
-      coordinator.markServiceFailed('GuestSessionService', 'Guest session initialization failed');
-      debugPrint('⚠️ Guest session service initialization failed, using default session');
+      coordinator.markServiceFailed(
+        'GuestSessionService',
+        'Guest session initialization failed',
+      );
+      debugPrint(
+        '⚠️ Guest session service initialization failed, using default session',
+      );
     },
     operationName: 'guest_session_initialization',
   );
-  
+
   // Initialize Supabase authentication service
   await reliableOps.withFallback(
     primary: () async {
@@ -140,12 +180,17 @@ Future<void> _initializeSystemStabilization() async {
       coordinator.markServiceInitialized('SupabaseAuthService');
     },
     fallback: () async {
-      coordinator.markServiceFailed('SupabaseAuthService', 'Supabase auth initialization failed');
-      debugPrint('⚠️ Supabase auth service initialization failed, using guest-only mode');
+      coordinator.markServiceFailed(
+        'SupabaseAuthService',
+        'Supabase auth initialization failed',
+      );
+      debugPrint(
+        '⚠️ Supabase auth service initialization failed, using guest-only mode',
+      );
     },
     operationName: 'supabase_auth_initialization',
   );
-  
+
   // Initialize usage gate service (depends on guest session and auth services)
   await reliableOps.safely(
     operation: () async {
@@ -157,7 +202,7 @@ Future<void> _initializeSystemStabilization() async {
     },
     operationName: 'usage_gate_initialization',
   );
-  
+
   // Initialize network infrastructure
   await reliableOps.safely(
     operation: () async {
@@ -167,7 +212,7 @@ Future<void> _initializeSystemStabilization() async {
     },
     operationName: 'network_infrastructure_initialization',
   );
-  
+
   // Report initialization status
   final report = coordinator.getInitializationReport();
   debugPrint('📊 System Stabilization Initialization Report:');
@@ -175,7 +220,7 @@ Future<void> _initializeSystemStabilization() async {
     final statusIcon = status == ServiceStatus.initialized ? '✅' : '❌';
     debugPrint('   $statusIcon $service: $status');
   });
-  
+
   debugPrint('✅ System Stabilization Complete');
 }
 
@@ -223,6 +268,45 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   Map<String, dynamic> _services = {};
 
+  @override
+  void initState() {
+    super.initState();
+
+    // Schedule authentication check after app loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAuthenticationStatus();
+    });
+  }
+
+  void _checkAuthenticationStatus() async {
+    // Wait a bit for all services to settle
+    await Future.delayed(Duration(milliseconds: 1000));
+
+    if (!mounted) return;
+
+    final guestSession = GuestSessionService();
+
+    debugPrint('🔍 Checking authentication status...');
+    debugPrint('Usage count: ${guestSession.usageCount}');
+    debugPrint('Usage limit: ${AppConfig.guestUsageLimit}');
+    debugPrint('Has reached limit: ${guestSession.hasReachedLimit}');
+    debugPrint('Limits enabled: ${AppConfig.enableUsageLimits}');
+    debugPrint('Auth enforced: ${AppConfig.enforceAuthentication}');
+
+    // Force show popup if conditions are met
+    if (guestSession.hasReachedLimit &&
+        AppConfig.enableUsageLimits &&
+        AppConfig.enforceAuthentication) {
+      debugPrint('🚨 FORCING AUTHENTICATION POPUP FROM MAIN');
+
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AuthenticationPopup(),
+      );
+    }
+  }
+
   // Theme change analytics
   static void _logThemeChange(ThemeMode oldMode, ThemeMode newMode) {
     // Implement your analytics here
@@ -254,67 +338,139 @@ class _MyAppState extends State<MyApp> {
                     CircularProgressIndicator(),
                     SizedBox(height: 16),
                     Text('Initializing FlashMaster...'),
+                    SizedBox(height: 24),
+                    LinearProgressIndicator(
+                      backgroundColor: Colors.grey[300],
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Preparing your personalized learning...',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
                   ],
                 ),
               ),
             ),
           );
         }
-        
+
         if (snapshot.hasError) {
           return MaterialApp(
             home: Scaffold(
               body: Center(
-                child: Text('Error initializing app: ${snapshot.error}'),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    SizedBox(height: 16),
+                    Text(
+                      'Failed to initialize FlashMaster',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Error: ${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Force rebuild by calling setState
+                        // This will retry initialization
+                        // Note: We need to modify this to properly reset state
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => MyApp()),
+                        );
+                      },
+                      child: Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
         }
-        
+
         return _buildMainApp();
       },
     );
   }
-  
+
   Future<void> _initializeServices() async {
-    // Create and register services
-    final apiService = ApiService();
-    final speechToTextService = SpeechToTextService();
-    final flashcardService = FlashcardService();
-    final userService = UserService();
-    final networkService = NetworkService();
-    final interviewService = InterviewService();
-    final recentViewService = RecentViewService();
-    final jobDescriptionService = JobDescriptionService();
+    try {
+      debugPrint('🚀 Starting service initialization...');
 
-    // Initialize InterviewService and wait for completion
-    debugPrint('🔧 Initializing InterviewService...');
-    await interviewService.initialize();
-    debugPrint('✅ InterviewService initialized with ${interviewService.questions.length} questions');
+      // Create and register services
+      final apiService = ApiService();
+      final speechToTextService = SpeechToTextService();
+      final flashcardService = FlashcardService();
+      final userService = UserService();
+      final networkService = NetworkService();
+      final interviewService = InterviewService();
+      final recentViewService = RecentViewService();
+      final jobDescriptionService = JobDescriptionService();
 
-    // Store services for use in _buildMainApp
-    _services = {
-      'api': apiService,
-      'speechToText': speechToTextService,
-      'flashcard': flashcardService,
-      'user': userService,
-      'network': networkService,
-      'interview': interviewService,
-      'recentView': recentViewService,
-      'jobDescription': jobDescriptionService,
-    };
+      // Initialize InterviewService with timeout to prevent hanging
+      debugPrint('🔧 Initializing InterviewService...');
+      await interviewService.initialize().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          debugPrint(
+            '⏰ InterviewService initialization timed out, continuing with fallback',
+          );
+        },
+      );
+      debugPrint(
+        '✅ InterviewService initialized with ${interviewService.questions.length} questions',
+      );
+
+      // Store services for use in _buildMainApp
+      _services = {
+        'api': apiService,
+        'speechToText': speechToTextService,
+        'flashcard': flashcardService,
+        'user': userService,
+        'network': networkService,
+        'interview': interviewService,
+        'recentView': recentViewService,
+        'jobDescription': jobDescriptionService,
+      };
+
+      debugPrint('✅ All services initialized successfully');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Service initialization error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // Continue with basic services even if some fail
+      _services = {
+        'api': ApiService(),
+        'speechToText': SpeechToTextService(),
+        'flashcard': FlashcardService(),
+        'user': UserService(),
+        'network': NetworkService(),
+        'interview': InterviewService(),
+        'recentView': RecentViewService(),
+        'jobDescription': JobDescriptionService(),
+      };
+    }
   }
-  
+
   Widget _buildMainApp() {
     // Get services from stored map
     final apiService = _services['api'] as ApiService;
-    final speechToTextService = _services['speechToText'] as SpeechToTextService;
+    final speechToTextService =
+        _services['speechToText'] as SpeechToTextService;
     final flashcardService = _services['flashcard'] as FlashcardService;
     final userService = _services['user'] as UserService;
     final networkService = _services['network'] as NetworkService;
     final interviewService = _services['interview'] as InterviewService;
     final recentViewService = _services['recentView'] as RecentViewService;
-    final jobDescriptionService = _services['jobDescription'] as JobDescriptionService;
+    final jobDescriptionService =
+        _services['jobDescription'] as JobDescriptionService;
 
     // Create global instances of BLoCs to be shared across all screens
     final recentViewBloc = RecentViewBloc(recentViewService: recentViewService);
@@ -368,6 +524,9 @@ class _MyAppState extends State<MyApp> {
               // Authentication Services
               ChangeNotifierProvider.value(value: GuestSessionService()),
               ChangeNotifierProvider.value(value: SupabaseAuthService()),
+              ChangeNotifierProvider.value(
+                value: AuthenticatedUserUsageService(),
+              ),
               ChangeNotifierProvider.value(value: UsageGateService()),
 
               // Theme provider with callback support

@@ -90,12 +90,12 @@ class SupabaseAuthService extends ChangeNotifier {
   Future<bool> signInWithGoogle() async {
     if (!_isInitialized) {
       debugPrint('⚠️ SupabaseAuthService: Not initialized');
-      return false;
+      throw Exception('Authentication service not initialized');
     }
 
     if (AppConfig.supabaseUrl.isEmpty) {
       debugPrint('⚠️ SupabaseAuthService: Supabase not configured');
-      return false;
+      throw Exception('Authentication service not configured');
     }
 
     return await _reliableOps.withDefault(
@@ -116,7 +116,19 @@ class SupabaseAuthService extends ChangeNotifier {
         } catch (e) {
           _isAuthenticating = false;
           notifyListeners();
-          debugPrint('❌ SupabaseAuthService: Google sign-in failed: $e');
+          
+          final errorString = e.toString();
+          debugPrint('❌ SupabaseAuthService: Google sign-in failed: $errorString');
+          
+          // Enhance error context for better debugging
+          if (errorString.contains('provider is not enabled')) {
+            debugPrint('🚨 SupabaseAuthService: Google OAuth provider not enabled in Supabase dashboard');
+            throw Exception('Google OAuth provider not enabled: $errorString');
+          } else if (errorString.contains('validation_failed')) {
+            debugPrint('🚨 SupabaseAuthService: OAuth validation failed');
+            throw Exception('OAuth validation failed: $errorString');
+          }
+          
           rethrow;
         }
       },
