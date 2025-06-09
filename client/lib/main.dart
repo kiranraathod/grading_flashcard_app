@@ -25,7 +25,7 @@ import 'blocs/recent_view/recent_view_bloc.dart';
 import 'blocs/search/search_bloc.dart';
 import 'widgets/error_handler.dart';
 import 'services/initialization_coordinator.dart';
-import 'services/reliable_operation_service.dart';
+import 'services/simple_error_handler.dart';
 import 'services/cache_manager.dart';
 
 void main() async {
@@ -41,24 +41,22 @@ void main() async {
 /// Initialize System Stabilization with coordinated service initialization
 Future<void> _initializeSystemStabilization() async {
   final coordinator = InitializationCoordinator();
-  final reliableOps = ReliableOperationService();
   
   debugPrint('🚀 Initializing System Stabilization...');
   
-  // Register services with dependencies
+  // Register services with dependencies (CacheManager registers itself)
   coordinator.registerService('StorageService');
   coordinator.registerService('UserService', dependencies: ['StorageService']);
-  coordinator.registerService('CacheManager');
   coordinator.registerService('NetworkInfrastructure');
   
   // Initialize storage service first
-  await reliableOps.withFallback(
-    primary: () async {
+  await SimpleErrorHandler.safe(
+    () async {
       coordinator.markServiceInitializing('StorageService');
       await StorageService.initialize();
       coordinator.markServiceInitialized('StorageService');
     },
-    fallback: () async {
+    fallbackOperation: () async {
       coordinator.markServiceFailed('StorageService', 'Storage initialization failed');
       debugPrint('⚠️ Storage service initialization failed, using memory-only storage');
     },
@@ -66,34 +64,32 @@ Future<void> _initializeSystemStabilization() async {
   );
   
   // Initialize user service (depends on storage)
-  await reliableOps.withFallback(
-    primary: () async {
+  await SimpleErrorHandler.safe(
+    () async {
       await coordinator.waitForService('StorageService');
       coordinator.markServiceInitializing('UserService');
       await UserService.initialize();
       coordinator.markServiceInitialized('UserService');
     },
-    fallback: () async {
+    fallbackOperation: () async {
       coordinator.markServiceFailed('UserService', 'User service initialization failed');
       debugPrint('⚠️ User service initialization failed, using default user');
     },
     operationName: 'user_service_initialization',
   );
   
-  // Initialize cache manager
-  await reliableOps.safely(
-    operation: () async {
-      coordinator.markServiceInitializing('CacheManager');
+  // Initialize cache manager (handles its own coordination)
+  await SimpleErrorHandler.safely(
+    () async {
       final cacheManager = CacheManager();
       await cacheManager.initialize();
-      coordinator.markServiceInitialized('CacheManager');
     },
-    operationName: 'cache_manager_initialization',
+    operationName: 'cache_manager_initialization_wrapper',
   );
   
   // Initialize network infrastructure
-  await reliableOps.safely(
-    operation: () async {
+  await SimpleErrorHandler.safely(
+    () async {
       coordinator.markServiceInitializing('NetworkInfrastructure');
       await _initializeNetworkInfrastructure();
       coordinator.markServiceInitialized('NetworkInfrastructure');

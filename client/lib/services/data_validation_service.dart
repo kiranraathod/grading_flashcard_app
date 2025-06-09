@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'simple_error_handler.dart';
 
 class DataValidationService {
   static const String _logTag = '[DATA_VALIDATION]';
@@ -10,35 +11,37 @@ class DataValidationService {
     debugPrint('$_logTag Starting comprehensive data validation...');
     final report = DataValidationReport();
     
-    try {
-      // Validate flashcard sets
-      await _validateFlashcardSets(report);
-      
-      // Validate interview questions  
-      await _validateInterviewQuestions(report);
-      
-      // Validate user progress data
-      await _validateUserProgress(report);
-      
-      // Validate recent view data
-      await _validateRecentViewData(report);
-      
-      // Validate cache data
-      await _validateCacheData(report);
-      
-      debugPrint('$_logTag Data validation completed');
-      debugPrint('$_logTag Critical Errors: ${report.criticalErrors.length}');
-      debugPrint('$_logTag Errors: ${report.errors.length}');
-      debugPrint('$_logTag Warnings: ${report.warnings.length}');
-      debugPrint('$_logTag Migration Blocked: ${report.hasBlockingIssues}');
-      
-      return report;
-    } catch (e, stackTrace) {
-      debugPrint('$_logTag FATAL ERROR during validation: $e');
-      debugPrint('$_logTag Stack trace: $stackTrace');
-      report.addCriticalError('validation_system', 'Fatal error during validation: $e');
-      return report;
-    }
+    return await SimpleErrorHandler.safe(
+      () async {
+        // Validate flashcard sets
+        await _validateFlashcardSets(report);
+        
+        // Validate interview questions  
+        await _validateInterviewQuestions(report);
+        
+        // Validate user progress data
+        await _validateUserProgress(report);
+        
+        // Validate recent view data
+        await _validateRecentViewData(report);
+        
+        // Validate cache data
+        await _validateCacheData(report);
+        
+        debugPrint('$_logTag Data validation completed');
+        debugPrint('$_logTag Critical Errors: ${report.criticalErrors.length}');
+        debugPrint('$_logTag Errors: ${report.errors.length}');
+        debugPrint('$_logTag Warnings: ${report.warnings.length}');
+        debugPrint('$_logTag Migration Blocked: ${report.hasBlockingIssues}');
+        
+        return report;
+      },
+      fallback: (() {
+        report.addCriticalError('validation_system', 'Fatal error during validation');
+        return report;
+      })(),
+      operationName: 'validate_all_stored_data',
+    );
   }
   
   Future<void> _validateFlashcardSets(DataValidationReport report) async {
@@ -54,12 +57,16 @@ class DataValidationService {
     debugPrint('$_logTag Found ${setsJson.length} flashcard sets to validate');
     
     for (int i = 0; i < setsJson.length; i++) {
-      try {
-        final setData = jsonDecode(setsJson[i]) as Map<String, dynamic>;
-        _validateFlashcardSetStructure(setData, i, report);
-      } catch (e) {
-        report.addError('flashcard_sets', 'Invalid JSON in set $i: $e');
-      }
+      await SimpleErrorHandler.safe(
+        () async {
+          final setData = jsonDecode(setsJson[i]) as Map<String, dynamic>;
+          _validateFlashcardSetStructure(setData, i, report);
+        },
+        operationName: 'validate_flashcard_set_$i',
+        fallbackOperation: () async {
+          report.addError('flashcard_sets', 'Invalid JSON in set $i');
+        },
+      );
     }
   }
   
@@ -91,11 +98,15 @@ class DataValidationService {
     }
     
     if (setData.containsKey('lastUpdated') && setData['lastUpdated'] != null) {
-      try {
-        DateTime.parse(setData['lastUpdated']);
-      } catch (e) {
-        report.addError(setPrefix, 'Invalid lastUpdated format: $e');
-      }
+      SimpleErrorHandler.safeSync(
+        () => DateTime.parse(setData['lastUpdated']),
+        fallback: null,
+        operationName: 'parse_last_updated',
+        fallbackOperation: () {
+          report.addError(setPrefix, 'Invalid lastUpdated format');
+          return null;
+        },
+      );
     }
     
     // Boolean field validation
@@ -127,8 +138,7 @@ class DataValidationService {
     if (cardData.containsKey('isCompleted') && cardData['isCompleted'] != null && cardData['isCompleted'] is! bool) {
       report.addWarning(flashcardPrefix, 'Field isCompleted should be boolean, found: ${cardData['isCompleted'].runtimeType} (${cardData['isCompleted']})');
     }
-  }
-  
+  }  
   Future<void> _validateInterviewQuestions(DataValidationReport report) async {
     debugPrint('$_logTag Validating interview questions...');
     final prefs = await SharedPreferences.getInstance();
@@ -139,21 +149,25 @@ class DataValidationService {
       return;
     }
     
-    try {
-      final List<dynamic> questions = jsonDecode(questionsJson);
-      debugPrint('$_logTag Found ${questions.length} interview questions to validate');
-      
-      for (int i = 0; i < questions.length; i++) {
-        if (questions[i] is! Map<String, dynamic>) {
-          report.addError('interview_questions[$i]', 'Invalid question structure - should be object');
-          continue;
+    await SimpleErrorHandler.safe(
+      () async {
+        final List<dynamic> questions = jsonDecode(questionsJson);
+        debugPrint('$_logTag Found ${questions.length} interview questions to validate');
+        
+        for (int i = 0; i < questions.length; i++) {
+          if (questions[i] is! Map<String, dynamic>) {
+            report.addError('interview_questions[$i]', 'Invalid question structure - should be object');
+            continue;
+          }
+          final question = questions[i] as Map<String, dynamic>;
+          _validateInterviewQuestionStructure(question, i, report);
         }
-        final question = questions[i] as Map<String, dynamic>;
-        _validateInterviewQuestionStructure(question, i, report);
-      }
-    } catch (e) {
-      report.addError('interview_questions', 'Invalid JSON structure: $e');
-    }
+      },
+      operationName: 'validate_interview_questions',
+      fallbackOperation: () async {
+        report.addError('interview_questions', 'Invalid JSON structure');
+      },
+    );
   }
   
   void _validateInterviewQuestionStructure(Map<String, dynamic> question, int index, DataValidationReport report) {
@@ -249,11 +263,13 @@ class DataValidationService {
       final value = prefs.getString(key);
       if (value != null) {
         progressEntries++;
-        try {
-          jsonDecode(value);
-        } catch (e) {
-          report.addError('user_progress', 'Invalid JSON in progress key "$key": $e');
-        }
+        await SimpleErrorHandler.safe(
+          () async => jsonDecode(value),
+          operationName: 'validate_progress_$key',
+          fallbackOperation: () async {
+            report.addError('user_progress', 'Invalid JSON in progress key "$key"');
+          },
+        );
       }
     }
     
@@ -274,22 +290,26 @@ class DataValidationService {
       return;
     }
     
-    try {
-      final List<dynamic> recentViews = jsonDecode(recentViewsJson);
-      debugPrint('$_logTag Found ${recentViews.length} recent view items');
-      
-      for (int i = 0; i < recentViews.length; i++) {
-        if (recentViews[i] is! Map<String, dynamic>) {
-          report.addError('recent_views[$i]', 'Invalid recent view structure - should be object');
-          continue;
-        }
+    await SimpleErrorHandler.safe(
+      () async {
+        final List<dynamic> recentViews = jsonDecode(recentViewsJson);
+        debugPrint('$_logTag Found ${recentViews.length} recent view items');
         
-        final item = recentViews[i] as Map<String, dynamic>;
-        _validateRecentViewItem(item, i, report);
-      }
-    } catch (e) {
-      report.addError('recent_views', 'Invalid JSON structure: $e');
-    }
+        for (int i = 0; i < recentViews.length; i++) {
+          if (recentViews[i] is! Map<String, dynamic>) {
+            report.addError('recent_views[$i]', 'Invalid recent view structure - should be object');
+            continue;
+          }
+          
+          final item = recentViews[i] as Map<String, dynamic>;
+          _validateRecentViewItem(item, i, report);
+        }
+      },
+      operationName: 'validate_recent_view_data',
+      fallbackOperation: () async {
+        report.addError('recent_views', 'Invalid JSON structure');
+      },
+    );
   }
   
   void _validateRecentViewItem(Map<String, dynamic> item, int index, DataValidationReport report) {
@@ -305,11 +325,15 @@ class DataValidationService {
     
     // Validate viewedAt format
     if (item.containsKey('viewedAt') && item['viewedAt'] != null) {
-      try {
-        DateTime.parse(item['viewedAt']);
-      } catch (e) {
-        report.addError(itemPrefix, 'Invalid viewedAt format: $e');
-      }
+      SimpleErrorHandler.safeSync(
+        () => DateTime.parse(item['viewedAt']),
+        fallback: null,
+        operationName: 'parse_viewed_at',
+        fallbackOperation: () {
+          report.addError(itemPrefix, 'Invalid viewedAt format');
+          return null;
+        },
+      );
     }
     
     // Validate type enum
@@ -338,11 +362,16 @@ class DataValidationService {
     for (final key in cacheKeys) {
       final value = prefs.getString(key);
       if (value != null) {
-        try {
-          jsonDecode(value);
-        } catch (e) {
+        final result = await SimpleErrorHandler.safe(
+          () async => jsonDecode(value),
+          fallback: null,
+          operationName: 'validate_cache_$key',
+          logErrors: false, // Don't log cache validation errors
+        );
+        
+        if (result == null) {
           corruptedCacheEntries++;
-          report.addWarning('cache_data', 'Corrupted cache entry "$key": $e');
+          report.addWarning('cache_data', 'Corrupted cache entry "$key"');
         }
       }
     }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/config.dart';
+import 'simple_error_handler.dart';
 
 enum CachePolicy {
   cacheFirst,    // Try cache first, then network
@@ -162,31 +163,32 @@ class EnhancedCacheManager extends ChangeNotifier {
     bool useCompression = false,
     int priority = 0,
   }) async {
-    try {
-      final now = DateTime.now();
-      final expiresAt = now.add(ttl ?? _defaultTtl);
-      
-      final entry = CacheEntry(
-        key: key,
-        data: data,
-        createdAt: now,
-        expiresAt: expiresAt,
-        etag: etag,
-        lastAccessedAt: now,
-        isCompressed: useCompression,
-      );
+    await SimpleErrorHandler.safely(
+      () async {
+        final now = DateTime.now();
+        final expiresAt = now.add(ttl ?? _defaultTtl);
+        
+        final entry = CacheEntry(
+          key: key,
+          data: data,
+          createdAt: now,
+          expiresAt: expiresAt,
+          etag: etag,
+          lastAccessedAt: now,
+          isCompressed: useCompression,
+        );
 
-      // Store in memory cache
-      _memoryCache[key] = entry;
-      _evictMemoryCacheIfNeeded();
+        // Store in memory cache
+        _memoryCache[key] = entry;
+        _evictMemoryCacheIfNeeded();
 
-      // Store in persistent cache
-      await _storePersistentCache(key, entry);
-      
-      AppConfig.logNetwork('Cached data: $key', level: NetworkLogLevel.verbose);
-    } catch (e) {
-      AppConfig.logNetwork('Failed to cache data: $key - $e', level: NetworkLogLevel.errors);
-    }
+        // Store in persistent cache
+        await _storePersistentCache(key, entry);
+        
+        AppConfig.logNetwork('Cached data: $key', level: NetworkLogLevel.verbose);
+      },
+      operationName: 'cache_data_$key',
+    );
   }
 
   /// Get cached data with policy support
@@ -194,39 +196,39 @@ class EnhancedCacheManager extends ChangeNotifier {
     String key, {
     CachePolicy policy = CachePolicy.cacheFirst,
   }) async {
-    try {
-      CacheEntry? entry;
+    return await SimpleErrorHandler.safe(
+      () async {
+        CacheEntry? entry;
 
-      // Check memory cache first
-      entry = _memoryCache[key];
-      
-      if (entry == null || entry.isExpired) {
-        // Check persistent cache
-        entry = await _loadPersistentCache(key);
-      }
-
-      if (entry != null && entry.isValid) {
-        // Update access statistics
-        final updatedEntry = entry.copyWith(
-          accessCount: entry.accessCount + 1,
-          lastAccessedAt: DateTime.now(),
-        );
+        // Check memory cache first
+        entry = _memoryCache[key];
         
-        _memoryCache[key] = updatedEntry;
-        _cacheHits++;
-        
-        AppConfig.logNetwork('Cache hit: $key', level: NetworkLogLevel.verbose);
-        return updatedEntry.data;
-      }
+        if (entry == null || entry.isExpired) {
+          // Check persistent cache
+          entry = await _loadPersistentCache(key);
+        }
 
-      _cacheMisses++;
-      AppConfig.logNetwork('Cache miss: $key', level: NetworkLogLevel.verbose);
-      return null;
-      
-    } catch (e) {
-      AppConfig.logNetwork('Failed to get cached data: $key - $e', level: NetworkLogLevel.errors);
-      return null;
-    }
+        if (entry != null && entry.isValid) {
+          // Update access statistics
+          final updatedEntry = entry.copyWith(
+            accessCount: entry.accessCount + 1,
+            lastAccessedAt: DateTime.now(),
+          );
+          
+          _memoryCache[key] = updatedEntry;
+          _cacheHits++;
+          
+          AppConfig.logNetwork('Cache hit: $key', level: NetworkLogLevel.verbose);
+          return updatedEntry.data;
+        }
+
+        _cacheMisses++;
+        AppConfig.logNetwork('Cache miss: $key', level: NetworkLogLevel.verbose);
+        return null;
+      },
+      fallback: null,
+      operationName: 'get_cached_data_$key',
+    );
   }
 
   /// Add item to offline queue
@@ -235,31 +237,32 @@ class EnhancedCacheManager extends ChangeNotifier {
     Map<String, dynamic> data, {
     int priority = 0,
   }) async {
-    try {
-      final item = OfflineQueueItem(
-        key: key,
-        data: data,
-        timestamp: DateTime.now(),
-        priority: priority,
-      );
+    await SimpleErrorHandler.safely(
+      () async {
+        final item = OfflineQueueItem(
+          key: key,
+          data: data,
+          timestamp: DateTime.now(),
+          priority: priority,
+        );
 
-      _offlineQueue.add(item);
-      
-      // Sort by priority (higher priority first)
-      _offlineQueue.sort((a, b) => b.priority.compareTo(a.priority));
-      
-      // Maintain queue size
-      if (_offlineQueue.length > _maxOfflineQueueSize) {
-        _offlineQueue.removeRange(_maxOfflineQueueSize, _offlineQueue.length);
-      }
+        _offlineQueue.add(item);
+        
+        // Sort by priority (higher priority first)
+        _offlineQueue.sort((a, b) => b.priority.compareTo(a.priority));
+        
+        // Maintain queue size
+        if (_offlineQueue.length > _maxOfflineQueueSize) {
+          _offlineQueue.removeRange(_maxOfflineQueueSize, _offlineQueue.length);
+        }
 
-      await _saveOfflineQueue();
-      
-      AppConfig.logNetwork('Added to offline queue: $key', level: NetworkLogLevel.verbose);
-      notifyListeners();
-    } catch (e) {
-      AppConfig.logNetwork('Failed to add to offline queue: $key - $e', level: NetworkLogLevel.errors);
-    }
+        await _saveOfflineQueue();
+        
+        AppConfig.logNetwork('Added to offline queue: $key', level: NetworkLogLevel.verbose);
+        notifyListeners();
+      },
+      operationName: 'add_to_offline_queue_$key',
+    );
   }
 
   /// Process offline queue
@@ -268,18 +271,23 @@ class EnhancedCacheManager extends ChangeNotifier {
     final failedItems = <OfflineQueueItem>[];
 
     for (final item in List.from(_offlineQueue)) {
-      try {
-        // Attempt to sync the item
-        // This would typically involve calling the network service
-        await _syncOfflineItem(item);
-        
-        processedKeys.add(item.key);
-        _offlineQueue.remove(item);
-        
-        AppConfig.logNetwork('Processed offline item: ${item.key}', level: NetworkLogLevel.basic);
-      } catch (e) {
-        AppConfig.logNetwork('Failed to process offline item: ${item.key} - $e', level: NetworkLogLevel.errors);
-        
+      final success = await SimpleErrorHandler.safe(
+        () async {
+          // Attempt to sync the item
+          // This would typically involve calling the network service
+          await _syncOfflineItem(item);
+          
+          processedKeys.add(item.key);
+          _offlineQueue.remove(item);
+          
+          AppConfig.logNetwork('Processed offline item: ${item.key}', level: NetworkLogLevel.basic);
+          return true;
+        },
+        fallback: false,
+        operationName: 'process_offline_item_${item.key}',
+      );
+
+      if (!success) {
         if (item.retryCount < 3) {
           failedItems.add(item.copyWith(retryCount: item.retryCount + 1));
         }
@@ -312,38 +320,39 @@ class EnhancedCacheManager extends ChangeNotifier {
     bool clearPersistent = true,
     Duration? olderThan,
   }) async {
-    try {
-      if (key != null) {
-        // Clear specific key
-        if (clearMemory) _memoryCache.remove(key);
-        if (clearPersistent) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.remove('$_cachePrefix$key');
-        }
-      } else {
-        // Clear all cache
-        if (clearMemory) _memoryCache.clear();
-        if (clearPersistent) {
-          final prefs = await SharedPreferences.getInstance();
-          final keys = prefs.getKeys().where((k) => k.startsWith(_cachePrefix));
-          for (final key in keys) {
-            if (olderThan != null) {
-              // Only clear entries older than specified duration
-              final entry = await _loadPersistentCache(key.substring(_cachePrefix.length));
-              if (entry != null && DateTime.now().difference(entry.createdAt) > olderThan) {
+    await SimpleErrorHandler.safely(
+      () async {
+        if (key != null) {
+          // Clear specific key
+          if (clearMemory) _memoryCache.remove(key);
+          if (clearPersistent) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.remove('$_cachePrefix$key');
+          }
+        } else {
+          // Clear all cache
+          if (clearMemory) _memoryCache.clear();
+          if (clearPersistent) {
+            final prefs = await SharedPreferences.getInstance();
+            final keys = prefs.getKeys().where((k) => k.startsWith(_cachePrefix));
+            for (final key in keys) {
+              if (olderThan != null) {
+                // Only clear entries older than specified duration
+                final entry = await _loadPersistentCache(key.substring(_cachePrefix.length));
+                if (entry != null && DateTime.now().difference(entry.createdAt) > olderThan) {
+                  await prefs.remove(key);
+                }
+              } else {
                 await prefs.remove(key);
               }
-            } else {
-              await prefs.remove(key);
             }
           }
         }
-      }
-      
-      AppConfig.logNetwork('Cache cleared${key != null ? ": $key" : ""}', level: NetworkLogLevel.basic);
-    } catch (e) {
-      AppConfig.logNetwork('Failed to clear cache: $e', level: NetworkLogLevel.errors);
-    }
+        
+        AppConfig.logNetwork('Cache cleared${key != null ? ": $key" : ""}', level: NetworkLogLevel.basic);
+      },
+      operationName: 'clear_cache${key != null ? "_$key" : "_all"}',
+    );
   }
 
   /// Get cache statistics
@@ -393,56 +402,60 @@ class EnhancedCacheManager extends ChangeNotifier {
 
   /// Store cache entry in persistent storage
   Future<void> _storePersistentCache(String key, CacheEntry entry) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonString = jsonEncode(entry.toJson());
-      await prefs.setString('$_cachePrefix$key', jsonString);
-    } catch (e) {
-      AppConfig.logNetwork('Failed to store persistent cache: $key - $e', level: NetworkLogLevel.errors);
-    }
+    await SimpleErrorHandler.safely(
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final jsonString = jsonEncode(entry.toJson());
+        await prefs.setString('$_cachePrefix$key', jsonString);
+      },
+      operationName: 'store_persistent_cache_$key',
+    );
   }
 
   /// Load cache entry from persistent storage
   Future<CacheEntry?> _loadPersistentCache(String key) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString('$_cachePrefix$key');
-      
-      if (jsonString == null) return null;
-      
-      final jsonData = jsonDecode(jsonString) as Map<String, dynamic>;
-      return CacheEntry.fromJson(jsonData);
-    } catch (e) {
-      AppConfig.logNetwork('Failed to load persistent cache: $key - $e', level: NetworkLogLevel.errors);
-      return null;
-    }
+    return await SimpleErrorHandler.safe(
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final jsonString = prefs.getString('$_cachePrefix$key');
+        
+        if (jsonString == null) return null;
+        
+        final jsonData = jsonDecode(jsonString) as Map<String, dynamic>;
+        return CacheEntry.fromJson(jsonData);
+      },
+      fallback: null,
+      operationName: 'load_persistent_cache_$key',
+    );
   }
 
   /// Save offline queue to persistent storage
   Future<void> _saveOfflineQueue() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonList = _offlineQueue.map((item) => item.toJson()).toList();
-      await prefs.setString(_offlineQueueKey, jsonEncode(jsonList));
-    } catch (e) {
-      AppConfig.logNetwork('Failed to save offline queue: $e', level: NetworkLogLevel.errors);
-    }
+    await SimpleErrorHandler.safely(
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final jsonList = _offlineQueue.map((item) => item.toJson()).toList();
+        await prefs.setString(_offlineQueueKey, jsonEncode(jsonList));
+      },
+      operationName: 'save_offline_queue',
+    );
   }
 
   /// Load offline queue from persistent storage
   Future<void> _loadOfflineQueue() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_offlineQueueKey);
-      
-      if (jsonString != null) {
-        final jsonList = jsonDecode(jsonString) as List<dynamic>;
-        _offlineQueue.addAll(
-          jsonList.map((item) => OfflineQueueItem.fromJson(item as Map<String, dynamic>))
-        );
-      }
-    } catch (e) {
-      AppConfig.logNetwork('Failed to load offline queue: $e', level: NetworkLogLevel.errors);
-    }
+    await SimpleErrorHandler.safely(
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final jsonString = prefs.getString(_offlineQueueKey);
+        
+        if (jsonString != null) {
+          final jsonList = jsonDecode(jsonString) as List<dynamic>;
+          _offlineQueue.addAll(
+            jsonList.map((item) => OfflineQueueItem.fromJson(item as Map<String, dynamic>))
+          );
+        }
+      },
+      operationName: 'load_offline_queue',
+    );
   }
 }

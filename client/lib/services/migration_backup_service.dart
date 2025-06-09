@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'simple_error_handler.dart';
 
 /// Task 1.3: Migration Backup System Implementation
 /// 
@@ -21,34 +22,34 @@ class MigrationBackupService {
     final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').replaceAll('.', '-');
     final backupId = '$_backupPrefix${label ?? 'auto'}_$timestamp';
     
-    try {
-      final backup = ApplicationBackup();
-      await _gatherAllData(backup);
-      
-      backup.metadata = BackupMetadata(
-        id: backupId,
-        timestamp: DateTime.now(),
-        label: label ?? 'Automatic backup',
-        version: await _getAppVersion(),
-        dataTypes: backup.getDataTypes(),
-        dataSize: backup.getDataSize(),
-      );
-      
-      final success1 = await _storeBackupToPreferences(backup);
-      final success2 = await _storeBackupToFile(backup);
-      
-      if (!success1 && !success2) {
-        throw Exception('Failed to store backup in any location');
-      }
-      
-      await _cleanOldBackups();
-      debugPrint('$_logTag ✅ Backup created successfully');
-      return BackupResult.success(backup.metadata!);
-      
-    } catch (e, stackTrace) {
-      debugPrint('$_logTag ❌ Backup creation failed: $e');
-      return BackupResult.failure('Backup creation failed: $e', stackTrace);
-    }
+    return await SimpleErrorHandler.safe(
+      () async {
+        final backup = ApplicationBackup();
+        await _gatherAllData(backup);
+        
+        backup.metadata = BackupMetadata(
+          id: backupId,
+          timestamp: DateTime.now(),
+          label: label ?? 'Automatic backup',
+          version: await _getAppVersion(),
+          dataTypes: backup.getDataTypes(),
+          dataSize: backup.getDataSize(),
+        );
+        
+        final success1 = await _storeBackupToPreferences(backup);
+        final success2 = await _storeBackupToFile(backup);
+        
+        if (!success1 && !success2) {
+          throw Exception('Failed to store backup in any location');
+        }
+        
+        await _cleanOldBackups();
+        debugPrint('$_logTag ✅ Backup created successfully');
+        return BackupResult.success(backup.metadata!);
+      },
+      fallback: BackupResult.failure('Backup creation failed'),
+      operationName: 'create_full_backup',
+    );
   }
   
   /// Gather all application data from SharedPreferences
@@ -169,113 +170,124 @@ class MigrationBackupService {
   }
   
   Future<bool> _storeBackupToPreferences(ApplicationBackup backup) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final backupJson = jsonEncode(backup.toJson());
-      await prefs.setString(backup.metadata!.id, backupJson);
-      return true;
-    } catch (e) {
-      debugPrint('$_logTag Failed to store backup to SharedPreferences: $e');
-      return false;
-    }
+    return await SimpleErrorHandler.safe(
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final backupJson = jsonEncode(backup.toJson());
+        await prefs.setString(backup.metadata!.id, backupJson);
+        return true;
+      },
+      fallback: false,
+      operationName: 'store_backup_to_preferences',
+    );
   }
   
   Future<bool> _storeBackupToFile(ApplicationBackup backup) async {
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final backupDir = Directory('${directory.path}/$_backupDirName');
-      
-      if (!await backupDir.exists()) {
-        await backupDir.create(recursive: true);
-      }
-      
-      final backupFile = File('${backupDir.path}/${backup.metadata!.id}.json');
-      final backupJson = jsonEncode(backup.toJson());
-      await backupFile.writeAsString(backupJson);
-      return true;
-    } catch (e) {
-      debugPrint('$_logTag Failed to store backup to file: $e');
-      return false;
-    }
+    return await SimpleErrorHandler.safe(
+      () async {
+        final directory = await getApplicationDocumentsDirectory();
+        final backupDir = Directory('${directory.path}/$_backupDirName');
+        
+        if (!await backupDir.exists()) {
+          await backupDir.create(recursive: true);
+        }
+        
+        final backupFile = File('${backupDir.path}/${backup.metadata!.id}.json');
+        final backupJson = jsonEncode(backup.toJson());
+        await backupFile.writeAsString(backupJson);
+        return true;
+      },
+      fallback: false,
+      operationName: 'store_backup_to_file',
+    );
   }
   
   Future<String> _getAppVersion() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      return '${packageInfo.version}+${packageInfo.buildNumber}';
-    } catch (e) {
-      return 'unknown';
-    }
+    return await SimpleErrorHandler.safe(
+      () async {
+        final packageInfo = await PackageInfo.fromPlatform();
+        return '${packageInfo.version}+${packageInfo.buildNumber}';
+      },
+      fallback: 'unknown',
+      operationName: 'get_app_version',
+    );
   }
   
   Future<void> _cleanOldBackups() async {
-    try {
-      final backups = await listBackups();
-      if (backups.length <= _maxBackups) return;
-      
-      backups.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-      final backupsToDelete = backups.take(backups.length - _maxBackups);
-      
-      for (final backup in backupsToDelete) {
-        await deleteBackup(backup.id);
-      }
-    } catch (e) {
-      debugPrint('$_logTag Error during backup cleanup: $e');
-    }
+    await SimpleErrorHandler.safely(
+      () async {
+        final backups = await listBackups();
+        if (backups.length <= _maxBackups) return;
+        
+        backups.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        final backupsToDelete = backups.take(backups.length - _maxBackups);
+        
+        for (final backup in backupsToDelete) {
+          await deleteBackup(backup.id);
+        }
+      },
+      operationName: 'clean_old_backups',
+    );
   }
   
   Future<RestoreResult> restoreFromBackup(String backupId) async {
-    try {
-      final backup = await _loadBackup(backupId);
-      if (backup == null) {
-        return RestoreResult.failure('Backup not found: $backupId');
-      }
-      
-      final safetyResult = await createFullBackup(label: 'pre_restore_safety');
-      if (!safetyResult.isSuccess) {
-        debugPrint('$_logTag Warning: Could not create safety backup');
-      }
-      
-      final validationResult = await validateBackup(backupId);
-      if (!validationResult.isValid) {
-        return RestoreResult.failure('Backup validation failed: ${validationResult.error}');
-      }
-      
-      await _restoreData(backup);
-      return RestoreResult.success('Successfully restored from $backupId');
-    } catch (e, stackTrace) {
-      return RestoreResult.failure('Restore failed: $e', stackTrace);
-    }
+    return await SimpleErrorHandler.safe(
+      () async {
+        final backup = await _loadBackup(backupId);
+        if (backup == null) {
+          return RestoreResult.failure('Backup not found: $backupId');
+        }
+        
+        final safetyResult = await createFullBackup(label: 'pre_restore_safety');
+        if (!safetyResult.isSuccess) {
+          debugPrint('$_logTag Warning: Could not create safety backup');
+        }
+        
+        final validationResult = await validateBackup(backupId);
+        if (!validationResult.isValid) {
+          return RestoreResult.failure('Backup validation failed: ${validationResult.error}');
+        }
+        
+        await _restoreData(backup);
+        return RestoreResult.success('Successfully restored from $backupId');
+      },
+      fallback: RestoreResult.failure('Restore operation failed'),
+      operationName: 'restore_from_backup',
+    );
   }
   
   Future<ApplicationBackup?> _loadBackup(String backupId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final backupJson = prefs.getString(backupId);
-      
-      if (backupJson != null) {
-        return ApplicationBackup.fromJson(jsonDecode(backupJson));
-      }
-      
-      return await _loadBackupFromFile(backupId);
-    } catch (e) {
-      return null;
-    }
+    return await SimpleErrorHandler.safe(
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final backupJson = prefs.getString(backupId);
+        
+        if (backupJson != null) {
+          return ApplicationBackup.fromJson(jsonDecode(backupJson));
+        }
+        
+        return await _loadBackupFromFile(backupId);
+      },
+      fallback: null,
+      operationName: 'load_backup',
+    );
   }
   
   Future<ApplicationBackup?> _loadBackupFromFile(String backupId) async {
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final backupFile = File('${directory.path}/$_backupDirName/$backupId.json');
-      
-      if (await backupFile.exists()) {
-        final backupJson = await backupFile.readAsString();
-        return ApplicationBackup.fromJson(jsonDecode(backupJson));
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
+    return await SimpleErrorHandler.safe(
+      () async {
+        final directory = await getApplicationDocumentsDirectory();
+        final backupFile = File('${directory.path}/$_backupDirName/$backupId.json');
+        
+        if (await backupFile.exists()) {
+          final backupJson = await backupFile.readAsString();
+          return ApplicationBackup.fromJson(jsonDecode(backupJson));
+        }
+        return null;
+      },
+      fallback: null,
+      operationName: 'load_backup_from_file',
+    );
   }
   
   Future<void> _restoreData(ApplicationBackup backup) async {
@@ -363,124 +375,133 @@ class MigrationBackupService {
   }
   
   Future<void> _addBackupsFromPreferences(List<BackupMetadata> backups) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final allKeys = prefs.getKeys();
-      final backupKeys = allKeys.where((key) => key.startsWith(_backupPrefix));
-      
-      for (final key in backupKeys) {
-        try {
-          final backupJson = prefs.getString(key);
-          if (backupJson != null) {
-            final backup = ApplicationBackup.fromJson(jsonDecode(backupJson));
-            if (backup.metadata != null) {
-              backups.add(backup.metadata!);
-            }
-          }
-        } catch (e) {
-          continue;
+    await SimpleErrorHandler.safely(
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final allKeys = prefs.getKeys();
+        final backupKeys = allKeys.where((key) => key.startsWith(_backupPrefix));
+        
+        for (final key in backupKeys) {
+          await SimpleErrorHandler.safely(
+            () async {
+              final backupJson = prefs.getString(key);
+              if (backupJson != null) {
+                final backup = ApplicationBackup.fromJson(jsonDecode(backupJson));
+                if (backup.metadata != null) {
+                  backups.add(backup.metadata!);
+                }
+              }
+            },
+            operationName: 'add_backup_from_preferences_$key',
+          );
         }
-      }
-    } catch (e) {
-      debugPrint('$_logTag Error reading backups from SharedPreferences: $e');
-    }
+      },
+      operationName: 'add_backups_from_preferences',
+    );
   }
   
   Future<void> _addBackupsFromFiles(List<BackupMetadata> backups) async {
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final backupDir = Directory('${directory.path}/$_backupDirName');
-      
-      if (await backupDir.exists()) {
-        final files = await backupDir.list().toList();
+    await SimpleErrorHandler.safely(
+      () async {
+        final directory = await getApplicationDocumentsDirectory();
+        final backupDir = Directory('${directory.path}/$_backupDirName');
         
-        for (final file in files) {
-          if (file is File && file.path.endsWith('.json')) {
-            try {
-              final backupJson = await file.readAsString();
-              final backup = ApplicationBackup.fromJson(jsonDecode(backupJson));
-              if (backup.metadata != null) {
-                backups.add(backup.metadata!);
-              }
-            } catch (e) {
-              continue;
+        if (await backupDir.exists()) {
+          final files = await backupDir.list().toList();
+          
+          for (final file in files) {
+            if (file is File && file.path.endsWith('.json')) {
+              await SimpleErrorHandler.safely(
+                () async {
+                  final backupJson = await file.readAsString();
+                  final backup = ApplicationBackup.fromJson(jsonDecode(backupJson));
+                  if (backup.metadata != null) {
+                    backups.add(backup.metadata!);
+                  }
+                },
+                operationName: 'add_backup_from_file_${file.path}',
+              );
             }
           }
         }
-      }
-    } catch (e) {
-      debugPrint('$_logTag Error reading backups from files: $e');
-    }
+      },
+      operationName: 'add_backups_from_files',
+    );
   }
   
   Future<BackupValidationResult> validateBackup(String backupId) async {
-    try {
-      final backup = await _loadBackup(backupId);
-      if (backup == null) {
-        return BackupValidationResult.invalid('Backup not found: $backupId');
-      }
-      
-      final issues = <String>[];
-      
-      if (backup.metadata == null) {
-        issues.add('Missing backup metadata');
-      }
-      
-      if (backup.flashcardSets != null) {
-        for (int i = 0; i < backup.flashcardSets!.length; i++) {
-          try {
-            final setData = jsonDecode(backup.flashcardSets![i]);
-            if (setData is! Map) {
-              issues.add('Invalid flashcard set structure at index $i');
-            }
-          } catch (e) {
-            issues.add('Invalid JSON in flashcard set $i: $e');
-          }
+    return await SimpleErrorHandler.safe(
+      () async {
+        final backup = await _loadBackup(backupId);
+        if (backup == null) {
+          return BackupValidationResult.invalid('Backup not found: $backupId');
         }
-      }
-      
-      if (backup.interviewQuestions != null) {
-        try {
-          final questions = jsonDecode(backup.interviewQuestions!);
-          if (questions is! List) {
-            issues.add('Interview questions is not a valid array');
-          }
-        } catch (e) {
-          issues.add('Invalid JSON in interview questions: $e');
-        }
-      }
-      
-      return issues.isEmpty 
-        ? BackupValidationResult.valid()
-        : BackupValidationResult.invalid('Validation issues: ${issues.join(', ')}');
         
-    } catch (e) {
-      return BackupValidationResult.invalid('Validation failed: $e');
-    }
+        final issues = <String>[];
+        
+        if (backup.metadata == null) {
+          issues.add('Missing backup metadata');
+        }
+        
+        if (backup.flashcardSets != null) {
+          for (int i = 0; i < backup.flashcardSets!.length; i++) {
+            await SimpleErrorHandler.safely(
+              () async {
+                final setData = jsonDecode(backup.flashcardSets![i]);
+                if (setData is! Map) {
+                  issues.add('Invalid flashcard set structure at index $i');
+                }
+              },
+              operationName: 'validate_flashcard_set_$i',
+            );
+          }
+        }
+        
+        if (backup.interviewQuestions != null) {
+          await SimpleErrorHandler.safely(
+            () async {
+              final questions = jsonDecode(backup.interviewQuestions!);
+              if (questions is! List) {
+                issues.add('Interview questions is not a valid array');
+              }
+            },
+            operationName: 'validate_interview_questions',
+          );
+        }
+        
+        return issues.isEmpty 
+          ? BackupValidationResult.valid()
+          : BackupValidationResult.invalid('Validation issues: ${issues.join(', ')}');
+      },
+      fallback: BackupValidationResult.invalid('Validation operation failed'),
+      operationName: 'validate_backup',
+    );
   }
   
   Future<bool> deleteBackup(String backupId) async {
-    try {
-      bool deletedFromPrefs = false;
-      bool deletedFromFiles = false;
-      
-      final prefs = await SharedPreferences.getInstance();
-      if (prefs.containsKey(backupId)) {
-        await prefs.remove(backupId);
-        deletedFromPrefs = true;
-      }
-      
-      final directory = await getApplicationDocumentsDirectory();
-      final backupFile = File('${directory.path}/$_backupDirName/$backupId.json');
-      if (await backupFile.exists()) {
-        await backupFile.delete();
-        deletedFromFiles = true;
-      }
-      
-      return deletedFromPrefs || deletedFromFiles;
-    } catch (e) {
-      return false;
-    }
+    return await SimpleErrorHandler.safe(
+      () async {
+        bool deletedFromPrefs = false;
+        bool deletedFromFiles = false;
+        
+        final prefs = await SharedPreferences.getInstance();
+        if (prefs.containsKey(backupId)) {
+          await prefs.remove(backupId);
+          deletedFromPrefs = true;
+        }
+        
+        final directory = await getApplicationDocumentsDirectory();
+        final backupFile = File('${directory.path}/$_backupDirName/$backupId.json');
+        if (await backupFile.exists()) {
+          await backupFile.delete();
+          deletedFromFiles = true;
+        }
+        
+        return deletedFromPrefs || deletedFromFiles;
+      },
+      fallback: false,
+      operationName: 'delete_backup',
+    );
   }
 }
 
