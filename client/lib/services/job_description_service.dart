@@ -7,6 +7,7 @@ import '../services/error_service.dart';
 import '../services/id_service.dart';
 import '../utils/config.dart';
 import '../web/proxy.dart';
+import 'simple_error_handler.dart';
 
 class JobDescriptionService {
   final ProxyClient client;
@@ -27,53 +28,40 @@ class JobDescriptionService {
       level: NetworkLogLevel.basic
     );
     
-    try {
-      final analyzeEndpoint = AppConfig.endpoints['jobDescriptionAnalyze'] ?? '/api/job-description/analyze';
-      
-      final response = await client.post(
-        analyzeEndpoint,
-        body: {'job_description': jobDescription},
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        return JobDescriptionAnalysis.fromJson(responseData);
-      } else {
-        throw AppError.api(
-          'Error analyzing job description: ${response.body}',
-          code: 'server_error',
-          severity: ErrorSeverity.warning,
-          details: 'Status code: ${response.statusCode}',
+    return await SimpleErrorHandler.safe<JobDescriptionAnalysis>(
+      () async {
+        final analyzeEndpoint = AppConfig.endpoints['jobDescriptionAnalyze'] ?? '/api/job-description/analyze';
+        
+        final response = await client.post(
+          analyzeEndpoint,
+          body: {'job_description': jobDescription},
         );
-      }
-    } catch (e, stackTrace) {
-      if (e is AppError) {
-        _errorService.reportError(e);
-        rethrow;
-      }
-      
-      // Check for network connectivity issues
-      if (e.toString().contains('Failed to fetch') || 
-          e.toString().contains('SocketException') ||
-          e.toString().contains('Connection refused')) {
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> responseData = jsonDecode(response.body);
+          return JobDescriptionAnalysis.fromJson(responseData);
+        } else {
+          throw AppError.api(
+            'Error analyzing job description: ${response.body}',
+            code: 'server_error',
+            severity: ErrorSeverity.warning,
+            details: 'Status code: ${response.statusCode}',
+          );
+        }
+      },
+      fallbackOperation: () async {
+        // Handle different error types and report them
         final error = AppError.api(
-          'Network is not connected',
-          code: 'network_error',
+          'Failed to analyze job description',
+          code: 'analysis_error',
           severity: ErrorSeverity.warning,
           context: {'operation': 'analyzeJobDescription'},
         );
         _errorService.reportError(error);
         throw error;
-      }
-      
-      final error = AppError.unknown(
-        e,
-        stackTrace: stackTrace,
-        context: {'operation': 'analyzeJobDescription'},
-      );
-      _errorService.reportError(error);
-      throw error;
-    }
+      },
+      operationName: 'analyze_job_description',
+    );
   }
   
   // Generate interview questions based on job analysis
@@ -88,68 +76,68 @@ class JobDescriptionService {
       level: NetworkLogLevel.basic
     );
     
-    try {
-      final generateEndpoint = AppConfig.endpoints['jobDescriptionGenerate'] ?? '/api/job-description/generate-questions';
-      
-      final response = await client.post(
-        generateEndpoint,
-        body: {
-          'job_analysis': jobAnalysis.toJson(),
-          'categories': categories,
-          'difficulty_levels': difficultyLevels,
-          'count_per_category': countPerCategory,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(response.body);
+    return await SimpleErrorHandler.safe<List<InterviewQuestion>>(
+      () async {
+        final generateEndpoint = AppConfig.endpoints['jobDescriptionGenerate'] ?? '/api/job-description/generate-questions';
         
-        // Check if we got fallback questions
-        bool containsFallback = responseData.any((q) => 
-            q['text'] != null && 
-            q['text'].toString().contains('FALLBACK QUESTION'));
-            
-        if (containsFallback) {
+        final response = await client.post(
+          generateEndpoint,
+          body: {
+            'job_analysis': jobAnalysis.toJson(),
+            'categories': categories,
+            'difficulty_levels': difficultyLevels,
+            'count_per_category': countPerCategory,
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final List<dynamic> responseData = jsonDecode(response.body);
+          
+          // Check if we got fallback questions
+          bool containsFallback = responseData.any((q) => 
+              q['text'] != null && 
+              q['text'].toString().contains('FALLBACK QUESTION'));
+              
+          if (containsFallback) {
+            throw AppError.api(
+              'Error generating questions. Server returned fallback content.',
+              code: 'generation_error',
+              severity: ErrorSeverity.warning,
+            );
+          }
+          
+          // Convert to InterviewQuestion objects
+          return responseData.map((questionData) {
+            return InterviewQuestion(
+              id: IdService.custom('job_'),
+              text: questionData['text'],
+              category: questionData['category'],
+              subtopic: questionData['subtopic'],
+              difficulty: questionData['difficulty'],
+              answer: questionData['answer'],
+              isDraft: true, // Mark as draft by default
+            );
+          }).toList();
+        } else {
           throw AppError.api(
-            'Error generating questions. Server returned fallback content.',
-            code: 'generation_error',
+            'Error generating questions: ${response.body}',
+            code: 'server_error',
             severity: ErrorSeverity.warning,
+            details: 'Status code: ${response.statusCode}',
           );
         }
-        
-        // Convert to InterviewQuestion objects
-        return responseData.map((questionData) {
-          return InterviewQuestion(
-            id: IdService.custom('job_'),
-            text: questionData['text'],
-            category: questionData['category'],
-            subtopic: questionData['subtopic'],
-            difficulty: questionData['difficulty'],
-            answer: questionData['answer'],
-            isDraft: true, // Mark as draft by default
-          );
-        }).toList();
-      } else {
-        throw AppError.api(
-          'Error generating questions: ${response.body}',
-          code: 'server_error',
+      },
+      fallbackOperation: () async {
+        final error = AppError.api(
+          'Failed to generate interview questions',
+          code: 'generation_error',
           severity: ErrorSeverity.warning,
-          details: 'Status code: ${response.statusCode}',
+          context: {'operation': 'generateQuestions'},
         );
-      }
-    } catch (e, stackTrace) {
-      if (e is AppError) {
-        _errorService.reportError(e);
-        rethrow;
-      }
-      
-      final error = AppError.unknown(
-        e,
-        stackTrace: stackTrace,
-        context: {'operation': 'generateQuestions'},
-      );
-      _errorService.reportError(error);
-      throw error;
-    }
+        _errorService.reportError(error);
+        throw error;
+      },
+      operationName: 'generate_interview_questions',
+    );
   }
 }

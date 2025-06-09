@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../utils/config.dart';
+import 'simple_error_handler.dart';
 
 class NetworkService extends ChangeNotifier {
   bool _isOnline = false;
@@ -46,48 +47,56 @@ class NetworkService extends ChangeNotifier {
   }
 
   Future<void> _checkInternetConnection() async {
-    try {
-      // Use our own backend for connectivity check
-      final pingEndpoint = AppConfig.endpoints['ping'] ?? '/api/ping';
-      final response = await http.get(
-        Uri.parse('${AppConfig.apiBaseUrl}$pingEndpoint'),
-      ).timeout(AppConfig.connectivityTimeout);
-      
-      _isOnline = response.statusCode >= 200 && response.statusCode < 300;
-      
-      AppConfig.logNetwork(
-        'Internet connectivity check: $_isOnline (${response.statusCode})',
-        level: NetworkLogLevel.verbose
-      );
-    } catch (e) {
-      AppConfig.logNetwork(
-        'Internet connectivity check failed: $e',
-        level: NetworkLogLevel.errors
-      );
-      _isOnline = false;
-    }
+    await SimpleErrorHandler.safe<void>(
+      () async {
+        // Use our own backend for connectivity check
+        final pingEndpoint = AppConfig.endpoints['ping'] ?? '/api/ping';
+        final response = await http.get(
+          Uri.parse('${AppConfig.apiBaseUrl}$pingEndpoint'),
+        ).timeout(AppConfig.connectivityTimeout);
+        
+        _isOnline = response.statusCode >= 200 && response.statusCode < 300;
+        
+        AppConfig.logNetwork(
+          'Internet connectivity check: $_isOnline (${response.statusCode})',
+          level: NetworkLogLevel.verbose
+        );
+      },
+      fallbackOperation: () async {
+        AppConfig.logNetwork(
+          'Internet connectivity check failed',
+          level: NetworkLogLevel.errors
+        );
+        _isOnline = false;
+      },
+      operationName: 'check_internet_connection',
+    );
   }
 
   Future<void> _checkServerConnection() async {
-    try {
-      // Check if API server is reachable and responsive
-      final response = await http.get(
-        Uri.parse('${AppConfig.apiBaseUrl}/'),
-      ).timeout(AppConfig.connectivityTimeout);
-      
-      _isServerReachable = response.statusCode >= 200 && response.statusCode < 300;
-      
-      AppConfig.logNetwork(
-        'Server connectivity check: $_isServerReachable (${response.statusCode})',
-        level: NetworkLogLevel.verbose
-      );
-    } catch (e) {
-      AppConfig.logNetwork(
-        'Server connectivity check failed: $e',
-        level: NetworkLogLevel.errors
-      );
-      _isServerReachable = false;
-    }
+    await SimpleErrorHandler.safe<void>(
+      () async {
+        // Check if API server is reachable and responsive
+        final response = await http.get(
+          Uri.parse('${AppConfig.apiBaseUrl}/'),
+        ).timeout(AppConfig.connectivityTimeout);
+        
+        _isServerReachable = response.statusCode >= 200 && response.statusCode < 300;
+        
+        AppConfig.logNetwork(
+          'Server connectivity check: $_isServerReachable (${response.statusCode})',
+          level: NetworkLogLevel.verbose
+        );
+      },
+      fallbackOperation: () async {
+        AppConfig.logNetwork(
+          'Server connectivity check failed',
+          level: NetworkLogLevel.errors
+        );
+        _isServerReachable = false;
+      },
+      operationName: 'check_server_connection',
+    );
   }
   
   // Method to manually force online/offline mode (for testing)

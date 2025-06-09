@@ -4,6 +4,7 @@ import '../utils/config.dart';
 import '../models/app_error.dart';
 import 'connectivity_service.dart';
 import 'enhanced_cache_manager.dart';
+import 'simple_error_handler.dart';
 
 enum RecoveryStrategy {
   retry,
@@ -200,12 +201,11 @@ class NetworkErrorRecoveryService extends ChangeNotifier {
       return await _handleCacheFallback<T>(context);
     }
 
-    try {
-      return await retryOperation();
-    } catch (e) {
-      AppConfig.logNetwork('Retry failed for: ${context.operation} - $e', level: NetworkLogLevel.basic);
-      return null;
-    }
+    return await SimpleErrorHandler.safe<T?>(
+      () => retryOperation(),
+      fallback: null,
+      operationName: 'retry_${context.operation}',
+    );
   }
 
   /// Handle cache fallback strategy

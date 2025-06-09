@@ -114,9 +114,14 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
               ),
             );
           } else {
-            debugPrint('Card was already completed - not updating progress');
+            debugPrint('Card was already completed - updating graded answer but not progress');
+            // Still update the graded answer for UI feedback, but don't change completion status
             emit(
-              state.copyWith(status: StudyStatus.loaded, gradedAnswer: gradedAnswer),
+              state.copyWith(
+                status: StudyStatus.loaded, 
+                gradedAnswer: gradedAnswer,
+                // Keep the existing flashcardSet unchanged since completion status doesn't change
+              ),
             );
           }
         } else {

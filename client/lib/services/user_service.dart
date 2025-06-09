@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../utils/config.dart';
+import 'simple_error_handler.dart';
 
 /// UserService using Hive for consistent storage across the application
 /// 
@@ -24,13 +25,13 @@ class UserService extends ChangeNotifier {
   
   /// Initialize Hive box for UserService (call this during app startup)
   static Future<void> initialize() async {
-    try {
-      _userBox = await Hive.openBox(_boxName);
-      debugPrint('✅ UserService: Hive box initialized successfully');
-    } catch (e) {
-      debugPrint('❌ UserService: Failed to initialize Hive box: $e');
-      rethrow;
-    }
+    await SimpleErrorHandler.safely(
+      () async {
+        _userBox = await Hive.openBox(_boxName);
+        debugPrint('✅ UserService: Hive box initialized successfully');
+      },
+      operationName: 'user_service_hive_initialization',
+    );
   }
   
   UserService() {
@@ -38,44 +39,48 @@ class UserService extends ChangeNotifier {
   }  
   /// Load user data with automatic migration from SharedPreferences
   Future<void> _loadUserData() async {
-    try {
-      // Try loading from Hive first
-      final hiveStreakData = _userBox.get(AppConfig.userStreakKey);
-      if (hiveStreakData != null) {
-        _weeklyStreak = List<bool>.from(hiveStreakData);
-        debugPrint('✅ UserService: Loaded streak data from Hive');
+    await SimpleErrorHandler.safe<void>(
+      () async {
+        // Try loading from Hive first
+        final hiveStreakData = _userBox.get(AppConfig.userStreakKey);
+        if (hiveStreakData != null) {
+          _weeklyStreak = List<bool>.from(hiveStreakData);
+          debugPrint('✅ UserService: Loaded streak data from Hive');
+          notifyListeners();
+          return;
+        }
+        
+        // Migration: Check SharedPreferences for existing data
+        final prefs = await SharedPreferences.getInstance();
+        final streakJson = prefs.getString(AppConfig.userStreakKey);
+        
+        if (streakJson != null) {
+          // Migrate existing data
+          final streakList = json.decode(streakJson) as List;
+          _weeklyStreak = streakList.map((item) => item as bool).toList();
+          
+          // Save to Hive and cleanup SharedPreferences
+          await _userBox.put(AppConfig.userStreakKey, _weeklyStreak);
+          await prefs.remove(AppConfig.userStreakKey);
+          
+          debugPrint('✅ UserService: Migrated streak data from SharedPreferences to Hive');
+        } else {
+          // No existing data - initialize with default values
+          _weeklyStreak = List.generate(7, (index) => index < 3);
+          await _userBox.put(AppConfig.userStreakKey, _weeklyStreak);
+          debugPrint('✅ UserService: Initialized default streak data');
+        }
+        
         notifyListeners();
-        return;
-      }
-      
-      // Migration: Check SharedPreferences for existing data
-      final prefs = await SharedPreferences.getInstance();
-      final streakJson = prefs.getString(AppConfig.userStreakKey);
-      
-      if (streakJson != null) {
-        // Migrate existing data
-        final streakList = json.decode(streakJson) as List;
-        _weeklyStreak = streakList.map((item) => item as bool).toList();
-        
-        // Save to Hive and cleanup SharedPreferences
-        await _userBox.put(AppConfig.userStreakKey, _weeklyStreak);
-        await prefs.remove(AppConfig.userStreakKey);
-        
-        debugPrint('✅ UserService: Migrated streak data from SharedPreferences to Hive');
-      } else {
-        // No existing data - initialize with default values
-        _weeklyStreak = List.generate(7, (index) => index < 3);
-        await _userBox.put(AppConfig.userStreakKey, _weeklyStreak);
-        debugPrint('✅ UserService: Initialized default streak data');
-      }
-      
-      notifyListeners();
-    } catch (e) {
-      debugPrint('❌ UserService: Error loading user data: $e');
-      // Fallback to default values
-      _weeklyStreak = List.filled(7, false);
-      notifyListeners();
-    }
+      },
+      fallbackOperation: () async {
+        debugPrint('❌ UserService: Error loading user data, using fallback');
+        // Fallback to default values
+        _weeklyStreak = List.filled(7, false);
+        notifyListeners();
+      },
+      operationName: 'load_user_data',
+    );
   }  
   /// Mark a specific day as complete in the weekly streak
   Future<void> markDayComplete(int day) async {
@@ -91,38 +96,38 @@ class UserService extends ChangeNotifier {
   
   /// Save user data to Hive storage
   Future<void> _saveUserData() async {
-    try {
-      await _userBox.put(AppConfig.userStreakKey, _weeklyStreak);
-      debugPrint('✅ UserService: Saved streak data to Hive');
-    } catch (e) {
-      debugPrint('❌ UserService: Error saving user data: $e');
-      rethrow;
-    }
+    await SimpleErrorHandler.safely(
+      () async {
+        await _userBox.put(AppConfig.userStreakKey, _weeklyStreak);
+        debugPrint('✅ UserService: Saved streak data to Hive');
+      },
+      operationName: 'save_user_data',
+    );
   }
   
   /// Reset the weekly streak (for testing purposes)
   Future<void> resetStreak() async {
-    try {
-      _weeklyStreak = List.filled(7, false);
-      await _saveUserData();
-      notifyListeners();
-      debugPrint('✅ UserService: Reset weekly streak');
-    } catch (e) {
-      debugPrint('❌ UserService: Error resetting streak: $e');
-      rethrow;
-    }
+    await SimpleErrorHandler.safely(
+      () async {
+        _weeklyStreak = List.filled(7, false);
+        await _saveUserData();
+        notifyListeners();
+        debugPrint('✅ UserService: Reset weekly streak');
+      },
+      operationName: 'reset_streak',
+    );
   }
   
   /// Reset all user data (for testing purposes)
   Future<void> resetUser() async {
-    try {
-      _weeklyStreak = List.filled(7, false);
-      await _saveUserData();
-      notifyListeners();
-      debugPrint('✅ UserService: Reset user data');
-    } catch (e) {
-      debugPrint('❌ UserService: Error resetting user: $e');
-      rethrow;
-    }
+    await SimpleErrorHandler.safely(
+      () async {
+        _weeklyStreak = List.filled(7, false);
+        await _saveUserData();
+        notifyListeners();
+        debugPrint('✅ UserService: Reset user data');
+      },
+      operationName: 'reset_user',
+    );
   }
 }

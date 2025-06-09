@@ -5,6 +5,7 @@ import '../models/flashcard.dart';
 import '../models/interview_question.dart';
 import 'http_client_service.dart';
 import 'cache_manager.dart';
+import 'simple_error_handler.dart';
 
 class DefaultDataService extends ChangeNotifier {
   static final DefaultDataService _instance = DefaultDataService._internal();
@@ -15,93 +16,101 @@ class DefaultDataService extends ChangeNotifier {
   final CacheManager _cache = CacheManager();
 
   Future<List<FlashcardSet>> loadDefaultFlashcardSets({String? userId}) async {
-    try {
-      final cachedData = await _cache.getCachedData('default_flashcard_sets');
-      if (cachedData != null && cachedData['flashcard_sets'] != null) {
-        return _parseFlashcardSets(cachedData['flashcard_sets']);
-      }
+    return await SimpleErrorHandler.safe<List<FlashcardSet>>(
+      () async {
+        final cachedData = await _cache.getCachedData('default_flashcard_sets');
+        if (cachedData != null && cachedData['flashcard_sets'] != null) {
+          return _parseFlashcardSets(cachedData['flashcard_sets']);
+        }
 
-      final queryParams = userId != null ? {'user_id': userId} : null;
-      final response = await _httpClient.get('/api/default-data/flashcard-sets', queryParams: queryParams);
+        final queryParams = userId != null ? {'user_id': userId} : null;
+        final response = await _httpClient.get('/api/default-data/flashcard-sets', queryParams: queryParams);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        await _cache.cacheData('default_flashcard_sets', {'flashcard_sets': data});
-        return _parseFlashcardSets(data);
-      }
-      return [];
-    } catch (e) {
-      return [];
-    }
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          await _cache.cacheData('default_flashcard_sets', {'flashcard_sets': data});
+          return _parseFlashcardSets(data);
+        }
+        return <FlashcardSet>[];
+      },
+      fallback: <FlashcardSet>[],
+      operationName: 'load_default_flashcard_sets',
+    );
   }
 
   Future<List<InterviewQuestion>> loadDefaultInterviewQuestions({
     String? userId, String? category, String? difficulty}) async {
-    try {
-      final cacheKey = 'interview_${category ?? 'all'}_${difficulty ?? 'all'}';
-      final cachedData = await _cache.getCachedData(cacheKey);
-      if (cachedData != null && cachedData['data'] != null) {
-        return _parseInterviewQuestions(cachedData['data']);
-      }
+    return await SimpleErrorHandler.safe<List<InterviewQuestion>>(
+      () async {
+        final cacheKey = 'interview_${category ?? 'all'}_${difficulty ?? 'all'}';
+        final cachedData = await _cache.getCachedData(cacheKey);
+        if (cachedData != null && cachedData['data'] != null) {
+          return _parseInterviewQuestions(cachedData['data']);
+        }
 
-      final queryParams = <String, String>{};
-      if (userId != null) queryParams['user_id'] = userId;
-      if (category != null) queryParams['category'] = category;
-      if (difficulty != null) queryParams['difficulty'] = difficulty;
+        final queryParams = <String, String>{};
+        if (userId != null) queryParams['user_id'] = userId;
+        if (category != null) queryParams['category'] = category;
+        if (difficulty != null) queryParams['difficulty'] = difficulty;
 
-      final response = await _httpClient.get('/api/default-data/interview-questions',
-          queryParams: queryParams.isNotEmpty ? queryParams : null);
+        final response = await _httpClient.get('/api/default-data/interview-questions',
+            queryParams: queryParams.isNotEmpty ? queryParams : null);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        await _cache.cacheData(cacheKey, {'data': data});
-        return _parseInterviewQuestions(data);
-      }
-      return [];
-    } catch (e) {
-      return [];
-    }
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          await _cache.cacheData(cacheKey, {'data': data});
+          return _parseInterviewQuestions(data);
+        }
+        return <InterviewQuestion>[];
+      },
+      fallback: <InterviewQuestion>[],
+      operationName: 'load_default_interview_questions',
+    );
   }
 
   Future<List<Map<String, dynamic>>> loadDefaultCategories() async {
-    try {
-      final cachedData = await _cache.getCachedData('categories');
-      if (cachedData != null && cachedData['data'] != null) {
-        return List<Map<String, dynamic>>.from(cachedData['data']);
-      }
+    return await SimpleErrorHandler.safe<List<Map<String, dynamic>>>(
+      () async {
+        final cachedData = await _cache.getCachedData('categories');
+        if (cachedData != null && cachedData['data'] != null) {
+          return List<Map<String, dynamic>>.from(cachedData['data']);
+        }
 
-      final response = await _httpClient.get('/api/default-data/categories');
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        await _cache.cacheData('categories', {'data': data});
-        return List<Map<String, dynamic>>.from(data);
-      }
-      return [];
-    } catch (e) {
-      return [];
-    }
+        final response = await _httpClient.get('/api/default-data/categories');
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          await _cache.cacheData('categories', {'data': data});
+          return List<Map<String, dynamic>>.from(data);
+        }
+        return <Map<String, dynamic>>[];
+      },
+      fallback: <Map<String, dynamic>>[],
+      operationName: 'load_default_categories',
+    );
   }
 
   Future<Map<String, int>> loadCategoryCounts({String? userId}) async {
-    try {
-      final cachedData = await _cache.getCachedData('category_counts');
-      if (cachedData != null && cachedData['counts'] != null) {
-        return Map<String, int>.from(cachedData['counts']);
-      }
+    return await SimpleErrorHandler.safe<Map<String, int>>(
+      () async {
+        final cachedData = await _cache.getCachedData('category_counts');
+        if (cachedData != null && cachedData['counts'] != null) {
+          return Map<String, int>.from(cachedData['counts']);
+        }
 
-      final queryParams = userId != null ? {'user_id': userId} : null;
-      final response = await _httpClient.get('/api/default-data/category-counts', queryParams: queryParams);
+        final queryParams = userId != null ? {'user_id': userId} : null;
+        final response = await _httpClient.get('/api/default-data/category-counts', queryParams: queryParams);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final counts = Map<String, int>.from(data['counts']);
-        await _cache.cacheData('category_counts', {'counts': counts});
-        return counts;
-      }
-      return _getDefaultCounts();
-    } catch (e) {
-      return _getDefaultCounts();
-    }
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final counts = Map<String, int>.from(data['counts']);
+          await _cache.cacheData('category_counts', {'counts': counts});
+          return counts;
+        }
+        return _getDefaultCounts();
+      },
+      fallback: _getDefaultCounts(),
+      operationName: 'load_category_counts',
+    );
   }
 
   Map<String, int> _getDefaultCounts() => {

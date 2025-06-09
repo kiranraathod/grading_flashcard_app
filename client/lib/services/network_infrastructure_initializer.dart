@@ -6,6 +6,7 @@ import 'enhanced_cache_manager.dart';
 import 'sync_status_tracker.dart';
 import 'http_client_service.dart';
 import 'cache_manager.dart';
+import 'simple_error_handler.dart';
 
 class NetworkInfrastructureInitializer {
   static final NetworkInfrastructureInitializer _instance = NetworkInfrastructureInitializer._internal();
@@ -36,72 +37,72 @@ class NetworkInfrastructureInitializer {
     _initializationInProgress = true;
     _initializationErrors.clear();
 
-    try {
-      AppConfig.logNetwork('Starting network infrastructure initialization', level: NetworkLogLevel.basic);
+    final result = await SimpleErrorHandler.safe<bool>(
+      () async {
+        AppConfig.logNetwork('Starting network infrastructure initialization', level: NetworkLogLevel.basic);
 
-      // Step 1: Initialize core configuration
-      AppConfig.initialize();
-      AppConfig.logNetwork('Configuration initialized', level: NetworkLogLevel.verbose);
+        // Step 1: Initialize core configuration
+        AppConfig.initialize();
+        AppConfig.logNetwork('Configuration initialized', level: NetworkLogLevel.verbose);
 
-      // Step 2: Initialize connectivity service (foundation for all network operations)
-      await _initializeWithErrorHandling(
-        'ConnectivityService',
-        () => _connectivity.initialize(),
-      );
+        // Step 2: Initialize connectivity service (foundation for all network operations)
+        await _initializeWithErrorHandling(
+          'ConnectivityService',
+          () => _connectivity.initialize(),
+        );
 
-      // Step 3: Initialize enhanced cache manager (independent component)
-      await _initializeWithErrorHandling(
-        'EnhancedCacheManager',
-        () => _enhancedCache.initialize(),
-      );
+        // Step 3: Initialize enhanced cache manager (independent component)
+        await _initializeWithErrorHandling(
+          'EnhancedCacheManager',
+          () => _enhancedCache.initialize(),
+        );
 
-      // Step 4: Initialize enhanced HTTP client (depends on connectivity)
-      await _initializeWithErrorHandling(
-        'EnhancedHttpClientService',
-        () => _enhancedHttp.initialize(),
-      );
+        // Step 4: Initialize enhanced HTTP client (depends on connectivity)
+        await _initializeWithErrorHandling(
+          'EnhancedHttpClientService',
+          () => _enhancedHttp.initialize(),
+        );
 
-      // Step 5: Initialize error recovery service (depends on connectivity and cache)
-      await _initializeWithErrorHandling(
-        'NetworkErrorRecoveryService',
-        () => Future.value(), // Error recovery doesn't need explicit initialization
-      );
+        // Step 5: Initialize error recovery service (depends on connectivity and cache)
+        await _initializeWithErrorHandling(
+          'NetworkErrorRecoveryService',
+          () => Future.value(), // Error recovery doesn't need explicit initialization
+        );
 
-      // Step 6: Initialize sync tracker (depends on connectivity, cache, and HTTP client)
-      await _initializeWithErrorHandling(
-        'SyncStatusTracker',
-        () => _syncTracker.initialize(),
-      );
+        // Step 6: Initialize sync tracker (depends on connectivity, cache, and HTTP client)
+        await _initializeWithErrorHandling(
+          'SyncStatusTracker',
+          () => _syncTracker.initialize(),
+        );
 
-      // Step 7: Initialize backward-compatible services
-      await _initializeWithErrorHandling(
-        'HttpClientService',
-        () => _httpClient.initialize(),
-      );
+        // Step 7: Initialize backward-compatible services
+        await _initializeWithErrorHandling(
+          'HttpClientService',
+          () => _httpClient.initialize(),
+        );
 
-      await _initializeWithErrorHandling(
-        'CacheManager',
-        () => _cacheManager.initialize(),
-      );
+        await _initializeWithErrorHandling(
+          'CacheManager',
+          () => _cacheManager.initialize(),
+        );
 
-      _isInitialized = _initializationErrors.isEmpty;
+        _isInitialized = _initializationErrors.isEmpty;
 
-      if (_isInitialized) {
-        AppConfig.logNetwork('Network infrastructure initialization completed successfully', level: NetworkLogLevel.basic);
-        _logInitializationSummary();
-      } else {
-        AppConfig.logNetwork('Network infrastructure initialization completed with errors: ${_initializationErrors.join(', ')}', level: NetworkLogLevel.errors);
-      }
+        if (_isInitialized) {
+          AppConfig.logNetwork('Network infrastructure initialization completed successfully', level: NetworkLogLevel.basic);
+          _logInitializationSummary();
+        } else {
+          AppConfig.logNetwork('Network infrastructure initialization completed with errors: ${_initializationErrors.join(', ')}', level: NetworkLogLevel.errors);
+        }
 
-      return _isInitialized;
+        return _isInitialized;
+      },
+      fallback: false,
+      operationName: 'network_infrastructure_initialization',
+    );
 
-    } catch (e) {
-      AppConfig.logNetwork('Critical error during network infrastructure initialization: $e', level: NetworkLogLevel.errors);
-      _initializationErrors.add('Critical initialization error: $e');
-      return false;
-    } finally {
-      _initializationInProgress = false;
-    }
+    _initializationInProgress = false;
+    return result;
   }
 
   /// Initialize a component with error handling
@@ -109,18 +110,22 @@ class NetworkInfrastructureInitializer {
     String componentName,
     Future<void> Function() initFunction,
   ) async {
-    try {
-      AppConfig.logNetwork('Initializing $componentName...', level: NetworkLogLevel.verbose);
-      await initFunction();
-      AppConfig.logNetwork('$componentName initialized successfully', level: NetworkLogLevel.verbose);
-    } catch (e) {
-      final errorMessage = 'Failed to initialize $componentName: $e';
-      AppConfig.logNetwork(errorMessage, level: NetworkLogLevel.errors);
-      _initializationErrors.add(errorMessage);
-      
-      // Don't throw - allow other components to initialize
-      AppConfig.logNetwork('Continuing initialization despite $componentName failure', level: NetworkLogLevel.basic);
-    }
+    await SimpleErrorHandler.safe<void>(
+      () async {
+        AppConfig.logNetwork('Initializing $componentName...', level: NetworkLogLevel.verbose);
+        await initFunction();
+        AppConfig.logNetwork('$componentName initialized successfully', level: NetworkLogLevel.verbose);
+      },
+      fallbackOperation: () async {
+        final errorMessage = 'Failed to initialize $componentName';
+        AppConfig.logNetwork(errorMessage, level: NetworkLogLevel.errors);
+        _initializationErrors.add(errorMessage);
+        
+        // Don't throw - allow other components to initialize
+        AppConfig.logNetwork('Continuing initialization despite $componentName failure', level: NetworkLogLevel.basic);
+      },
+      operationName: 'initialize_$componentName',
+    );
   }
 
   /// Log initialization summary
@@ -150,33 +155,35 @@ class NetworkInfrastructureInitializer {
     final results = <String, bool>{};
 
     // Connectivity check
-    try {
-      results['connectivity'] = _connectivity.hasInternetConnection;
-    } catch (e) {
-      results['connectivity'] = false;
-    }
+    results['connectivity'] = await SimpleErrorHandler.safe<bool>(
+      () async => _connectivity.hasInternetConnection,
+      fallback: false,
+      operationName: 'connectivity_health_check',
+    );
 
     // HTTP client check
-    try {
-      results['httpClient'] = await _httpClient.checkConnectivity();
-    } catch (e) {
-      results['httpClient'] = false;
-    }
+    results['httpClient'] = await SimpleErrorHandler.safe<bool>(
+      () => _httpClient.checkConnectivity(),
+      fallback: false,
+      operationName: 'http_client_health_check',
+    );
 
     // Enhanced HTTP client check
-    try {
-      results['enhancedHttpClient'] = await _enhancedHttp.healthCheck();
-    } catch (e) {
-      results['enhancedHttpClient'] = false;
-    }
+    results['enhancedHttpClient'] = await SimpleErrorHandler.safe<bool>(
+      () => _enhancedHttp.healthCheck(),
+      fallback: false,
+      operationName: 'enhanced_http_client_health_check',
+    );
 
     // Cache availability check
-    try {
-      await _cacheManager.getCachedData('health_check_test');
-      results['cache'] = true;
-    } catch (e) {
-      results['cache'] = false;
-    }
+    results['cache'] = await SimpleErrorHandler.safe<bool>(
+      () async {
+        await _cacheManager.getCachedData('health_check_test');
+        return true;
+      },
+      fallback: false,
+      operationName: 'cache_health_check',
+    );
 
     return results;
   }

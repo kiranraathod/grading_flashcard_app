@@ -3,7 +3,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/config.dart';
-import '../models/app_error.dart';
+import 'simple_error_handler.dart';
 
 enum NetworkStatus {
   unknown,
@@ -82,52 +82,51 @@ class ConnectivityService extends ChangeNotifier {
 
   /// Initialize the connectivity service
   Future<void> initialize() async {
-    try {
-      AppConfig.logNetwork('Initializing ConnectivityService', level: NetworkLogLevel.basic);
-      
-      // Configure connection checker
-      _connectionChecker.checkInterval = AppConfig.networkCheckInterval;
-      
-      // Check initial connectivity
-      await _checkInitialConnectivity();
-      
-      // Start monitoring
-      _startConnectivityMonitoring();
-      _startInternetMonitoring();
-      _startNetworkQualityMonitoring();
-      _startPeriodicHealthCheck();
-      
-      AppConfig.logNetwork('ConnectivityService initialized successfully', level: NetworkLogLevel.basic);
-    } catch (e, stackTrace) {
-      AppConfig.logNetwork('Failed to initialize ConnectivityService: $e', level: NetworkLogLevel.errors);
-      throw AppError.network(
-        'Failed to initialize connectivity monitoring',
-        details: e.toString(),
-        exception: e,
-        stackTrace: stackTrace,
-      );
-    }
+    await SimpleErrorHandler.safely(
+      () async {
+        AppConfig.logNetwork('Initializing ConnectivityService', level: NetworkLogLevel.basic);
+        
+        // Configure connection checker
+        _connectionChecker.checkInterval = AppConfig.networkCheckInterval;
+        
+        // Check initial connectivity
+        await _checkInitialConnectivity();
+        
+        // Start monitoring
+        _startConnectivityMonitoring();
+        _startInternetMonitoring();
+        _startNetworkQualityMonitoring();
+        _startPeriodicHealthCheck();
+        
+        AppConfig.logNetwork('ConnectivityService initialized successfully', level: NetworkLogLevel.basic);
+      },
+      operationName: 'connectivity_service_initialization',
+    );
   }
 
   /// Check initial connectivity state
   Future<void> _checkInitialConnectivity() async {
-    try {
-      final connectivityResults = await _connectivity.checkConnectivity();
-      final hasInternet = await _connectionChecker.hasConnection;
-      
-      _updateConnectivityType(connectivityResults);
-      _isOnline = hasInternet;
-      _updateNetworkStatus();
-      
-      AppConfig.logNetwork(
-        'Initial connectivity: Type=${_currentType.name}, Online=$_isOnline, Status=${_currentStatus.name}',
-        level: NetworkLogLevel.basic
-      );
-    } catch (e) {
-      AppConfig.logNetwork('Error checking initial connectivity: $e', level: NetworkLogLevel.errors);
-      _currentStatus = NetworkStatus.unknown;
-      _isOnline = false;
-    }
+    await SimpleErrorHandler.safe<void>(
+      () async {
+        final connectivityResults = await _connectivity.checkConnectivity();
+        final hasInternet = await _connectionChecker.hasConnection;
+        
+        _updateConnectivityType(connectivityResults);
+        _isOnline = hasInternet;
+        _updateNetworkStatus();
+        
+        AppConfig.logNetwork(
+          'Initial connectivity: Type=${_currentType.name}, Online=$_isOnline, Status=${_currentStatus.name}',
+          level: NetworkLogLevel.basic
+        );
+      },
+      fallbackOperation: () async {
+        AppConfig.logNetwork('Error checking initial connectivity, using defaults', level: NetworkLogLevel.errors);
+        _currentStatus = NetworkStatus.unknown;
+        _isOnline = false;
+      },
+      operationName: 'check_initial_connectivity',
+    );
   }
 
   /// Start monitoring connectivity changes
@@ -224,46 +223,50 @@ class ConnectivityService extends ChangeNotifier {
   Future<void> _performQualityCheck() async {
     if (!_isOnline) return;
 
-    try {
-      AppConfig.logNetwork('Performing network quality check', level: NetworkLogLevel.verbose);
-      
-      final stopwatch = Stopwatch()..start();
-      
-      // Use a web-safe approach for quality check
-      final hasConnection = await _connectionChecker.hasConnection;
-      
-      stopwatch.stop();
-      
-      if (hasConnection) {
-        final latency = stopwatch.elapsedMilliseconds.toDouble();
-        final bandwidth = _estimateBandwidth(latency);
-        final status = _assessNetworkStatus(latency, bandwidth);
+    await SimpleErrorHandler.safe<void>(
+      () async {
+        AppConfig.logNetwork('Performing network quality check', level: NetworkLogLevel.verbose);
         
-        final quality = NetworkQuality(
-          latency: latency,
-          bandwidth: bandwidth,
-          status: status,
+        final stopwatch = Stopwatch()..start();
+        
+        // Use a web-safe approach for quality check
+        final hasConnection = await _connectionChecker.hasConnection;
+        
+        stopwatch.stop();
+        
+        if (hasConnection) {
+          final latency = stopwatch.elapsedMilliseconds.toDouble();
+          final bandwidth = _estimateBandwidth(latency);
+          final status = _assessNetworkStatus(latency, bandwidth);
+          
+          final quality = NetworkQuality(
+            latency: latency,
+            bandwidth: bandwidth,
+            status: status,
+            timestamp: DateTime.now(),
+          );
+          
+          _updateQuality(quality);
+          
+          AppConfig.logNetwork(
+            'Network quality: Latency=${latency.toStringAsFixed(1)}ms, Status=${status.name}',
+            level: NetworkLogLevel.verbose
+          );
+        }
+      },
+      fallbackOperation: () async {
+        AppConfig.logNetwork('Quality check failed, using poor quality fallback', level: NetworkLogLevel.verbose);
+        
+        // Update with poor quality on failure
+        _updateQuality(NetworkQuality(
+          latency: 999999,
+          bandwidth: 0,
+          status: NetworkStatus.poor,
           timestamp: DateTime.now(),
-        );
-        
-        _updateQuality(quality);
-        
-        AppConfig.logNetwork(
-          'Network quality: Latency=${latency.toStringAsFixed(1)}ms, Status=${status.name}',
-          level: NetworkLogLevel.verbose
-        );
-      }
-    } catch (e) {
-      AppConfig.logNetwork('Quality check failed: $e', level: NetworkLogLevel.verbose);
-      
-      // Update with poor quality on failure
-      _updateQuality(NetworkQuality(
-        latency: 999999,
-        bandwidth: 0,
-        status: NetworkStatus.poor,
-        timestamp: DateTime.now(),
-      ));
-    }
+        ));
+      },
+      operationName: 'network_quality_check',
+    );
   }
 
   /// Update quality and maintain history
@@ -300,24 +303,25 @@ class ConnectivityService extends ChangeNotifier {
 
   /// Perform comprehensive health check
   Future<bool> _performHealthCheck() async {
-    try {
-      AppConfig.logNetwork('Performing connectivity health check', level: NetworkLogLevel.verbose);
-      
-      // Check multiple connectivity indicators
-      final connectivityResult = await _connectivity.checkConnectivity();
-      final hasInternet = await _connectionChecker.hasConnection;
-      
-      // Update state
-      _updateConnectivityType(connectivityResult);
-      _isOnline = hasInternet;
-      _updateNetworkStatus();
-      
-      notifyListeners();
-      return _isOnline;
-    } catch (e) {
-      AppConfig.logNetwork('Health check failed: $e', level: NetworkLogLevel.errors);
-      return false;
-    }
+    return await SimpleErrorHandler.safe<bool>(
+      () async {
+        AppConfig.logNetwork('Performing connectivity health check', level: NetworkLogLevel.verbose);
+        
+        // Check multiple connectivity indicators
+        final connectivityResult = await _connectivity.checkConnectivity();
+        final hasInternet = await _connectionChecker.hasConnection;
+        
+        // Update state
+        _updateConnectivityType(connectivityResult);
+        _isOnline = hasInternet;
+        _updateNetworkStatus();
+        
+        notifyListeners();
+        return _isOnline;
+      },
+      fallback: false,
+      operationName: 'connectivity_health_check',
+    );
   }
 
   /// Get average quality metrics

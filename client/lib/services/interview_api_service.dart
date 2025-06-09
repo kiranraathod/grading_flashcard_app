@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../models/interview_answer.dart';
 import '../models/app_error.dart';
 import '../services/error_service.dart';
+import '../services/simple_error_handler.dart';
 import '../utils/config.dart';
 import '../web/proxy.dart';
 
@@ -25,87 +26,73 @@ class InterviewApiService {
       level: NetworkLogLevel.verbose
     );
     
-    try {
-      final interviewGradeEndpoint = AppConfig.endpoints['interviewGrade'] ?? '/api/interview-grade';
-      
-      AppConfig.logNetwork(
-        'Making API request to $interviewGradeEndpoint',
-        level: NetworkLogLevel.basic
-      );
-      
-      final response = await client.post(
-        interviewGradeEndpoint,
-        body: {
-          'questionId': answer.questionId,
-          'questionText': answer.questionText,
-          'userAnswer': answer.userAnswer,
-          'category': answer.category,
-          'difficulty': answer.difficulty,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+    return await SimpleErrorHandler.safe<InterviewAnswer>(
+      () async {
+        final interviewGradeEndpoint = AppConfig.endpoints['interviewGrade'] ?? '/api/interview-grade';
         
-        // Validate response data
-        if (validateResponseData(responseData)) {
-          return InterviewAnswer(
-            questionId: answer.questionId,
-            questionText: answer.questionText,
-            userAnswer: answer.userAnswer,
-            category: answer.category,
-            difficulty: answer.difficulty,
-            score: responseData['score'],
-            feedback: responseData['feedback'],
-            suggestions: List<String>.from(responseData['suggestions']),
-          );
+        AppConfig.logNetwork(
+          'Making API request to $interviewGradeEndpoint',
+          level: NetworkLogLevel.basic
+        );
+        
+        final response = await client.post(
+          interviewGradeEndpoint,
+          body: {
+            'questionId': answer.questionId,
+            'questionText': answer.questionText,
+            'userAnswer': answer.userAnswer,
+            'category': answer.category,
+            'difficulty': answer.difficulty,
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> responseData = jsonDecode(response.body);
+          
+          // Validate response data
+          if (validateResponseData(responseData)) {
+            return InterviewAnswer(
+              questionId: answer.questionId,
+              questionText: answer.questionText,
+              userAnswer: answer.userAnswer,
+              category: answer.category,
+              difficulty: answer.difficulty,
+              score: responseData['score'],
+              feedback: responseData['feedback'],
+              suggestions: List<String>.from(responseData['suggestions']),
+            );
+          } else {
+            final error = AppError.api(
+              'Invalid response format from server',
+              code: 'invalid_response',
+              severity: ErrorSeverity.warning,
+              context: {
+                'endpoint': interviewGradeEndpoint,
+                'responseData': responseData,
+              },
+            );
+            _errorService.reportError(error);
+            return createFallbackAnswer(answer);
+          }
         } else {
           final error = AppError.api(
-            'Invalid response format from server',
-            code: 'invalid_response',
+            'Server returned an error',
+            code: 'server_error',
             severity: ErrorSeverity.warning,
+            details: 'Status code: ${response.statusCode}',
             context: {
               'endpoint': interviewGradeEndpoint,
-              'responseData': responseData,
+              'statusCode': response.statusCode,
+              'responseBody': response.body,
             },
           );
           _errorService.reportError(error);
           return createFallbackAnswer(answer);
         }
-      } else {
-        final error = AppError.api(
-          'Server returned an error',
-          code: 'server_error',
-          severity: ErrorSeverity.warning,
-          details: 'Status code: ${response.statusCode}',
-          context: {
-            'endpoint': interviewGradeEndpoint,
-            'statusCode': response.statusCode,
-            'responseBody': response.body,
-          },
-        );
-        _errorService.reportError(error);
-        return createFallbackAnswer(answer);
-      }
-    } catch (e, stackTrace) {      
-      // If we already have a structured error, just propagate it
-      if (e is AppError) {
-        return createFallbackAnswer(answer);
-      }
-      
-      // Otherwise, create a new error
-      final error = AppError.unknown(
-        e,
-        stackTrace: stackTrace,
-        context: {
-          'endpoint': AppConfig.endpoints['interviewGrade'],
-          'questionId': answer.questionId,
-          'questionText': answer.questionText,
-        },
-      );
-      _errorService.reportError(error);
-      return createFallbackAnswer(answer);
-    }
+      },
+      fallback: createFallbackAnswer(answer),
+      operationName: 'grade_interview_answer',
+    );
   }
 
   // Method to grade multiple interview answers in a batch
@@ -126,90 +113,81 @@ class InterviewApiService {
       return answers; // Return original answers without grading
     }
 
-    try {
-      final batchEndpoint = AppConfig.endpoints['interviewGradeBatch'] ?? '/api/interview-grade-batch';
-      
-      AppConfig.logNetwork(
-        'Making batch API request to $batchEndpoint',
-        level: NetworkLogLevel.basic
-      );
-      
-      // Prepare batch request body
-      final List<Map<String, dynamic>> requestItems = nonEmptyAnswers.map((answer) => {
-        'questionId': answer.questionId,
-        'questionText': answer.questionText,
-        'userAnswer': answer.userAnswer,
-        'category': answer.category,
-        'difficulty': answer.difficulty,
-      }).toList();
-      
-      final response = await client.post(
-        batchEndpoint,
-        body: {'answers': requestItems},
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(response.body);
+    return await SimpleErrorHandler.safe<List<InterviewAnswer>>(
+      () async {
+        final batchEndpoint = AppConfig.endpoints['interviewGradeBatch'] ?? '/api/interview-grade-batch';
+        
         AppConfig.logNetwork(
-          'Received responses for ${responseData.length} answers',
-          level: NetworkLogLevel.verbose
+          'Making batch API request to $batchEndpoint',
+          level: NetworkLogLevel.basic
         );
-
-        // Create a map of the original answers by questionId for easy lookup
-        final Map<String, InterviewAnswer> answerMap = {
-          for (var answer in answers) answer.questionId: answer
-        };
         
-        // Process the graded answers and update the original list
-        for (int i = 0; i < responseData.length; i++) {
-          final Map<String, dynamic> gradeData = responseData[i];
-          final String questionId = gradeData['questionId'];
-          
-          if (answerMap.containsKey(questionId) && validateResponseData(gradeData)) {
-            // Update the answer with grading results
-            answerMap[questionId] = InterviewAnswer(
-              questionId: questionId,
-              questionText: answerMap[questionId]!.questionText,
-              userAnswer: answerMap[questionId]!.userAnswer,
-              category: answerMap[questionId]!.category,
-              difficulty: answerMap[questionId]!.difficulty,
-              score: gradeData['score'],
-              feedback: gradeData['feedback'],
-              suggestions: List<String>.from(gradeData['suggestions']),
-            );
-          }
-        }
-        
-        // Return the updated list of answers (preserving the original order)
-        return answers.map((original) {
-          return answerMap[original.questionId] ?? original;
+        // Prepare batch request body
+        final List<Map<String, dynamic>> requestItems = nonEmptyAnswers.map((answer) => {
+          'questionId': answer.questionId,
+          'questionText': answer.questionText,
+          'userAnswer': answer.userAnswer,
+          'category': answer.category,
+          'difficulty': answer.difficulty,
         }).toList();
-      } else {
-        AppConfig.logNetwork(
-          'API batch error: ${response.statusCode} - ${response.body}',
-          level: NetworkLogLevel.errors
+        
+        final response = await client.post(
+          batchEndpoint,
+          body: {'answers': requestItems},
         );
-        throw AppError.api(
-          'Server returned an error for batch grading',
-          code: 'server_error',
-          severity: ErrorSeverity.warning,
-          details: 'Status code: ${response.statusCode}',
-        );
-      }
-    } catch (e, stackTrace) {
-      AppConfig.logNetwork(
-        'Error during batch API call: $e',
-        level: NetworkLogLevel.errors
-      );
-      throw AppError.unknown(
-        e,
-        stackTrace: stackTrace,
-        context: {
-          'endpoint': AppConfig.endpoints['interviewGradeBatch'],
-          'answerCount': nonEmptyAnswers.length,
-        },
-      );
-    }
+
+        if (response.statusCode == 200) {
+          final List<dynamic> responseData = jsonDecode(response.body);
+          AppConfig.logNetwork(
+            'Received responses for ${responseData.length} answers',
+            level: NetworkLogLevel.verbose
+          );
+
+          // Create a map of the original answers by questionId for easy lookup
+          final Map<String, InterviewAnswer> answerMap = {
+            for (var answer in answers) answer.questionId: answer
+          };
+          
+          // Process the graded answers and update the original list
+          for (int i = 0; i < responseData.length; i++) {
+            final Map<String, dynamic> gradeData = responseData[i];
+            final String questionId = gradeData['questionId'];
+            
+            if (answerMap.containsKey(questionId) && validateResponseData(gradeData)) {
+              // Update the answer with grading results
+              answerMap[questionId] = InterviewAnswer(
+                questionId: questionId,
+                questionText: answerMap[questionId]!.questionText,
+                userAnswer: answerMap[questionId]!.userAnswer,
+                category: answerMap[questionId]!.category,
+                difficulty: answerMap[questionId]!.difficulty,
+                score: gradeData['score'],
+                feedback: gradeData['feedback'],
+                suggestions: List<String>.from(gradeData['suggestions']),
+              );
+            }
+          }
+          
+          // Return the updated list of answers (preserving the original order)
+          return answers.map((original) {
+            return answerMap[original.questionId] ?? original;
+          }).toList();
+        } else {
+          AppConfig.logNetwork(
+            'API batch error: ${response.statusCode} - ${response.body}',
+            level: NetworkLogLevel.errors
+          );
+          throw AppError.api(
+            'Server returned an error for batch grading',
+            code: 'server_error',
+            severity: ErrorSeverity.warning,
+            details: 'Status code: ${response.statusCode}',
+          );
+        }
+      },
+      fallback: answers, // Return original answers as fallback
+      operationName: 'grade_batch_answers',
+    );
   }
 
   // Helper method to validate response data

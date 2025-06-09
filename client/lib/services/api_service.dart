@@ -5,6 +5,7 @@ import '../models/app_error.dart';
 import '../services/error_service.dart';
 import '../utils/config.dart';
 import '../web/proxy.dart';
+import 'simple_error_handler.dart';
 
 class ApiService {
   final ProxyClient client;
@@ -34,85 +35,71 @@ class ApiService {
       return _createSmartFallbackAnswer(answer);
     }
 
-    try {
-      final gradeEndpoint = AppConfig.endpoints['grade'] ?? '/api/grade';
-      
-      AppConfig.logNetwork(
-        'Making API request to $gradeEndpoint',
-        level: NetworkLogLevel.basic
-      );
-      
-      final response = await client.post(
-        gradeEndpoint,
-        body: {
-          'flashcardId': answer.flashcardId,
-          'question': answer.question,
-          'userAnswer': answer.userAnswer,
-          'correctAnswer': answer.correctAnswer,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+    return await SimpleErrorHandler.safe<answer_model.Answer>(
+      () async {
+        final gradeEndpoint = AppConfig.endpoints['grade'] ?? '/api/grade';
         
-        // Validate response data
-        if (_validateResponseData(responseData)) {
-          return answer_model.Answer(
-            flashcardId: answer.flashcardId,
-            question: answer.question,
-            userAnswer: answer.userAnswer,
-            correctAnswer: answer.correctAnswer,
-            grade: responseData['grade'],
-            feedback: responseData['feedback'],
-            suggestions: List<String>.from(responseData['suggestions']),
-          );
+        AppConfig.logNetwork(
+          'Making API request to $gradeEndpoint',
+          level: NetworkLogLevel.basic
+        );
+        
+        final response = await client.post(
+          gradeEndpoint,
+          body: {
+            'flashcardId': answer.flashcardId,
+            'question': answer.question,
+            'userAnswer': answer.userAnswer,
+            'correctAnswer': answer.correctAnswer,
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> responseData = jsonDecode(response.body);
+          
+          // Validate response data
+          if (_validateResponseData(responseData)) {
+            return answer_model.Answer(
+              flashcardId: answer.flashcardId,
+              question: answer.question,
+              userAnswer: answer.userAnswer,
+              correctAnswer: answer.correctAnswer,
+              grade: responseData['grade'],
+              feedback: responseData['feedback'],
+              suggestions: List<String>.from(responseData['suggestions']),
+            );
+          } else {
+            final error = AppError.api(
+              'Invalid response format from server',
+              code: 'invalid_response',
+              severity: ErrorSeverity.warning,
+              context: {
+                'endpoint': gradeEndpoint,
+                'responseData': responseData,
+              },
+            );
+            _errorService.reportError(error);
+            return _createSmartFallbackAnswer(answer);
+          }
         } else {
           final error = AppError.api(
-            'Invalid response format from server',
-            code: 'invalid_response',
+            'Server returned an error',
+            code: 'server_error',
             severity: ErrorSeverity.warning,
+            details: 'Status code: ${response.statusCode}',
             context: {
               'endpoint': gradeEndpoint,
-              'responseData': responseData,
+              'statusCode': response.statusCode,
+              'responseBody': response.body,
             },
           );
           _errorService.reportError(error);
           return _createSmartFallbackAnswer(answer);
         }
-      } else {
-        final error = AppError.api(
-          'Server returned an error',
-          code: 'server_error',
-          severity: ErrorSeverity.warning,
-          details: 'Status code: ${response.statusCode}',
-          context: {
-            'endpoint': gradeEndpoint,
-            'statusCode': response.statusCode,
-            'responseBody': response.body,
-          },
-        );
-        _errorService.reportError(error);
-        return _createSmartFallbackAnswer(answer);
-      }
-    } catch (e, stackTrace) {
-      // If we already have a structured error, just propagate it
-      if (e is AppError) {
-        return _createSmartFallbackAnswer(answer);
-      }
-      
-      // Otherwise, create a new error
-      final error = AppError.unknown(
-        e,
-        stackTrace: stackTrace,
-        context: {
-          'endpoint': AppConfig.endpoints['grade'],
-          'flashcardId': answer.flashcardId,
-          'question': answer.question,
-        },
-      );
-      _errorService.reportError(error);
-      return _createSmartFallbackAnswer(answer);
-    }
+      },
+      fallback: _createSmartFallbackAnswer(answer),
+      operationName: 'grade_answer_api',
+    );
   }
 
   bool _validateResponseData(Map<String, dynamic> data) {

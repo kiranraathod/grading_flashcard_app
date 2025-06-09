@@ -4,6 +4,7 @@ import '../utils/config.dart';
 import 'connectivity_service.dart';
 import 'enhanced_cache_manager.dart';
 import 'enhanced_http_client_service.dart';
+import 'simple_error_handler.dart';
 
 enum SyncStatus {
   idle,
@@ -167,64 +168,72 @@ class SyncStatusTracker extends ChangeNotifier {
     int successCount = 0;
     int failureCount = 0;
 
-    try {
-      AppConfig.logNetwork('Starting sync operation', level: NetworkLogLevel.basic);
-      
-      final itemsToSync = List<SyncItem>.from(_syncQueue);
-      
-      for (final item in itemsToSync) {
-        try {
-          await _syncSingleItem(item);
-          _syncQueue.remove(item);
-          _completedSyncs.add(item);
-          successCount++;
-          
-          AppConfig.logNetwork('Synced item: ${item.id}', level: NetworkLogLevel.verbose);
-        } catch (e) {
-          final updatedItem = item.copyWith(
-            retryCount: item.retryCount + 1,
-            lastAttempt: DateTime.now(),
-            error: e.toString(),
+    await SimpleErrorHandler.safe<void>(
+      () async {
+        AppConfig.logNetwork('Starting sync operation', level: NetworkLogLevel.basic);
+        
+        final itemsToSync = List<SyncItem>.from(_syncQueue);
+        
+        for (final item in itemsToSync) {
+          await SimpleErrorHandler.safe<void>(
+            () async {
+              await _syncSingleItem(item);
+              _syncQueue.remove(item);
+              _completedSyncs.add(item);
+              successCount++;
+              
+              AppConfig.logNetwork('Synced item: ${item.id}', level: NetworkLogLevel.verbose);
+            },
+            fallbackOperation: () async {
+              final updatedItem = item.copyWith(
+                retryCount: item.retryCount + 1,
+                lastAttempt: DateTime.now(),
+                error: 'sync_failed',
+              );
+              
+              final index = _syncQueue.indexOf(item);
+              if (index != -1) {
+                _syncQueue[index] = updatedItem;
+              }
+              
+              if (updatedItem.retryCount >= maxRetries) {
+                _syncQueue.remove(updatedItem);
+                AppConfig.logNetwork('Max retries exceeded for: ${item.id}', level: NetworkLogLevel.errors);
+              }
+              
+              failureCount++;
+              AppConfig.logNetwork('Failed to sync item: ${item.id}', level: NetworkLogLevel.errors);
+            },
+            operationName: 'sync_individual_item_${item.id}',
           );
-          
-          final index = _syncQueue.indexOf(item);
-          if (index != -1) {
-            _syncQueue[index] = updatedItem;
-          }
-          
-          if (updatedItem.retryCount >= maxRetries) {
-            _syncQueue.remove(updatedItem);
-            AppConfig.logNetwork('Max retries exceeded for: ${item.id}', level: NetworkLogLevel.errors);
-          }
-          
-          failureCount++;
-          AppConfig.logNetwork('Failed to sync item: ${item.id} - $e', level: NetworkLogLevel.errors);
         }
-      }
 
-      // Update status based on results
-      if (failureCount == 0) {
-        _currentStatus = SyncStatus.success;
-      } else if (successCount > 0) {
-        _currentStatus = SyncStatus.partial;
-      } else {
+        // Update status based on results
+        if (failureCount == 0) {
+          _currentStatus = SyncStatus.success;
+        } else if (successCount > 0) {
+          _currentStatus = SyncStatus.partial;
+        } else {
+          _currentStatus = SyncStatus.failed;
+        }
+
+        await _saveSyncQueue();
+        
+        AppConfig.logNetwork(
+          'Sync completed: $successCount success, $failureCount failed',
+          level: NetworkLogLevel.basic
+        );
+      },
+      fallbackOperation: () async {
         _currentStatus = SyncStatus.failed;
-      }
+        AppConfig.logNetwork('Sync operation failed', level: NetworkLogLevel.errors);
+      },
+      operationName: 'perform_sync_operation',
+    );
 
-      await _saveSyncQueue();
-      
-      AppConfig.logNetwork(
-        'Sync completed: $successCount success, $failureCount failed',
-        level: NetworkLogLevel.basic
-      );
-      
-    } catch (e) {
-      _currentStatus = SyncStatus.failed;
-      AppConfig.logNetwork('Sync operation failed: $e', level: NetworkLogLevel.errors);
-    } finally {
-      _isSyncing = false;
-      notifyListeners();
-    }
+    // Finally block equivalent
+    _isSyncing = false;
+    notifyListeners();
   }
 
   /// Sync a single item
@@ -281,36 +290,44 @@ class SyncStatusTracker extends ChangeNotifier {
 
   /// Save sync queue to persistent storage
   Future<void> _saveSyncQueue() async {
-    try {
-      final data = {
-        'syncQueue': _syncQueue.map((item) => item.toJson()).toList(),
-        'completedSyncs': _completedSyncs.map((item) => item.toJson()).toList(),
-      };
-      await _cache.cacheData('sync_queue', data);
-    } catch (e) {
-      AppConfig.logNetwork('Failed to save sync queue: $e', level: NetworkLogLevel.errors);
-    }
+    await SimpleErrorHandler.safe<void>(
+      () async {
+        final data = {
+          'syncQueue': _syncQueue.map((item) => item.toJson()).toList(),
+          'completedSyncs': _completedSyncs.map((item) => item.toJson()).toList(),
+        };
+        await _cache.cacheData('sync_queue', data);
+      },
+      fallbackOperation: () async {
+        AppConfig.logNetwork('Failed to save sync queue', level: NetworkLogLevel.errors);
+      },
+      operationName: 'save_sync_queue',
+    );
   }
 
   /// Load sync queue from persistent storage
   Future<void> _loadSyncQueue() async {
-    try {
-      final data = await _cache.getCachedData('sync_queue');
-      if (data != null) {
-        if (data['syncQueue'] != null) {
-          _syncQueue.addAll(
-            (data['syncQueue'] as List).map((item) => SyncItem.fromJson(item))
-          );
+    await SimpleErrorHandler.safe<void>(
+      () async {
+        final data = await _cache.getCachedData('sync_queue');
+        if (data != null) {
+          if (data['syncQueue'] != null) {
+            _syncQueue.addAll(
+              (data['syncQueue'] as List).map((item) => SyncItem.fromJson(item))
+            );
+          }
+          if (data['completedSyncs'] != null) {
+            _completedSyncs.addAll(
+              (data['completedSyncs'] as List).map((item) => SyncItem.fromJson(item))
+            );
+          }
         }
-        if (data['completedSyncs'] != null) {
-          _completedSyncs.addAll(
-            (data['completedSyncs'] as List).map((item) => SyncItem.fromJson(item))
-          );
-        }
-      }
-    } catch (e) {
-      AppConfig.logNetwork('Failed to load sync queue: $e', level: NetworkLogLevel.errors);
-    }
+      },
+      fallbackOperation: () async {
+        AppConfig.logNetwork('Failed to load sync queue', level: NetworkLogLevel.errors);
+      },
+      operationName: 'load_sync_queue',
+    );
   }
 
   /// Manually trigger sync

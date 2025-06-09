@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'default_data_service.dart';
 import '../utils/category_theme.dart'; // Import new theme system
+import 'simple_error_handler.dart';
 
 class CategoryConfigService extends ChangeNotifier {
   static final CategoryConfigService _instance = CategoryConfigService._internal();
@@ -13,20 +14,24 @@ class CategoryConfigService extends ChangeNotifier {
   List<Map<String, dynamic>> get categories => _categories;
 
   Future<void> loadCategories() async {
-    try {
-      final serverCategories = await _defaultDataService.loadDefaultCategories();
-      _categories = serverCategories.map((cat) => {
-        'id': cat['id'],
-        'name': cat['name'],
-        // USE CLIENT-SIDE THEME SYSTEM INSTEAD OF HARDCODED VALUES:
-        'color': CategoryTheme.getColor(cat['id']),
-        'icon': CategoryTheme.getIcon(cat['id']),
-        'subtopics': List<String>.from(cat['subtopics'] ?? []),
-      }).toList();
-      notifyListeners();
-    } catch (e) {
-      _loadFallbackCategories();
-    }
+    await SimpleErrorHandler.safe<void>(
+      () async {
+        final serverCategories = await _defaultDataService.loadDefaultCategories();
+        _categories = serverCategories.map((cat) => {
+          'id': cat['id'],
+          'name': cat['name'],
+          // USE CLIENT-SIDE THEME SYSTEM INSTEAD OF HARDCODED VALUES:
+          'color': CategoryTheme.getColor(cat['id']),
+          'icon': CategoryTheme.getIcon(cat['id']),
+          'subtopics': List<String>.from(cat['subtopics'] ?? []),
+        }).toList();
+        notifyListeners();
+      },
+      fallbackOperation: () async {
+        _loadFallbackCategories();
+      },
+      operationName: 'load_categories',
+    );
   }
 
   List<String> getSubtopics(String categoryId) {

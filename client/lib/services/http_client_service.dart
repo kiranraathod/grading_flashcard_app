@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart' show Response;
 import '../utils/config.dart';
 import '../models/app_error.dart';
 import 'enhanced_http_client_service.dart';
 import 'connectivity_service.dart';
+import 'simple_error_handler.dart';
 
 class HttpClientService {
   static final HttpClientService _instance = HttpClientService._internal();
@@ -21,16 +23,20 @@ class HttpClientService {
   Future<void> initialize() async {
     if (_isInitialized) return;
     
-    try {
-      await _enhancedClient.initialize();
-      await _connectivity.initialize();
-      _isInitialized = true;
-      AppConfig.logNetwork('HttpClientService initialized with enhanced features', level: NetworkLogLevel.basic);
-    } catch (e) {
-      AppConfig.logNetwork('Failed to initialize enhanced client, falling back to basic: $e', level: NetworkLogLevel.errors);
-      _useEnhancedClient = false;
-      _isInitialized = true;
-    }
+    await SimpleErrorHandler.safe<void>(
+      () async {
+        await _enhancedClient.initialize();
+        await _connectivity.initialize();
+        _isInitialized = true;
+        AppConfig.logNetwork('HttpClientService initialized with enhanced features', level: NetworkLogLevel.basic);
+      },
+      fallbackOperation: () async {
+        AppConfig.logNetwork('Failed to initialize enhanced client, falling back to basic', level: NetworkLogLevel.errors);
+        _useEnhancedClient = false;
+        _isInitialized = true;
+      },
+      operationName: 'http_client_service_initialization',
+    );
   }
 
   /// Enhanced GET request with automatic fallback
@@ -38,13 +44,17 @@ class HttpClientService {
     await _ensureInitialized();
     
     if (_useEnhancedClient) {
-      try {
-        final response = await _enhancedClient.get(endpoint, queryParameters: queryParams);
-        return _convertDioResponse(response);
-      } catch (e) {
-        AppConfig.logNetwork('Enhanced client failed, falling back: $e', level: NetworkLogLevel.verbose);
-        return await _fallbackGet(endpoint, queryParams);
-      }
+      return await SimpleErrorHandler.safe<http.Response>(
+        () async {
+          final response = await _enhancedClient.get(endpoint, queryParameters: queryParams);
+          return _convertDioResponse(response);
+        },
+        fallbackOperation: () async {
+          AppConfig.logNetwork('Enhanced client failed, falling back', level: NetworkLogLevel.verbose);
+          return await _fallbackGet(endpoint, queryParams);
+        },
+        operationName: 'enhanced_http_get',
+      );
     } else {
       return await _fallbackGet(endpoint, queryParams);
     }
@@ -55,13 +65,17 @@ class HttpClientService {
     await _ensureInitialized();
     
     if (_useEnhancedClient) {
-      try {
-        final response = await _enhancedClient.post(endpoint, data: body);
-        return _convertDioResponse(response);
-      } catch (e) {
-        AppConfig.logNetwork('Enhanced client failed, falling back: $e', level: NetworkLogLevel.verbose);
-        return await _fallbackPost(endpoint, body);
-      }
+      return await SimpleErrorHandler.safe<http.Response>(
+        () async {
+          final response = await _enhancedClient.post(endpoint, data: body);
+          return _convertDioResponse(response);
+        },
+        fallbackOperation: () async {
+          AppConfig.logNetwork('Enhanced client failed, falling back', level: NetworkLogLevel.verbose);
+          return await _fallbackPost(endpoint, body);
+        },
+        operationName: 'enhanced_http_post',
+      );
     } else {
       return await _fallbackPost(endpoint, body);
     }
@@ -86,11 +100,20 @@ class HttpClientService {
   }
 
   /// Convert Dio response to http.Response for backward compatibility
-  http.Response _convertDioResponse(response) {
+  http.Response _convertDioResponse(Response response) {
+    // Convert headers from Map<String, List<String>> to Map<String, String>
+    // by taking the first value from each header list
+    final Map<String, String> convertedHeaders = {};
+    response.headers.map.forEach((key, values) {
+      if (values.isNotEmpty) {
+        convertedHeaders[key] = values.first;
+      }
+    });
+    
     return http.Response(
       response.data is String ? response.data : json.encode(response.data),
       response.statusCode ?? 200,
-      headers: Map<String, String>.from(response.headers.map),
+      headers: convertedHeaders,
     );
   }
 
@@ -111,12 +134,14 @@ class HttpClientService {
     if (_useEnhancedClient) {
       return await _enhancedClient.healthCheck();
     } else {
-      try {
-        final response = await get('/api/ping');
-        return response.statusCode == 200;
-      } catch (e) {
-        return false;
-      }
+      return await SimpleErrorHandler.safe<bool>(
+        () async {
+          final response = await get('/api/ping');
+          return response.statusCode == 200;
+        },
+        fallback: false,
+        operationName: 'http_connectivity_check',
+      );
     }
   }
 

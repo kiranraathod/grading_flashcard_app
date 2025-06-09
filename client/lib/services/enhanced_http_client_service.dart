@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../utils/config.dart';
 import '../models/app_error.dart';
 import 'connectivity_service.dart';
+import 'simple_error_handler.dart';
 
 enum CircuitBreakerState { closed, open, halfOpen }
 
@@ -452,14 +453,15 @@ class EnhancedHttpClientService {
 
   /// Health check method
   Future<bool> healthCheck() async {
-    try {
-      await _ensureInitialized();
-      final response = await get(AppConfig.endpoints['ping']!, enableRetry: false);
-      return response.statusCode == 200;
-    } catch (e) {
-      AppConfig.logNetwork('Health check failed: $e', level: NetworkLogLevel.errors);
-      return false;
-    }
+    return await SimpleErrorHandler.safe<bool>(
+      () async {
+        await _ensureInitialized();
+        final response = await get(AppConfig.endpoints['ping']!, enableRetry: false);
+        return response.statusCode == 200;
+      },
+      fallback: false,
+      operationName: 'enhanced_http_health_check',
+    );
   }
 
   /// Reset circuit breaker manually
