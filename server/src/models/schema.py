@@ -68,16 +68,15 @@ class FeedbackRequest(BaseModel):
 
 # Response models with validation
 class GradeResponse(BaseModel):
-    grade: str
+    score: int  # Changed from grade: str
     feedback: str
     suggestions: List[str] = Field(default_factory=list)
     error: Optional[str] = None
     
-    @validator('grade')
-    def validate_grade(cls, v):
-        valid_grades = ['A', 'B', 'C', 'D', 'F', 'X']  # X for system errors
-        if v not in valid_grades:
-            raise ValueError(f"Invalid grade: {v}. Must be one of {valid_grades}")
+    @validator('score')
+    def validate_score(cls, v):
+        if v < 0 or v > 100:
+            raise ValueError(f"Invalid score: {v}. Must be between 0 and 100")
         return v
     
     @validator('suggestions')

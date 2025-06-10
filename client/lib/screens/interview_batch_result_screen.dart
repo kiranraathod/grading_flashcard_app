@@ -56,25 +56,32 @@ class InterviewBatchResultScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16.0),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildStatCard(
-                      'Answers Graded',
-                      totalAnswers.toString(),
-                      Icons.question_answer,
-                      Colors.blue,
+                    Expanded(
+                      child: _buildStatCard(
+                        'Answers Graded',
+                        totalAnswers.toString(),
+                        Icons.question_answer,
+                        Colors.blue,
+                      ),
                     ),
-                    _buildStatCard(
-                      'Passing Answers',
-                      completedAnswers.toString(),
-                      Icons.check_circle,
-                      Colors.green,
+                    const SizedBox(width: 8.0), // Add spacing between cards
+                    Expanded(
+                      child: _buildStatCard(
+                        'Passing Answers',
+                        completedAnswers.toString(),
+                        Icons.check_circle,
+                        Colors.green,
+                      ),
                     ),
-                    _buildStatCard(
-                      'Average Score',
-                      averageScore.toStringAsFixed(1),
-                      Icons.analytics,
-                      _getColorForScore(averageScore.toInt()),
+                    const SizedBox(width: 8.0), // Add spacing between cards
+                    Expanded(
+                      child: _buildStatCard(
+                        'Average Score',
+                        averageScore.toStringAsFixed(1),
+                        Icons.analytics,
+                        _getColorForScore(averageScore.toInt()),
+                      ),
                     ),
                   ],
                 ),
@@ -123,6 +130,7 @@ class InterviewBatchResultScreen extends StatelessWidget {
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Container(
+      width: double.infinity, // Take full available width
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -139,21 +147,27 @@ class InterviewBatchResultScreen extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min, // Take minimum required space
         children: [
           Icon(icon, color: color, size: 28),
           const SizedBox(height: 8.0),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20, // ✅ Slightly larger for better visibility
-              fontWeight: FontWeight.bold,
-              color: _getDarkerColorForText(color), // ✅ Use darker color for better contrast
+          FittedBox( // Ensure the value text fits
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 20, // ✅ Slightly larger for better visibility
+                fontWeight: FontWeight.bold,
+                color: _getDarkerColorForText(color), // ✅ Use darker color for better contrast
+              ),
             ),
           ),
           const SizedBox(height: 4.0),
           Text(
             title,
             textAlign: TextAlign.center, // ✅ Center align for better layout
+            maxLines: 2, // Allow title to wrap if needed
+            overflow: TextOverflow.ellipsis, // Handle overflow gracefully
             style: const TextStyle(
               fontSize: 12,
               color: Colors.grey,

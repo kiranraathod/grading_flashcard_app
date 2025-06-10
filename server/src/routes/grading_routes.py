@@ -49,10 +49,10 @@ async def grade_answer(
         logger.debug(f"Grading result: {result}")
         
         # Validate the response structure
-        if 'grade' not in result or 'feedback' not in result or 'suggestions' not in result:
+        if 'score' not in result or 'feedback' not in result or 'suggestions' not in result:
             logger.error(f"Invalid response structure: {result}")
             return GradeResponse(
-                grade='X',
+                score=50,
                 feedback='Error in grading system. Please try again.',
                 suggestions=['Contact support if this error persists.'],
                 error='invalid_response_structure'

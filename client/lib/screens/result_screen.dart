@@ -32,23 +32,24 @@ class _ResultScreenState extends State<ResultScreen> {
   // Add a flag to prevent multiple clicks
   bool _continuePressed = false;
 
-  Color _getGradeColor() {
-    switch (widget.answer.grade) {
-      case 'A':
-        return AppColors.gradeA;
-      case 'B':
-        return AppColors.gradeB;
-      case 'C':
-        return AppColors.gradeC;
-      case 'D':
-        return AppColors.gradeD;
-      case 'F':
-        return AppColors.gradeF;
-      case 'X': // System error indicator
-        return Colors.grey;
-      default:
-        return Colors.grey;
-    }
+  Color _getScoreColor() {
+    final score = widget.answer.score ?? 0;
+    
+    if (score >= 90) return AppColors.gradeA;
+    if (score >= 80) return AppColors.gradeB;
+    if (score >= 70) return AppColors.gradeC;
+    if (score >= 60) return AppColors.gradeD;
+    return AppColors.gradeF;
+  }
+
+  String _getScoreDescription() {
+    final score = widget.answer.score ?? 0;
+    if (score >= 90) return 'Excellent Answer';
+    if (score >= 80) return 'Good Answer';
+    if (score >= 70) return 'Satisfactory Answer';
+    if (score >= 60) return 'Needs Improvement';
+    if (score > 0) return 'Incomplete Answer';
+    return 'No Score';
   }
 
   @override
@@ -61,10 +62,8 @@ class _ResultScreenState extends State<ResultScreen> {
         // Don't try to access StudyBloc directly - it's causing errors
         // Instead, use the information we already have in the widget
                 
-        // Check if the answer is correct (grade A, B, or C)
-        bool isCompleted = widget.answer.grade == 'A' || 
-                           widget.answer.grade == 'B' || 
-                           widget.answer.grade == 'C';
+        // Check if the answer is correct (score >= 70)
+        bool isCompleted = (widget.answer.score ?? 0) >= 70;
         
         // Record the view in the global RecentViewBloc with the info we have
         context.read<RecentViewBloc>().add(
@@ -95,7 +94,7 @@ class _ResultScreenState extends State<ResultScreen> {
   
   @override
   Widget build(BuildContext context) {
-    final bool isSystemError = widget.answer.grade == 'X';
+    final bool isSystemError = widget.answer.score == null;
 
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context).results)),
@@ -131,9 +130,9 @@ class _ResultScreenState extends State<ResultScreen> {
             Card(
               // Using constructor with individual color components
               color: Color.fromRGBO(
-                _getGradeColor().r.toInt(), // Convert from double to int
-                _getGradeColor().g.toInt(),
-                _getGradeColor().b.toInt(),
+                _getScoreColor().r.toInt(), // Convert from double to int
+                _getScoreColor().g.toInt(),
+                _getScoreColor().b.toInt(),
                 0.2,
               ),
               child: Padding(
@@ -143,22 +142,45 @@ class _ResultScreenState extends State<ResultScreen> {
                   children: [
                     Row(
                       children: [
-                        CircleAvatar(
-                          backgroundColor: _getGradeColor(),
-                          child: Text(
-                            isSystemError ? "!" : (widget.answer.grade ?? '?'),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                        // Score circle - matching interview design
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,  // Clean white background
+                            border: Border.all(color: _getScoreColor(), width: 2),
+                          ),
+                          child: Center(
+                            child: Text(
+                              isSystemError ? "!" : '${widget.answer.score ?? 0}',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: _getScoreColor(),
+                              ),
                             ),
                           ),
                         ),
                         SizedBox(width: DS.spacingM),
-                        Text(
-                          isSystemError 
-                            ? AppLocalizations.of(context).systemError 
-                            : AppLocalizations.of(context).yourGrade,
-                          style: DS.headingSmall,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isSystemError ? 'System Error' : 'Your Score',
+                                style: DS.headingSmall,
+                              ),
+                              Text(
+                                isSystemError ? 'Error' : _getScoreDescription(),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: _getScoreColor(),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -190,9 +212,7 @@ class _ResultScreenState extends State<ResultScreen> {
               ),
             SizedBox(height: DS.spacingL),
             // Show progress update message when answer is correct
-            if (widget.answer.grade == 'A' ||
-                widget.answer.grade == 'B' ||
-                widget.answer.grade == 'C')
+            if ((widget.answer.score ?? 0) >= 70)
               Container(
                 padding: EdgeInsets.all(DS.spacingM),
                 margin: EdgeInsets.only(bottom: DS.spacingM),
@@ -260,10 +280,8 @@ class _ResultScreenState extends State<ResultScreen> {
     try {
       // Don't try to access StudyBloc - use the information we have
       
-      // Check if the answer is correct (grade A, B, or C)
-      bool isCompleted = widget.answer.grade == 'A' || 
-                         widget.answer.grade == 'B' || 
-                         widget.answer.grade == 'C';
+      // Check if the answer is correct (score >= 70)
+      bool isCompleted = (widget.answer.score ?? 0) >= 70;
       
       // Record the view in the global RecentViewBloc
       context.read<RecentViewBloc>().add(

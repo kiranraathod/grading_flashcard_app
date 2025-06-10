@@ -177,9 +177,7 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
           final bloc = BlocProvider.of<StudyBloc>(context);
           
           // IMPORTANT: Save progress immediately when a card is completed
-          if (state.gradedAnswer!.grade == 'A' || 
-              state.gradedAnswer!.grade == 'B' || 
-              state.gradedAnswer!.grade == 'C') {
+          if ((state.gradedAnswer!.score ?? 0) >= 70) {
             // This is the critical part - save immediately after grading
             debugPrint('Saving progress after correct answer');
             widget.flashcardService.updateFlashcardSet(state.flashcardSet!);

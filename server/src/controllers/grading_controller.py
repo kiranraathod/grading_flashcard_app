@@ -99,7 +99,7 @@ class GradingController:
         
         error_responses = {
             "llm_connection_error": {
-                'grade': 'X',  # Use 'X' to indicate system error
+                'score': 50,  # Use neutral score to indicate system error
                 'feedback': f'LLM Service Error: {message}',
                 'suggestions': [
                     'The AI grading service is currently unavailable',
@@ -109,7 +109,7 @@ class GradingController:
                 'error': error_type
             },
             "llm_response_error": {
-                'grade': 'X',
+                'score': 50,
                 'feedback': f'Error processing your answer: {message}',
                 'suggestions': [
                     'Please try a different wording in your answer',
@@ -118,7 +118,7 @@ class GradingController:
                 'error': error_type
             },
             "validation_error": {
-                'grade': 'X',
+                'score': 50,
                 'feedback': f'Input validation error: {message}',
                 'suggestions': [
                     'Please ensure all required fields are provided',
@@ -127,7 +127,7 @@ class GradingController:
                 'error': error_type
             },
             "system_error": {
-                'grade': 'X',
+                'score': 50,
                 'feedback': f'System error: {message}',
                 'suggestions': [
                     'Please try again with a different answer',

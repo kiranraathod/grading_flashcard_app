@@ -71,11 +71,11 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
       final gradedAnswer = await _apiService.gradeAnswer(answer);
       
       // Log the grade received for debugging
-      debugPrint('Answer grade received: ${gradedAnswer.grade} for card ${event.flashcard.id}');
+      debugPrint('Answer score received: ${gradedAnswer.score} for card ${event.flashcard.id}');
       
-      // Only mark flashcard as completed if the answer is correct (grade A, B, or C)
+      // Only mark flashcard as completed if the answer is correct (score >= 70)
       // This is the ONLY place where progress is updated, and only on user answer submission
-      if (gradedAnswer.grade == 'A' || gradedAnswer.grade == 'B' || gradedAnswer.grade == 'C') {
+      if ((gradedAnswer.score ?? 0) >= 70) {
         debugPrint('Marking card ${event.flashcard.id} as completed');
         
         // Create a copy of the flashcard set with the updated flashcard
@@ -131,7 +131,7 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
           );
         }
       } else {
-        debugPrint('Answer incorrect (grade: ${gradedAnswer.grade}) - not updating progress');
+        debugPrint('Answer incorrect (score: ${gradedAnswer.score}) - not updating progress');
         emit(
           state.copyWith(status: StudyStatus.loaded, gradedAnswer: gradedAnswer),
         );

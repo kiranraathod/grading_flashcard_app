@@ -89,10 +89,15 @@ class LLMService:
             response = await self._execute_grading_request(question, user_answer, correct_answer)
             logger.debug(f"Received processed response from API: {response}")
             
-            # Normalize the grade (remove + or -)
-            if 'grade' in response:
-                # Extract just the letter part (A, B, C, D, F)
-                response['grade'] = response['grade'][0]
+            # Normalize the score (ensure it's an integer within valid range)
+            if 'score' in response:
+                # Ensure score is an integer and clamp to 0-100 range
+                try:
+                    score = int(float(response['score']))  # Handle both int and float responses
+                    response['score'] = max(0, min(100, score))  # Clamp to 0-100 range
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid score format: {response['score']}, defaulting to 50")
+                    response['score'] = 50  # Default neutral score for invalid responses
             
             # Validate response structure
             self._validate_response(response)
@@ -171,7 +176,7 @@ class LLMService:
         Raises:
             LLMResponseParsingError: If the response is invalid
         """
-        required_keys = ['grade', 'feedback', 'suggestions']
+        required_keys = ['score', 'feedback', 'suggestions']
         
         # Check if all required keys exist
         missing_keys = [key for key in required_keys if key not in response]
@@ -180,10 +185,9 @@ class LLMService:
             logger.error(error_msg)
             raise LLMResponseParsingError(error_msg)
         
-        # Check if grade is valid
-        valid_grades = ['A', 'B', 'C', 'D', 'F']
-        if response['grade'] not in valid_grades:
-            error_msg = f"Invalid grade: {response['grade']}"
+        # Check if score is valid
+        if not isinstance(response['score'], (int, float)) or response['score'] < 0 or response['score'] > 100:
+            error_msg = f"Invalid score: {response['score']}. Must be between 0 and 100"
             logger.error(error_msg)
             raise LLMResponseParsingError(error_msg)
             
@@ -193,10 +197,10 @@ class LLMService:
             logger.error(error_msg)
             raise LLMResponseParsingError(error_msg)
             
-        # If suggestions array is empty, add default suggestions based on grade
+        # If suggestions array is empty, add default suggestions based on score
         if len(response['suggestions']) == 0:
             logger.warning("Empty suggestions array detected, adding default suggestions")
-            if response['grade'] == 'A':
+            if response['score'] >= 90:
                 response['suggestions'] = [
                     "Continue practicing to maintain your understanding",
                     "Try applying this knowledge to more complex problems",
@@ -395,12 +399,13 @@ class LLMService:
         3. For mathematical answers, accept equivalent forms (e.g., "1/2" and "0.5" are equivalent).
         4. For factual answers, focus on the key concepts rather than exact wording.
         
-        GRADING SCALE:
-        - A: The answer is completely correct or semantically equivalent to the correct answer.
-        - B: The answer is mostly correct with minor omissions or inaccuracies (80-90% correct).
-        - C: The answer shows partial understanding but has significant gaps (70-80% correct).
-        - D: The answer shows minimal understanding with major errors (60-70% correct).
-        - F: The answer is completely incorrect or shows fundamental misunderstanding (<60% correct).
+        SCORING SCALE (0-100):
+        - 90-100: The answer is completely correct or semantically equivalent to the correct answer.
+        - 80-89: The answer is mostly correct with minor omissions or inaccuracies.
+        - 70-79: The answer shows good understanding with some gaps or minor errors.
+        - 60-69: The answer shows partial understanding with significant issues.
+        - 50-59: The answer shows minimal understanding with major errors.
+        - 0-49: The answer is mostly or completely incorrect or shows fundamental misunderstanding.
         
         When providing feedback, be specific about the comparison between the student's answer and the correct answer. Always include encouraging language, even for incorrect answers.
         
@@ -409,18 +414,18 @@ class LLMService:
         
         Your response must strictly conform to this JSON format:
         {{
-            "grade": "LETTER",
+            "score": NUMERICAL_SCORE,
             "feedback": "DETAILED_FEEDBACK",
             "suggestions": ["SUGGESTION_1", "SUGGESTION_2", "SUGGESTION_3"]
         }}
         
         Where:
-        - LETTER must be a single letter grade (A, B, C, D, or F) based on how well the student's answer matches the correct answer
+        - NUMERICAL_SCORE must be an integer between 0 and 100 based on how well the student's answer matches the correct answer
         - DETAILED_FEEDBACK must include specific comparison to the correct answer and encouragement
         - There must be 2-3 specific suggestions in the suggestions array that help the student improve
         
-        For excellent answers (grade A), provide suggestions that extend the student's knowledge.
-        For other grades, provide targeted suggestions to help improve understanding of the concept.
+        For excellent answers (score 90+), provide suggestions that extend the student's knowledge.
+        For other scores, provide targeted suggestions to help improve understanding of the concept.
         
         Do not include any explanations, markdown formatting or any text outside the JSON structure.
         Return only the valid JSON object, nothing else.

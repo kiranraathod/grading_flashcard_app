@@ -64,7 +64,7 @@ class ApiService {
               question: answer.question,
               userAnswer: answer.userAnswer,
               correctAnswer: answer.correctAnswer,
-              grade: responseData['grade'],
+              score: responseData['score'],  // Changed from grade
               feedback: responseData['feedback'],
               suggestions: List<String>.from(responseData['suggestions']),
             );
@@ -104,7 +104,7 @@ class ApiService {
 
   bool _validateResponseData(Map<String, dynamic> data) {
     // Check that all required fields exist and have correct types
-    if (!data.containsKey('grade') ||
+    if (!data.containsKey('score') ||  // Changed from 'grade'
         !data.containsKey('feedback') ||
         !data.containsKey('suggestions')) {
       AppConfig.logNetwork(
@@ -114,11 +114,11 @@ class ApiService {
       return false;
     }
 
-    // Validate grade is a valid letter grade
-    final validGrades = ['A', 'B', 'C', 'D', 'F', 'X'];  // Added 'X' for system errors
-    if (!validGrades.contains(data['grade'])) {
+    // Validate score is a valid number between 0 and 100
+    final score = data['score'];
+    if (score is! num || score < 0 || score > 100) {
       AppConfig.logNetwork(
-        'Invalid grade in response: ${data["grade"]}',
+        'Invalid score in response: $score',
         level: NetworkLogLevel.errors
       );
       return false;
@@ -174,14 +174,14 @@ class ApiService {
     final bool isPartialMatch = _calculateSimilarity(userAnswer, correctAnswer) > AppConfig.partialMatchThreshold;
     final bool hasKeyElements = _containsKeyElements(userAnswer, correctAnswer);
 
-    // Grade determination based on answer similarity
-    String grade;
+    // Score determination based on answer similarity
+    int score;
     String feedback;
     List<String> suggestions;
 
     if (isExactMatch) {
       // Perfect match
-      grade = 'A';
+      score = 95;
       feedback = 'Excellent! Your answer is exactly correct.';
       suggestions = [
         'Continue practicing to maintain your understanding',
@@ -190,7 +190,7 @@ class ApiService {
       ];
     } else if (isStrongMatch) {
       // Very close match
-      grade = 'B';
+      score = 85;
       feedback = 'Good job! Your answer is very close to the correct one: "${answer.correctAnswer}".';
       suggestions = [
         'Pay attention to the precise wording of your answers',
@@ -199,7 +199,7 @@ class ApiService {
       ];
     } else if (isPartialMatch || hasKeyElements) {
       // Partial match with some correct elements
-      grade = 'C';
+      score = 75;
       feedback = 'Your answer contains some correct elements, but needs improvement. The correct answer is: "${answer.correctAnswer}".';
       suggestions = [
         'Review the core concepts of this topic',
@@ -208,7 +208,7 @@ class ApiService {
       ];
     } else {
       // Incorrect answer
-      grade = 'F';
+      score = 40;
       feedback = 'Your answer doesn\'t match the expected response. The correct answer is: "${answer.correctAnswer}".';
       suggestions = [
         'Review the material related to this topic',
@@ -222,7 +222,7 @@ class ApiService {
       question: answer.question,
       userAnswer: answer.userAnswer,
       correctAnswer: answer.correctAnswer,
-      grade: grade,
+      score: score,  // Changed from grade
       feedback: feedback,
       suggestions: suggestions,
     );
