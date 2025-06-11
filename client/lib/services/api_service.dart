@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import '../models/answer.dart' as answer_model;
 import '../models/app_error.dart';
 import '../services/error_service.dart';
@@ -21,6 +22,12 @@ class ApiService {
   }
 
   Future<answer_model.Answer> gradeAnswer(answer_model.Answer answer) async {
+    // 🚨 CRITICAL: Log ALL grading calls to catch authentication bypasses
+    final stackTrace = StackTrace.current.toString();
+    final caller = stackTrace.split('\n')[1]; // Get the immediate caller
+    debugPrint('🔍 API SERVICE: gradeAnswer called - ${answer.question} => ${answer.userAnswer}');
+    debugPrint('🔍 API SERVICE: Called from: $caller');
+    
     AppConfig.logNetwork(
       'Grading answer: ${answer.question} => ${answer.userAnswer}',
       level: NetworkLogLevel.verbose
@@ -39,6 +46,7 @@ class ApiService {
       () async {
         final gradeEndpoint = AppConfig.endpoints['grade'] ?? '/api/grade';
         
+        debugPrint('🌐 API SERVICE: Starting request to $gradeEndpoint');
         AppConfig.logNetwork(
           'Making API request to $gradeEndpoint',
           level: NetworkLogLevel.basic
@@ -54,11 +62,15 @@ class ApiService {
           },
         );
 
+        debugPrint('🌐 API SERVICE: Received response - Status: ${response.statusCode}');
+
         if (response.statusCode == 200) {
+          debugPrint('🌐 API SERVICE: Success response received');
           final Map<String, dynamic> responseData = jsonDecode(response.body);
           
           // Validate response data
           if (_validateResponseData(responseData)) {
+            debugPrint('🌐 API SERVICE: Response validation successful - Score: ${responseData['score']}');
             return answer_model.Answer(
               flashcardId: answer.flashcardId,
               question: answer.question,
@@ -69,6 +81,7 @@ class ApiService {
               suggestions: List<String>.from(responseData['suggestions']),
             );
           } else {
+            debugPrint('🌐 API SERVICE: Response validation failed - using fallback');
             final error = AppError.api(
               'Invalid response format from server',
               code: 'invalid_response',
@@ -82,6 +95,7 @@ class ApiService {
             return _createSmartFallbackAnswer(answer);
           }
         } else {
+          debugPrint('🌐 API SERVICE: Error response - Status: ${response.statusCode}, Body: ${response.body}');
           final error = AppError.api(
             'Server returned an error',
             code: 'server_error',
@@ -159,6 +173,8 @@ class ApiService {
   }
 
   answer_model.Answer _createSmartFallbackAnswer(answer_model.Answer answer) {
+    debugPrint('🔄 API SERVICE: Creating fallback answer for: "${answer.userAnswer}" vs "${answer.correctAnswer}"');
+    
     // Extract and normalize answers for comparison
     final String userAnswer = answer.userAnswer.toLowerCase().trim();
     final String correctAnswer = answer.correctAnswer.toLowerCase().trim();
@@ -216,6 +232,8 @@ class ApiService {
         'Try to understand the reasoning behind the correct answer'
       ];
     }
+
+    debugPrint('🔄 API SERVICE: Fallback answer created - Score: $score, Feedback: $feedback');
 
     return answer_model.Answer(
       flashcardId: answer.flashcardId,

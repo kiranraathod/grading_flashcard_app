@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/app_header.dart';
+import '../widgets/auth_debug_panel.dart';
 import '../widgets/flashcard_deck_card.dart';
 import '../widgets/create_deck_card.dart';
 import '../widgets/recent/recent_tab_content.dart';
@@ -51,14 +52,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Calculate the progress percentage based on completed flashcards
   int _calculateProgress(FlashcardSet set) {
-    if (set.flashcards.isEmpty) return 0;
+    if (set.flashcards.isEmpty) {
+      debugPrint('📊 Progress Debug: Empty set, returning 0%');
+      return 0;
+    }
 
-    // Count completed flashcards
-    int completedCount =
-        set.flashcards.where((card) => card.isCompleted).length;
+    // Count completed flashcards with detailed debugging
+    int completedCount = set.flashcards.where((card) => card.isCompleted).length;
+    int totalCount = set.flashcards.length;
+    int progressPercent = (completedCount / totalCount * 100).round();
 
-    // Calculate percentage - always start at zero for clean state
-    return (completedCount / set.flashcards.length * 100).round();
+    // Enhanced debugging for progress tracking issues
+    debugPrint('📊 Progress Debug for "${set.title}":');
+    debugPrint('   Total cards: $totalCount');
+    debugPrint('   Completed cards: $completedCount');
+    debugPrint('   Progress: $progressPercent%');
+    debugPrint('   Set last updated: ${set.lastUpdated}');
+    
+    // Debug individual card completion status
+    for (int i = 0; i < set.flashcards.length; i++) {
+      final card = set.flashcards[i];
+      debugPrint('   Card ${i + 1}: ${card.isCompleted ? "✅ COMPLETED" : "❌ Not completed"} - "${card.question.substring(0, (card.question.length > 30 ? 30 : card.question.length))}..."');
+    }
+
+    return progressPercent;
   }
 
   // Handle delete flashcard set with confirmation
@@ -123,22 +140,27 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final flashcardService = Provider.of<FlashcardService>(context);
+    
+    // 🔍 DEBUG: Log when home screen rebuilds
+    debugPrint('🏠 HomeScreen: Building with ${flashcardService.sets.length} flashcard sets');
 
     return KeyboardShortcuts(
       searchFocusNode: _searchFocusNode,
       onSearchShortcut: _navigateToSearch,
       child: Scaffold(
         backgroundColor: context.backgroundColor,
-        body: Column(
+        body: Stack(
           children: [
-            // App header
-            AppHeader(key: GlobalKey()),
+            Column(
+              children: [
+                // App header
+                AppHeader(key: GlobalKey()),
 
-            // Main content with scrolling
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(DS.spacingL),
-                child: Column(
+                // Main content with scrolling
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(DS.spacingL),
+                    child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Streak calendar (simplified version from reference)
@@ -606,6 +628,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+        
+        // Debug Panel Overlay (positioned in top right)
+        Positioned(
+          top: 80, // Below the app header
+          right: 16,
+          child: const AuthDebugPanel(),
+        ),
+      ],
+    ),
 
         // Multi-action Floating Action Button
         floatingActionButton: MultiActionFab(

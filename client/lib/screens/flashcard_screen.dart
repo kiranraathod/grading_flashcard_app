@@ -6,8 +6,11 @@ import '../models/flashcard_set.dart';
 import '../services/api_service.dart';
 import '../services/speech_to_text_service.dart';
 import '../services/network_service.dart';
+import '../services/guest_user_manager.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/answer_input_widget.dart';
+import '../widgets/auth/authentication_modal.dart';
+import '../utils/config.dart';
 import 'result_screen.dart';
 
 class FlashcardScreen extends StatefulWidget {
@@ -123,7 +126,66 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
         correctAnswer: currentCard.answer,
       );
 
+      // 🎯 AUTHENTICATION TRIGGER LOGIC - WITH TESTING LOGS
+      final guestManager = GuestUserManager.instance;
+      
+      // Log current state for testing
+      debugPrint('🔍 Testing Auth Trigger - Current usage: ${guestManager.currentUsageCount}/${guestManager.maxActions}');
+      debugPrint('🔍 Can perform action: ${guestManager.canPerformGradingAction()}');
+      debugPrint('🔍 Has reached limit: ${guestManager.hasReachedLimit}');
+      
+      // Check if usage limits are enabled and user has reached the limit
+      if (AuthConfig.enableUsageLimits && !guestManager.canPerformGradingAction()) {
+        debugPrint('🚫 Usage limit reached - showing auth modal');
+        
+        // Show authentication modal
+        await AuthenticationModal.show(context);
+        
+        debugPrint('🔍 Auth modal dismissed - checking if user authenticated');
+        
+        // Check if widget is still mounted after async operation
+        if (!mounted) return;
+        
+        // After modal is dismissed, check if user is now authenticated
+        if (!guestManager.canPerformGradingAction()) {
+          debugPrint('❌ User still not authenticated - blocking grading action');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(guestManager.getUsageMessage()),
+              backgroundColor: Colors.blue,
+            ),
+          );
+          setState(() {
+            _isSubmitting = false;
+          });
+          return;
+        } else {
+          debugPrint('✅ User authenticated - allowing grading action');
+        }
+      }
+
+      debugPrint('🔍 Proceeding with grading - calling API');
       final gradedAnswer = await _apiService.gradeAnswer(answer);
+      
+      // Record grading action AFTER successful grading
+      debugPrint('🔍 API call successful - recording grading action');
+      await guestManager.recordGradingAction();
+      
+      // 🚨 POST-ACTION AUTHENTICATION CHECK: Check if user has now reached limit
+      final hasNowReachedLimit = AuthConfig.enableUsageLimits && 
+                                 (guestManager.currentUsageCount >= guestManager.maxActions);
+      
+      if (hasNowReachedLimit) {
+        debugPrint('🚨 FlashcardScreen: Usage limit reached after recording action (${guestManager.currentUsageCount}/${guestManager.maxActions})');
+        debugPrint('🔐 FlashcardScreen: Showing authentication modal');
+        
+        if (!mounted) return;
+        
+        // Show authentication modal
+        await AuthenticationModal.show(context);
+        
+        if (!mounted) return;
+      }
       
       if (!mounted) return;
       

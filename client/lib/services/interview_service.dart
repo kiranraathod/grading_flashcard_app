@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/interview_question.dart';
@@ -13,41 +12,47 @@ class InterviewService extends ChangeNotifier {
   final DefaultDataService _defaultDataService = DefaultDataService();
   final ReliableOperationService _reliableOps = ReliableOperationService();
   bool _isInitialized = false;
-  
+
   // Map to store user answers (questionId -> answer text)
   final Map<String, String> _userAnswers = {};
-  
+
   // Constructor - automatically initialize
   InterviewService() {
     _initializeAsync();
   }
-  
+
   // Async initialization
   Future<void> _initializeAsync() async {
     if (!_isInitialized) {
       debugPrint('🔧 InterviewService: Auto-initializing...');
       await loadQuestionsFromStorage();
       _isInitialized = true;
-      debugPrint('✅ InterviewService: Initialization complete with ${_questions.length} questions');
+      debugPrint(
+        '✅ InterviewService: Initialization complete with ${_questions.length} questions',
+      );
     }
   }
-  
+
   // Getters with automatic initialization check
   List<InterviewQuestion> get questions {
     if (!_isInitialized) {
-      debugPrint('⚠️ InterviewService: Questions accessed before initialization');
+      debugPrint(
+        '⚠️ InterviewService: Questions accessed before initialization',
+      );
       return [];
     }
     return _questions.where((q) => !q.isDraft).toList();
   }
-  List<InterviewQuestion> get drafts => _questions.where((q) => q.isDraft).toList();
+
+  List<InterviewQuestion> get drafts =>
+      _questions.where((q) => q.isDraft).toList();
   List<QuestionSet> get questionSets => _questionSets;
 
   // Public initialization method
   Future<void> initialize() async {
     await _initializeAsync();
   }
-  
+
   // Check if service is ready
   bool get isInitialized => _isInitialized;
 
@@ -56,11 +61,14 @@ class InterviewService extends ChangeNotifier {
     await _reliableOps.withFallback(
       primary: () async {
         debugPrint('Loading default interview questions from server...');
-        final defaultQuestions = await _defaultDataService.loadDefaultInterviewQuestions();
-        
+        final defaultQuestions =
+            await _defaultDataService.loadDefaultInterviewQuestions();
+
         if (defaultQuestions.isNotEmpty) {
           _questions = defaultQuestions;
-          debugPrint('Loaded ${defaultQuestions.length} default interview questions from server');
+          debugPrint(
+            'Loaded ${defaultQuestions.length} default interview questions from server',
+          );
           await _saveQuestionsToStorage();
         } else {
           _questions = _createFallbackQuestions();
@@ -76,19 +84,22 @@ class InterviewService extends ChangeNotifier {
     return [
       InterviewQuestion(
         id: 'fallback-1',
-        text: 'Explain the difference between bias and variance in machine learning.',
+        text:
+            'Explain the difference between bias and variance in machine learning.',
         category: 'technical',
         subtopic: 'Machine Learning Algorithms',
         difficulty: 'mid',
-        answer: 'Bias is error from oversimplification, variance is error from sensitivity to data.',
+        answer:
+            'Bias is error from oversimplification, variance is error from sensitivity to data.',
       ),
       InterviewQuestion(
-        id: 'fallback-2', 
+        id: 'fallback-2',
         text: 'How would you handle missing data in a dataset?',
         category: 'applied',
         subtopic: 'Data Cleaning & Preprocessing',
         difficulty: 'entry',
-        answer: 'Identify patterns, evaluate extent, choose imputation strategy, validate approach.',
+        answer:
+            'Identify patterns, evaluate extent, choose imputation strategy, validate approach.',
       ),
     ];
   }
@@ -97,14 +108,21 @@ class InterviewService extends ChangeNotifier {
   Future<void> synchronizeWithServerCategories() async {
     await _reliableOps.safely(
       operation: () async {
-        debugPrint('Synchronizing interview questions with server categories...');
-        
-        final serverCategories = await _defaultDataService.loadDefaultCategories();
-        final serverCategoryCounts = await _defaultDataService.loadCategoryCounts();
-        
+        debugPrint(
+          'Synchronizing interview questions with server categories...',
+        );
+
+        final serverCategories =
+            await _defaultDataService.loadDefaultCategories();
+        final serverCategoryCounts =
+            await _defaultDataService.loadCategoryCounts();
+
         if (serverCategories.isNotEmpty) {
           debugPrint('Server provides ${serverCategories.length} categories');
-          _validateQuestionCategoryMapping(serverCategories, serverCategoryCounts);
+          _validateQuestionCategoryMapping(
+            serverCategories,
+            serverCategoryCounts,
+          );
           await _updateQuestionMetadata(serverCategories);
         }
       },
@@ -113,33 +131,39 @@ class InterviewService extends ChangeNotifier {
   }
 
   /// Validate question-category mapping consistency safely
-  void _validateQuestionCategoryMapping(List<dynamic> serverCategories, Map<String, int>? serverCounts) {
+  void _validateQuestionCategoryMapping(
+    List<dynamic> serverCategories,
+    Map<String, int>? serverCounts,
+  ) {
     _reliableOps.safelySync(
       operation: () {
         debugPrint('Validating question-category mapping consistency...');
-        
+
         final localCategoryCounts = <String, int>{};
-        
+
         for (final question in questions) {
           for (final serverCategory in serverCategories) {
             final categoryName = serverCategory['name'] ?? '';
             if (_isQuestionInCategory(question, categoryName)) {
-              localCategoryCounts[categoryName] = (localCategoryCounts[categoryName] ?? 0) + 1;
+              localCategoryCounts[categoryName] =
+                  (localCategoryCounts[categoryName] ?? 0) + 1;
             }
           }
         }
-        
+
         if (serverCounts != null) {
           for (final entry in serverCounts.entries) {
             final serverCount = entry.value;
             final localCount = localCategoryCounts[entry.key] ?? 0;
-            
+
             if (serverCount != localCount) {
-              debugPrint('Category count mismatch for ${entry.key}: server=$serverCount, local=$localCount');
+              debugPrint(
+                'Category count mismatch for ${entry.key}: server=$serverCount, local=$localCount',
+              );
             }
           }
         }
-        
+
         debugPrint('Question-category validation completed');
       },
       operationName: 'validate_question_category_mapping',
@@ -149,87 +173,96 @@ class InterviewService extends ChangeNotifier {
   /// Check if a question belongs to a specific category
   bool _isQuestionInCategory(InterviewQuestion question, String categoryName) {
     return _reliableOps.safelySync(
-      operation: () {
-        // Handle 'all' category - should match everything
-        if (categoryName.toLowerCase() == 'all') {
-          debugPrint('🔍 CATEGORY MATCH: "all" category - returning true');
-          return true;
-        }
-        
-        final categoryLower = categoryName.toLowerCase();
-        final subtopicLower = question.subtopic.toLowerCase();
-        final textLower = question.text.toLowerCase();
-        
-        // DEBUG: Log the comparison
-        debugPrint('🔍 CATEGORY MATCH DEBUG:');
-        debugPrint('  Question: "${question.text}"');
-        debugPrint('  Question subtopic: "${question.subtopic}"');
-        debugPrint('  Looking for category: "$categoryName"');
-        debugPrint('  Subtopic lower: "$subtopicLower"');
-        debugPrint('  Category lower: "$categoryLower"');
-        
-        // Direct subtopic match (most common case)
-        if (subtopicLower == categoryLower) {
-          debugPrint('  ✅ DIRECT MATCH: subtopic == category');
-          return true;
-        }
-        
-        // Specific category mappings
-        bool result = false;
-        switch (categoryLower) {
-          case 'data analysis':
-            result = subtopicLower.contains('data') ||
-                   subtopicLower.contains('analysis') ||
-                   textLower.contains('data');
-            break;
-          case 'machine learning':
-            result = subtopicLower.contains('machine') ||
-                   subtopicLower.contains('learning') ||
-                   subtopicLower.contains('ml');
-            break;
-          case 'sql database':
-          case 'sql':
-            result = subtopicLower.contains('sql') ||
-                   textLower.contains('sql');
-            break;
-          case 'python programming':
-          case 'python':
-            result = subtopicLower.contains('python') ||
-                   textLower.contains('python');
-            break;
-          case 'api development':
-            result = subtopicLower.contains('api') ||
-                   textLower.contains('api') ||
-                   subtopicLower == 'api development';
-            break;
-          case 'web development':
-            result = subtopicLower.contains('web') ||
-                   subtopicLower.contains('api') ||
-                   textLower.contains('web');
-            break;
-          case 'statistics':
-            result = subtopicLower.contains('statistics') ||
-                   subtopicLower.contains('stat') ||
-                   textLower.contains('statistic');
-            break;
-          default:
-            // Flexible matching for any other categories
-            result = subtopicLower.contains(categoryLower) ||
-                   textLower.contains(categoryLower);
-        }
-        
-        debugPrint('  Match result: $result');
-        if (result) {
-          debugPrint('  ✅ MATCHED!');
-        } else {
-          debugPrint('  ❌ NO MATCH');
-        }
-        
-        return result;
-      },
-      defaultValue: false,
-      operationName: 'is_question_in_category',
-    ) ?? false;
+          operation: () {
+            // Handle 'all' category - should match everything
+            if (categoryName.toLowerCase() == 'all') {
+              debugPrint('🔍 CATEGORY MATCH: "all" category - returning true');
+              return true;
+            }
+
+            final categoryLower = categoryName.toLowerCase();
+            final subtopicLower = question.subtopic.toLowerCase();
+            final textLower = question.text.toLowerCase();
+
+            // DEBUG: Log the comparison
+            debugPrint('🔍 CATEGORY MATCH DEBUG:');
+            debugPrint('  Question: "${question.text}"');
+            debugPrint('  Question subtopic: "${question.subtopic}"');
+            debugPrint('  Looking for category: "$categoryName"');
+            debugPrint('  Subtopic lower: "$subtopicLower"');
+            debugPrint('  Category lower: "$categoryLower"');
+
+            // Direct subtopic match (most common case)
+            if (subtopicLower == categoryLower) {
+              debugPrint('  ✅ DIRECT MATCH: subtopic == category');
+              return true;
+            }
+
+            // Specific category mappings
+            bool result = false;
+            switch (categoryLower) {
+              case 'data analysis':
+                result =
+                    subtopicLower.contains('data') ||
+                    subtopicLower.contains('analysis') ||
+                    textLower.contains('data');
+                break;
+              case 'machine learning':
+                result =
+                    subtopicLower.contains('machine') ||
+                    subtopicLower.contains('learning') ||
+                    subtopicLower.contains('ml');
+                break;
+              case 'sql database':
+              case 'sql':
+                result =
+                    subtopicLower.contains('sql') || textLower.contains('sql');
+                break;
+              case 'python programming':
+              case 'python':
+                result =
+                    subtopicLower.contains('python') ||
+                    textLower.contains('python');
+                break;
+              case 'api development':
+                result =
+                    subtopicLower.contains('api') ||
+                    textLower.contains('api') ||
+                    subtopicLower == 'api development';
+                break;
+              case 'web development':
+                result =
+                    subtopicLower.contains('web') ||
+                    subtopicLower.contains('api') ||
+                    textLower.contains('web');
+                break;
+              case 'statistics':
+                result =
+                    subtopicLower.contains('statistics') ||
+                    subtopicLower.contains('stat') ||
+                    textLower.contains('statistic');
+                break;
+              default:
+                // Flexible matching for any other categories
+                result =
+                    subtopicLower.contains(categoryLower) ||
+                    textLower.contains(categoryLower);
+            }
+
+            debugPrint('  Match result: $result');
+            if (result) {
+              debugPrint('  ✅ MATCHED!');
+            } else if (kDebugMode) {
+              // Only show NO MATCH in debug mode to reduce spam
+              debugPrint('  ❌ NO MATCH');
+            }
+
+            return result;
+          },
+          defaultValue: false,
+          operationName: 'is_question_in_category',
+        ) ??
+        false;
   }
 
   /// Update question metadata based on server categories safely
@@ -237,9 +270,9 @@ class InterviewService extends ChangeNotifier {
     await _reliableOps.safely(
       operation: () async {
         debugPrint('Updating question metadata based on server categories...');
-        
+
         bool hasUpdates = false;
-        
+
         for (int i = 0; i < _questions.length; i++) {
           final question = _questions[i];
           for (final serverCategory in serverCategories) {
@@ -247,13 +280,15 @@ class InterviewService extends ChangeNotifier {
             if (_isQuestionInCategory(question, categoryName)) {
               if (question.categoryId != serverCategory['id']) {
                 // Create updated question with new categoryId
-                _questions[i] = question.copyWith(categoryId: serverCategory['id']);
+                _questions[i] = question.copyWith(
+                  categoryId: serverCategory['id'],
+                );
                 hasUpdates = true;
               }
             }
           }
         }
-        
+
         if (hasUpdates) {
           await _saveQuestionsToStorage();
           debugPrint('Question metadata updated and saved');
@@ -264,13 +299,15 @@ class InterviewService extends ChangeNotifier {
     );
   }
 
-  /// Save questions to storage safely  
+  /// Save questions to storage safely
   Future<void> _saveQuestionsToStorage() async {
     await _reliableOps.safely(
       operation: () async {
         final questionsJson = _questions.map((q) => q.toJson()).toList();
         await StorageService.saveInterviewQuestions(questionsJson);
-        debugPrint('Successfully saved ${_questions.length} questions to storage using StorageService');
+        debugPrint(
+          'Successfully saved ${_questions.length} questions to storage using StorageService',
+        );
       },
       operationName: 'save_questions_to_storage',
     );
@@ -282,15 +319,18 @@ class InterviewService extends ChangeNotifier {
       primary: () async {
         debugPrint('Loading questions from storage...');
         final questionsData = StorageService.getInterviewQuestions();
-        
+
         if (questionsData != null && questionsData.isNotEmpty) {
-          _questions = questionsData.map((data) => InterviewQuestion.fromJson(data)).toList();
+          _questions =
+              questionsData
+                  .map((data) => InterviewQuestion.fromJson(data))
+                  .toList();
           debugPrint('Loaded ${_questions.length} questions from storage');
         } else {
           debugPrint('No questions found in storage, loading from server');
           await _loadDefaultQuestions();
         }
-        
+
         notifyListeners();
       },
       fallback: () async {
@@ -344,49 +384,68 @@ class InterviewService extends ChangeNotifier {
   }
 
   /// Get questions by category with safe operation
-  List<InterviewQuestion> getQuestionsByCategory(String category, {bool isSubtopic = false}) {
+  List<InterviewQuestion> getQuestionsByCategory(
+    String category, {
+    bool isSubtopic = false,
+  }) {
     return _reliableOps.safelySync(
-      operation: () {
-        debugPrint('Getting questions for category: $category');
-        
-        final filteredQuestions = questions.where((question) {
-          return _isQuestionInCategory(question, category);
-        }).toList();
-        
-        debugPrint('Found ${filteredQuestions.length} questions for category: $category');
-        return filteredQuestions;
-      },
-      defaultValue: <InterviewQuestion>[],
-      operationName: 'get_questions_by_category',
-    ) ?? <InterviewQuestion>[];
+          operation: () {
+            debugPrint('Getting questions for category: $category');
+
+            final filteredQuestions =
+                questions.where((question) {
+                  return _isQuestionInCategory(question, category);
+                }).toList();
+
+            debugPrint(
+              'Found ${filteredQuestions.length} questions for category: $category',
+            );
+            return filteredQuestions;
+          },
+          defaultValue: <InterviewQuestion>[],
+          operationName: 'get_questions_by_category',
+        ) ??
+        <InterviewQuestion>[];
   }
 
   /// Search questions with default empty result
   List<InterviewQuestion> searchQuestions(String query) {
     return _reliableOps.safelySync(
-      operation: () {
-        if (query.isEmpty) return questions;
-        
-        final lowercaseQuery = query.toLowerCase();
-        return questions.where((question) =>
-          question.text.toLowerCase().contains(lowercaseQuery) ||
-          question.subtopic.toLowerCase().contains(lowercaseQuery) ||
-          question.category.toLowerCase().contains(lowercaseQuery) ||
-          (question.answer?.toLowerCase().contains(lowercaseQuery) ?? false)
-        ).toList();
-      },
-      defaultValue: <InterviewQuestion>[],
-      operationName: 'search_questions',
-    ) ?? <InterviewQuestion>[];
+          operation: () {
+            if (query.isEmpty) return questions;
+
+            final lowercaseQuery = query.toLowerCase();
+            return questions
+                .where(
+                  (question) =>
+                      question.text.toLowerCase().contains(lowercaseQuery) ||
+                      question.subtopic.toLowerCase().contains(
+                        lowercaseQuery,
+                      ) ||
+                      question.category.toLowerCase().contains(
+                        lowercaseQuery,
+                      ) ||
+                      (question.answer?.toLowerCase().contains(
+                            lowercaseQuery,
+                          ) ??
+                          false),
+                )
+                .toList();
+          },
+          defaultValue: <InterviewQuestion>[],
+          operationName: 'search_questions',
+        ) ??
+        <InterviewQuestion>[];
   }
 
   /// Get user answer safely
   String getUserAnswer(String questionId) {
     return _reliableOps.safelySync(
-      operation: () => _userAnswers[questionId] ?? '',
-      defaultValue: '',
-      operationName: 'get_user_answer',
-    ) ?? '';
+          operation: () => _userAnswers[questionId] ?? '',
+          defaultValue: '',
+          operationName: 'get_user_answer',
+        ) ??
+        '';
   }
 
   /// Save user answer safely
@@ -410,9 +469,29 @@ class InterviewService extends ChangeNotifier {
         question.isCompleted = !question.isCompleted;
         await _saveQuestionsToStorage();
         notifyListeners();
-        debugPrint('Toggled completion for question: $questionId to ${question.isCompleted}');
+        debugPrint(
+          'Toggled completion for question: $questionId to ${question.isCompleted}',
+        );
       },
       operationName: 'toggle_completion',
+    );
+  }
+
+  /// Mark question as completed (always sets to true, doesn't toggle)
+  Future<void> markAsCompleted(String questionId) async {
+    await _reliableOps.safely(
+      operation: () async {
+        final question = _questions.firstWhere((q) => q.id == questionId);
+        if (!question.isCompleted) {
+          question.isCompleted = true;
+          await _saveQuestionsToStorage();
+          notifyListeners();
+          debugPrint('✅ Marked question as completed: $questionId');
+        } else {
+          debugPrint('📝 Question already completed: $questionId');
+        }
+      },
+      operationName: 'mark_as_completed',
     );
   }
 
@@ -424,7 +503,9 @@ class InterviewService extends ChangeNotifier {
         question.isStarred = !question.isStarred;
         await _saveQuestionsToStorage();
         notifyListeners();
-        debugPrint('Toggled star for question: $questionId to ${question.isStarred}');
+        debugPrint(
+          'Toggled star for question: $questionId to ${question.isStarred}',
+        );
       },
       operationName: 'toggle_star',
     );
@@ -450,23 +531,32 @@ class InterviewService extends ChangeNotifier {
   /// Get statistics safely
   Map<String, int> getStatistics() {
     return _reliableOps.safelySync(
-      operation: () {
-        final totalQuestions = questions.length;
-        final completedQuestions = questions.where((q) => q.isCompleted).length;
-        final starredQuestions = questions.where((q) => q.isStarred).length;
-        final answeredQuestions = _userAnswers.keys.where((key) => 
-          _userAnswers[key]?.isNotEmpty == true).length;
-        
-        return {
-          'total': totalQuestions,
-          'completed': completedQuestions,
-          'starred': starredQuestions,
-          'answered': answeredQuestions,
-        };
-      },
-      defaultValue: {'total': 0, 'completed': 0, 'starred': 0, 'answered': 0},
-      operationName: 'get_statistics',
-    ) ?? {'total': 0, 'completed': 0, 'starred': 0, 'answered': 0};
+          operation: () {
+            final totalQuestions = questions.length;
+            final completedQuestions =
+                questions.where((q) => q.isCompleted).length;
+            final starredQuestions = questions.where((q) => q.isStarred).length;
+            final answeredQuestions =
+                _userAnswers.keys
+                    .where((key) => _userAnswers[key]?.isNotEmpty == true)
+                    .length;
+
+            return {
+              'total': totalQuestions,
+              'completed': completedQuestions,
+              'starred': starredQuestions,
+              'answered': answeredQuestions,
+            };
+          },
+          defaultValue: {
+            'total': 0,
+            'completed': 0,
+            'starred': 0,
+            'answered': 0,
+          },
+          operationName: 'get_statistics',
+        ) ??
+        {'total': 0, 'completed': 0, 'starred': 0, 'answered': 0};
   }
 
   /// Clear all user answers safely
@@ -489,78 +579,120 @@ class InterviewService extends ChangeNotifier {
   // ==============================================
 
   /// Get filtered questions (compatibility method)
-  List<InterviewQuestion> getFilteredQuestions({String? category, String? difficulty, String? searchQuery}) {
+  List<InterviewQuestion> getFilteredQuestions({
+    String? category,
+    String? difficulty,
+    String? searchQuery,
+  }) {
     return _reliableOps.safelySync(
-      operation: () {
-        debugPrint('🔧 FILTER START: category="$category", difficulty="$difficulty", searchQuery="$searchQuery"');
-        var filtered = questions;
-        debugPrint('🔧 Initial questions count: ${filtered.length}');
-        
-        if (category != null && category.isNotEmpty && category != 'all') {
-          debugPrint('🔧 Filtering by category: $category');
-          final beforeCount = filtered.length;
-          filtered = filtered.where((q) => _isQuestionInCategory(q, category)).toList();
-          debugPrint('🔧 After category filter: ${filtered.length} (was $beforeCount)');
-        }
-        
-        if (difficulty != null && difficulty.isNotEmpty && difficulty != 'all') {
-          debugPrint('🔧 Filtering by difficulty: $difficulty');
-          final beforeCount = filtered.length;
-          filtered = filtered.where((q) => q.difficulty == difficulty).toList();
-          debugPrint('🔧 After difficulty filter: ${filtered.length} (was $beforeCount)');
-        }
-        
-        if (searchQuery != null && searchQuery.isNotEmpty) {
-          debugPrint('🔧 Filtering by search query: $searchQuery');
-          final beforeCount = filtered.length;
-          filtered = filtered.where((q) => 
-            q.text.toLowerCase().contains(searchQuery.toLowerCase()) ||
-            q.subtopic.toLowerCase().contains(searchQuery.toLowerCase())
-          ).toList();
-          debugPrint('🔧 After search filter: ${filtered.length} (was $beforeCount)');
-        }
-        
-        debugPrint('🔧 FILTER END: Returning ${filtered.length} questions');
-        return filtered;
-      },
-      defaultValue: <InterviewQuestion>[],
-      operationName: 'get_filtered_questions',
-    ) ?? <InterviewQuestion>[];
+          operation: () {
+            debugPrint(
+              '🔧 FILTER START: category="$category", difficulty="$difficulty", searchQuery="$searchQuery"',
+            );
+            var filtered = questions;
+            debugPrint('🔧 Initial questions count: ${filtered.length}');
+
+            if (category != null && category.isNotEmpty && category != 'all') {
+              debugPrint('🔧 Filtering by category: $category');
+              final beforeCount = filtered.length;
+              filtered =
+                  filtered
+                      .where((q) => _isQuestionInCategory(q, category))
+                      .toList();
+              debugPrint(
+                '🔧 After category filter: ${filtered.length} (was $beforeCount)',
+              );
+            }
+
+            if (difficulty != null &&
+                difficulty.isNotEmpty &&
+                difficulty != 'all') {
+              debugPrint('🔧 Filtering by difficulty: $difficulty');
+              final beforeCount = filtered.length;
+              filtered =
+                  filtered.where((q) => q.difficulty == difficulty).toList();
+              debugPrint(
+                '🔧 After difficulty filter: ${filtered.length} (was $beforeCount)',
+              );
+            }
+
+            if (searchQuery != null && searchQuery.isNotEmpty) {
+              debugPrint('🔧 Filtering by search query: $searchQuery');
+              final beforeCount = filtered.length;
+              filtered =
+                  filtered
+                      .where(
+                        (q) =>
+                            q.text.toLowerCase().contains(
+                              searchQuery.toLowerCase(),
+                            ) ||
+                            q.subtopic.toLowerCase().contains(
+                              searchQuery.toLowerCase(),
+                            ),
+                      )
+                      .toList();
+              debugPrint(
+                '🔧 After search filter: ${filtered.length} (was $beforeCount)',
+              );
+            }
+
+            debugPrint('🔧 FILTER END: Returning ${filtered.length} questions');
+            return filtered;
+          },
+          defaultValue: <InterviewQuestion>[],
+          operationName: 'get_filtered_questions',
+        ) ??
+        <InterviewQuestion>[];
   }
 
   /// Get progress stats (compatibility method)
   Map<String, dynamic> getProgressStats() {
     return _reliableOps.safelySync(
-      operation: () {
-        final stats = getStatistics();
-        final total = stats['total'] ?? 0;
-        final completed = stats['completed'] ?? 0;
-        final starred = stats['starred'] ?? 0;
-        final answered = stats['answered'] ?? 0;
-        
-        return {
-          'totalQuestions': total,
-          'completedQuestions': completed,
-          'starredQuestions': starred,
-          'answeredQuestions': answered,
-          'completionRate': total > 0 ? (completed / total) : 0.0,
+          operation: () {
+            final stats = getStatistics();
+            final total = stats['total'] ?? 0;
+            final completed = stats['completed'] ?? 0;
+            final starred = stats['starred'] ?? 0;
+            final answered = stats['answered'] ?? 0;
+
+            return {
+              // 🎯 FIX: Return keys that match what the UI expects
+              'total': total,
+              'completed': completed,
+              'starred': starred,
+              'answered': answered,
+              // Also provide detailed keys for backward compatibility
+              'totalQuestions': total,
+              'completedQuestions': completed,
+              'starredQuestions': starred,
+              'answeredQuestions': answered,
+              'completionRate': total > 0 ? (completed / total) : 0.0,
+            };
+          },
+          defaultValue: {
+            'total': 0,
+            'completed': 0,
+            'starred': 0,
+            'answered': 0,
+            'totalQuestions': 0,
+            'completedQuestions': 0,
+            'starredQuestions': 0,
+            'answeredQuestions': 0,
+            'completionRate': 0.0,
+          },
+          operationName: 'get_progress_stats',
+        ) ??
+        {
+          'total': 0,
+          'completed': 0,
+          'starred': 0,
+          'answered': 0,
+          'totalQuestions': 0,
+          'completedQuestions': 0,
+          'starredQuestions': 0,
+          'answeredQuestions': 0,
+          'completionRate': 0.0,
         };
-      },
-      defaultValue: {
-        'totalQuestions': 0,
-        'completedQuestions': 0,
-        'starredQuestions': 0,
-        'answeredQuestions': 0,
-        'completionRate': 0.0,
-      },
-      operationName: 'get_progress_stats',
-    ) ?? {
-      'totalQuestions': 0,
-      'completedQuestions': 0,
-      'starredQuestions': 0,
-      'answeredQuestions': 0,
-      'completionRate': 0.0,
-    };
   }
 
   // ==============================================
@@ -604,16 +736,19 @@ class InterviewService extends ChangeNotifier {
   /// Get questions for set (compatibility method)
   List<InterviewQuestion> getQuestionsForSet(String setId) {
     return _reliableOps.safelySync(
-      operation: () {
-        final questionSet = getQuestionSetById(setId);
-        if (questionSet != null) {
-          return _questions.where((q) => questionSet.questionIds.contains(q.id)).toList();
-        }
-        return <InterviewQuestion>[];
-      },
-      defaultValue: <InterviewQuestion>[],
-      operationName: 'get_questions_for_set',
-    ) ?? <InterviewQuestion>[];
+          operation: () {
+            final questionSet = getQuestionSetById(setId);
+            if (questionSet != null) {
+              return _questions
+                  .where((q) => questionSet.questionIds.contains(q.id))
+                  .toList();
+            }
+            return <InterviewQuestion>[];
+          },
+          defaultValue: <InterviewQuestion>[],
+          operationName: 'get_questions_for_set',
+        ) ??
+        <InterviewQuestion>[];
   }
 
   /// Delete question set (compatibility method)

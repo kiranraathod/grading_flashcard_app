@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../widgets/interview/category_filter.dart';
 import '../widgets/interview/difficulty_filter.dart';
@@ -123,8 +124,8 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
       searchQuery: _searchController.text,
     );
     
-    // ✅ SIMPLIFIED: Essential debugging for filtering issues
-    if (_activeCategory != 'all') {
+    // ✅ SIMPLIFIED: Essential debugging for filtering issues (reduced for cleaner logs)
+    if (_activeCategory != 'all' && kDebugMode) {
       final allQuestions = _interviewService!.questions;
       debugPrint('=== FILTER DEBUG: $_activeCategory ===');
       debugPrint('Total questions: ${allQuestions.length}');

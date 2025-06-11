@@ -5,23 +5,29 @@ import '../../models/app_error.dart';
 import '../../models/flashcard.dart';
 import '../../services/api_service.dart';
 import '../../services/error_service.dart';
+import '../../services/flashcard_service.dart';
+import '../../services/guest_user_manager.dart';
+import '../../utils/config.dart';
 import 'study_event.dart';
 import 'study_state.dart';
 
 class StudyBloc extends Bloc<StudyEvent, StudyState> {
   final ApiService _apiService;
+  final FlashcardService _flashcardService;
   final ErrorService _errorService = ErrorService();
 
-  StudyBloc({required ApiService apiService})
-    : _apiService = apiService,
-      super(const StudyState()) {
+  StudyBloc({
+    required ApiService apiService,
+    required FlashcardService flashcardService,
+  }) : _apiService = apiService,
+       _flashcardService = flashcardService,
+       super(const StudyState()) {
     on<StudyStarted>(_onStudyStarted);
     on<FlashcardAnswered>(_onFlashcardAnswered);
-    on<FlashcardMarkedForReview>(_onFlashcardMarkedForReview);
     on<NextFlashcardRequested>(_onNextFlashcardRequested);
     on<PreviousFlashcardRequested>(_onPreviousFlashcardRequested);
-    on<EditFlashcardSetRequested>(_onEditFlashcardSetRequested);
-    on<UpdateFlashcardSet>(_onUpdateFlashcardSet);
+    on<DeckCompleted>(_onDeckCompleted);
+    on<StudyResumedAfterAuth>(_onStudyResumedAfterAuth);
   }
 
   void _onStudyStarted(StudyStarted event, Emitter<StudyState> emit) {
@@ -52,6 +58,8 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     FlashcardAnswered event,
     Emitter<StudyState> emit,
   ) async {
+    debugPrint('🔍 StudyBloc: FlashcardAnswered event received - ${event.answer} for card ${event.flashcard.id}');
+    
     if (state.currentFlashcard == null) return;
 
     // Clear any previous graded answer first to avoid showing old results
@@ -61,22 +69,60 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     ));
 
     try {
+      // 🎯 SMART AUTHENTICATION CHECK - Only trigger when truly needed
+      final guestManager = GuestUserManager.instance;
+      
+      // Log current state for testing
+      debugPrint('🔍 StudyBloc Auth Check - Current usage: ${guestManager.currentUsageCount}/${guestManager.maxActions}');
+      debugPrint('🔍 Can perform action: ${guestManager.canPerformGradingAction()}');
+      debugPrint('🔍 Has reached limit: ${guestManager.hasReachedLimit}');
+      
+      // 🔧 SMART FIX: Only prevent action if user has EXCEEDED their limit
+      // This allows users to complete their allotted actions (1, 2, 3) without interruption
+      final hasExceededLimit = AuthConfig.enableUsageLimits && 
+                               (guestManager.currentUsageCount >= guestManager.maxActions);
+      
+      debugPrint('🔍 Current count check: ${guestManager.currentUsageCount} >= ${guestManager.maxActions} = $hasExceededLimit');
+      
+      if (hasExceededLimit) {
+        debugPrint('🚫 StudyBloc: Usage limit exceeded - preventing new grading action');
+        debugPrint('🔐 StudyBloc: User must authenticate before proceeding');
+        
+        // Emit authentication required state immediately - don't process the answer
+        emit(state.copyWith(
+          status: StudyStatus.authenticationRequired,
+          gradedAnswer: null, // Don't show any answer result
+        ));
+        return;
+      }
+
+      // 🔄 PROCEED WITH GRADING - user is within their usage limits
+      debugPrint('🔍 StudyBloc: Proceeding with grading - calling API');
+
       final answer = Answer(
         flashcardId: event.flashcard.id,
         question: event.flashcard.question,
         userAnswer: event.answer,
         correctAnswer: event.flashcard.answer,
       );
-
-      final gradedAnswer = await _apiService.gradeAnswer(answer);
       
-      // Log the grade received for debugging
-      debugPrint('Answer score received: ${gradedAnswer.score} for card ${event.flashcard.id}');
+      // Enhanced API call with explicit timeout and error handling
+      debugPrint('🔍 Making API call for card: ${event.flashcard.id}');
+      final gradedAnswer = await _apiService.gradeAnswer(answer);
+      debugPrint('🔍 API call completed - processing response');
+      
+      // 🎯 IMPORTANT: Record grading action AFTER successful grading
+      debugPrint('🔍 StudyBloc: API call successful - recording grading action');
+      await guestManager.recordGradingAction();
+      
+      // 🎯 FIRST: Process the score and update completion status
+      debugPrint('📊 Answer score received: ${gradedAnswer.score} for card ${event.flashcard.id}');
       
       // Only mark flashcard as completed if the answer is correct (score >= 70)
       // This is the ONLY place where progress is updated, and only on user answer submission
       if ((gradedAnswer.score ?? 0) >= 70) {
-        debugPrint('Marking card ${event.flashcard.id} as completed');
+        debugPrint('✅ Marking card ${event.flashcard.id} as completed (score: ${gradedAnswer.score})');
+        debugPrint('🎯 COMPLETION TRIGGER: Score ${gradedAnswer.score} >= 70 threshold');
         
         // Create a copy of the flashcard set with the updated flashcard
         final updatedFlashcards = List<Flashcard>.from(state.flashcardSet?.flashcards ?? []);
@@ -85,6 +131,11 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
         if (cardIndex >= 0) {
           // Only update if the card wasn't already completed
           final isAlreadyCompleted = updatedFlashcards[cardIndex].isCompleted;
+          
+          debugPrint('📊 COMPLETION DEBUG: Card ${event.flashcard.id} (index: $cardIndex)');
+          debugPrint('   Current completion status: ${isAlreadyCompleted ? "Already completed" : "Not completed"}');
+          debugPrint('   Score achieved: ${gradedAnswer.score}');
+          debugPrint('   Will mark as completed: ${!isAlreadyCompleted}');
           
           if (!isAlreadyCompleted) {
             debugPrint('Card was not previously completed - updating progress');
@@ -106,6 +157,12 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
               lastUpdated: DateTime.now(), // Update the timestamp to trigger rerenders
             );
             
+            // Calculate and log new progress
+            final completedCount = updatedFlashcards.where((card) => card.isCompleted).length;
+            final totalCount = updatedFlashcards.length;
+            final progressPercent = (completedCount / totalCount * 100).round();
+            debugPrint('📊 NEW PROGRESS: $completedCount/$totalCount cards completed ($progressPercent%)');
+            
             emit(
               state.copyWith(
                 status: StudyStatus.loaded, 
@@ -113,6 +170,16 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
                 flashcardSet: updatedSet,
               ),
             );
+            
+            // 🎯 CRITICAL FIX: Save the updated progress to storage
+            // Use a non-blocking save operation to avoid disrupting the main flow
+            _flashcardService.updateSet(updatedSet).then((_) {
+              debugPrint('✅ Flashcard progress saved to storage successfully');
+            }).catchError((saveError) {
+              debugPrint('❌ Failed to save flashcard progress: $saveError');
+              // Note: We don't re-emit error state here to avoid disrupting user experience
+              // The progress is still updated in memory for this session
+            });
           } else {
             debugPrint('Card was already completed - updating graded answer but not progress');
             // Still update the graded answer for UI feedback, but don't change completion status
@@ -125,19 +192,30 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
             );
           }
         } else {
-          debugPrint('Card index not found - not updating progress');
+          debugPrint('❌ CRITICAL: Card index not found - not updating progress');
           emit(
             state.copyWith(status: StudyStatus.loaded, gradedAnswer: gradedAnswer),
           );
         }
       } else {
-        debugPrint('Answer incorrect (score: ${gradedAnswer.score}) - not updating progress');
+        debugPrint('❌ Card ${event.flashcard.id} not completed (score: ${gradedAnswer.score}) - threshold is 70');
+        debugPrint('📊 SCORE DEBUG: Need ${70 - (gradedAnswer.score ?? 0)} more points to complete this card');
         emit(
           state.copyWith(status: StudyStatus.loaded, gradedAnswer: gradedAnswer),
         );
       }
+      
+      // 🎯 FIXED: Removed POST-PROCESSING authentication check
+      // Authentication should only trigger when user ATTEMPTS next action, not after completing current one
+      // This eliminates the flickering issue and provides better UX
+      
     } catch (e, stackTrace) {
-      debugPrint('Error in StudyBloc._onFlashcardAnswered: $e');
+      debugPrint('❌❌❌ CRITICAL ERROR in StudyBloc._onFlashcardAnswered: $e');
+      debugPrint('❌ Error type: ${e.runtimeType}');
+      debugPrint('❌ Stack trace: $stackTrace');
+      
+      // Also log to console with error level
+      debugPrint('❌❌❌ StudyBloc API Error: $e');
 
       // Report error through error service
       if (e is! AppError) {
@@ -159,85 +237,109 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
           errorMessage:
               e is AppError
                   ? e.userFriendlyMessage
-                  : 'An error occurred while grading your answer.',
+                  : 'An error occurred while grading your answer. Please check your network connection.',
         ),
       );
     }
   }
 
-  void _onFlashcardMarkedForReview(
-    FlashcardMarkedForReview event,
-    Emitter<StudyState> emit,
-  ) {
-    emit(state.copyWith(isMarkedForReview: event.isMarked));
-  }
-
+  /// Handle navigation to next flashcard
   void _onNextFlashcardRequested(
     NextFlashcardRequested event,
     Emitter<StudyState> emit,
   ) {
-    if (!state.canGoNext) return;
-
-    // Clear the graded answer first to ensure UI consistency
-    emit(
-      state.copyWith(
-        gradedAnswer: null,
-        isMarkedForReview: false,
-      ),
-    );
+    debugPrint('🔄 StudyBloc: NextFlashcardRequested - Current index: ${state.currentIndex}');
     
-    // Then update the index in a separate emission to ensure clean state transition
-    emit(
-      state.copyWith(
-        currentIndex: state.currentIndex + 1,
-      ),
-    );
+    if (state.flashcardSet == null) {
+      debugPrint('❌ No flashcard set available for navigation');
+      return;
+    }
+
+    final currentIndex = state.currentIndex;
+    final totalCards = state.flashcardSet!.flashcards.length;
+    
+    if (currentIndex < totalCards - 1) {
+      final nextIndex = currentIndex + 1;
+      debugPrint('✅ Moving to next card: ${nextIndex + 1}/$totalCards');
+      
+      emit(state.copyWith(
+        currentIndex: nextIndex,
+        status: StudyStatus.loaded,
+        gradedAnswer: null, // Clear previous graded answer
+      ));
+      
+      debugPrint('🔄 Navigation complete - Now showing card ${nextIndex + 1}/$totalCards');
+    } else {
+      debugPrint('📚 Already at last card ($totalCards/$totalCards) - completing deck');
+      // Complete the deck instead of staying on same card
+      emit(state.copyWith(
+        status: StudyStatus.completed,
+        gradedAnswer: null, // Clear any graded answer
+      ));
+      debugPrint('🏁 Deck completed - ready to return to home screen');
+    }
   }
 
+  /// Handle navigation to previous flashcard
   void _onPreviousFlashcardRequested(
     PreviousFlashcardRequested event,
     Emitter<StudyState> emit,
   ) {
-    if (!state.canGoPrevious) return;
-
-    // Clear the graded answer first to ensure UI consistency
-    emit(
-      state.copyWith(
-        gradedAnswer: null,
-        isMarkedForReview: false,
-      ),
-    );
+    debugPrint('🔄 StudyBloc: PreviousFlashcardRequested - Current index: ${state.currentIndex}');
     
-    // Then update the index in a separate emission
-    emit(
-      state.copyWith(
-        currentIndex: state.currentIndex - 1,
-      ),
-    );
+    if (state.flashcardSet == null) {
+      debugPrint('❌ No flashcard set available for navigation');
+      return;
+    }
+
+    final currentIndex = state.currentIndex;
+    final totalCards = state.flashcardSet!.flashcards.length;
+    
+    if (currentIndex > 0) {
+      final previousIndex = currentIndex - 1;
+      debugPrint('✅ Moving to previous card: ${previousIndex + 1}/$totalCards');
+      
+      emit(state.copyWith(
+        currentIndex: previousIndex,
+        status: StudyStatus.loaded,
+        gradedAnswer: null, // Clear previous graded answer
+      ));
+      
+      debugPrint('🔄 Navigation complete - Now showing card ${previousIndex + 1}/$totalCards');
+    } else {
+      debugPrint('📚 Already at first card (1/$totalCards) - no previous card available');
+    }
   }
 
-  void _onEditFlashcardSetRequested(
-    EditFlashcardSetRequested event,
+  /// Handle deck completion
+  void _onDeckCompleted(
+    DeckCompleted event,
     Emitter<StudyState> emit,
   ) {
-    // No state change needed for this event
-    // Navigation to edit screen will be handled in the UI
+    debugPrint('🏁 StudyBloc: DeckCompleted - Finishing study session');
+    
+    emit(state.copyWith(
+      status: StudyStatus.completed,
+      gradedAnswer: null, // Clear any graded answer
+    ));
+    
+    debugPrint('✅ Study session completed - ready to return to home screen');
   }
 
-  void _onUpdateFlashcardSet(
-    UpdateFlashcardSet event,
+  /// Handle resuming study after authentication
+  void _onStudyResumedAfterAuth(
+    StudyResumedAfterAuth event,
     Emitter<StudyState> emit,
   ) {
-    // Update the flashcard set while preserving the current index and other state
-    emit(
-      state.copyWith(
-        flashcardSet: event.flashcardSet,
-        // Preserve the current index if it's still valid
-        currentIndex: state.currentIndex < event.flashcardSet.flashcards.length 
-          ? state.currentIndex 
-          : 0,
-      ),
-    );
-    debugPrint('Updated flashcard set while preserving study progress');
+    debugPrint('🔄 StudyBloc: Study resumed after authentication');
+    
+    // Simply transition to loaded state to continue where we left off
+    // The authentication system has already updated usage limits
+    emit(state.copyWith(
+      status: StudyStatus.loaded,
+      gradedAnswer: null, // Clear any authentication-related state
+    ));
+    
+    debugPrint('✅ Study session resumed - user can continue');
   }
 }

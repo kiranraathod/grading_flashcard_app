@@ -254,6 +254,10 @@
   "@next": {
     "description": "Button to proceed to next step"
   },
+  "finish": "Finish",
+  "@finish": {
+    "description": "Button to complete the current activity"
+  },
   "back": "Back",
   "@back": {
     "description": "Button to go back to previous step"

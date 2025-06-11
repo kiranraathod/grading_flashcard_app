@@ -270,7 +270,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       });
 
       // ✨ AUTOMATIC COMPLETION: Always mark as completed when word requirements are met
-      _interviewService.toggleCompletion(widget.question.id);
+      _interviewService.markAsCompleted(widget.question.id);
 
       // Record the view again with completed status
       context.read<RecentViewBloc>().add(
@@ -462,7 +462,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
 
       // ✨ AUTOMATIC COMPLETION: Mark all submitted questions as completed
       for (final answer in gradedAnswers) {
-        _interviewService.toggleCompletion(answer.questionId);
+        _interviewService.markAsCompleted(answer.questionId);
         debugPrint(
           '✓ Automatically marked $answer.questionId as completed (met word requirements)',
         );

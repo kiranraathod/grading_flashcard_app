@@ -16,6 +16,7 @@ import '../utils/design_system.dart';
 import '../utils/app_localizations_extension.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/answer_input_widget.dart';
+import '../widgets/auth/authentication_modal.dart';
 import 'create_flashcard_screen.dart';
 import 'result_screen.dart';
 
@@ -31,8 +32,10 @@ class StudyScreen extends StatelessWidget {
     final flashcardService = Provider.of<FlashcardService>(context, listen: false);
     
     // Create the study bloc outside the build method to ensure it persists
-    final studyBloc = StudyBloc(apiService: ApiService())
-      ..add(StudyStarted(flashcardSet: set));
+    final studyBloc = StudyBloc(
+      apiService: ApiService(),
+      flashcardService: flashcardService,
+    )..add(StudyStarted(flashcardSet: set));
     
     // No longer create a new RecentViewBloc here as we're using the global one
     
@@ -139,11 +142,48 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return BlocConsumer<StudyBloc, StudyState>(
       listener: (context, state) {
+        // Handle authentication required
+        if (state.status == StudyStatus.authenticationRequired) {
+          debugPrint('🚫 StudyScreen: Authentication required - showing auth modal');
+          
+          // 🔧 FIX: Dismiss result screen if it's showing to prevent conflicts
+          if (_isResultScreenShowing) {
+            debugPrint('🔧 StudyScreen: Dismissing result screen before showing auth modal');
+            _isResultScreenShowing = false;
+            if (context.mounted) {
+              Navigator.of(context, rootNavigator: false).popUntil((route) => route.isFirst);
+            }
+          }
+          
+          // Show authentication modal
+          AuthenticationModal.show(context).then((_) {
+            debugPrint('🔍 StudyScreen: Auth modal dismissed');
+            
+            if (context.mounted) {
+              // 🔧 FIX: Resume study session without resetting everything
+              debugPrint('🔄 StudyScreen: Resuming study session after authentication');
+              context.read<StudyBloc>().add(StudyResumedAfterAuth());
+            }
+          });
+        }
+        
         // Handle error messages
         if (state.status == StudyStatus.error) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.errorMessage ?? 'An error occurred')),
           );
+        }
+        
+        // Handle deck completion - navigate back to home screen
+        if (state.status == StudyStatus.completed) {
+          debugPrint('🏁 StudyScreen: Deck completed - navigating to home screen');
+          
+          // Use post frame callback to ensure navigation happens after build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              Navigator.of(context).pop(); // Return to home screen
+            }
+          });
         }
         
         // Update page controller when index changes
@@ -166,11 +206,12 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
           }
         }
         
-        // Show result screen when a graded answer is available
+        // Show result screen when a graded answer is available AND authentication is not required
         if (state.status == StudyStatus.loaded && 
             state.gradedAnswer != null && 
             !_isResultScreenShowing) {
           
+          debugPrint('🎯 StudyScreen: Showing result dialog for graded answer (auth not required)');
           _isResultScreenShowing = true;
           
           // Get the bloc before navigation to ensure we have the correct instance
@@ -204,8 +245,16 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                   answer: state.gradedAnswer!,
                   correctAnswer: state.currentFlashcard!.answer,
                   onContinue: () {
-                    // First dispatch the event to move to the next card
-                    bloc.add(NextFlashcardRequested());
+                    // Check if we're on the last card
+                    if (state.isLastCard) {
+                      // Complete the deck instead of trying to go next
+                      debugPrint('🏁 Continue from last card - completing deck');
+                      bloc.add(DeckCompleted());
+                    } else {
+                      // Move to next card
+                      debugPrint('🔄 Continue to next card');
+                      bloc.add(NextFlashcardRequested());
+                    }
                     
                     // After a short delay, close the dialog to ensure state update happens first
                     Future.delayed(Duration(milliseconds: 100), () {
@@ -385,7 +434,7 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                         );
                       }
                     },
-                    isDisabled: state.status == StudyStatus.grading,
+                    isDisabled: state.status == StudyStatus.grading || state.status == StudyStatus.authenticationRequired,
                   ),
                   Padding(
                     padding: EdgeInsets.all(DS.spacingM),
@@ -393,7 +442,7 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         ElevatedButton(
-                          onPressed: state.canGoPrevious && state.status != StudyStatus.grading
+                          onPressed: state.canGoPrevious && state.status != StudyStatus.grading && state.status != StudyStatus.authenticationRequired
                               ? () => bloc.add(PreviousFlashcardRequested())
                               : null,
                           style: ElevatedButton.styleFrom(
@@ -410,14 +459,30 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                           style: context.titleMedium,
                         ),
                         ElevatedButton(
-                          onPressed: state.canGoNext && state.status != StudyStatus.grading
-                              ? () => bloc.add(NextFlashcardRequested())
+                          onPressed: (state.canGoNext || state.isLastCard) && 
+                                   state.status != StudyStatus.grading && 
+                                   state.status != StudyStatus.authenticationRequired
+                              ? () {
+                                  if (state.isLastCard) {
+                                    // On last card, complete the deck
+                                    bloc.add(DeckCompleted());
+                                  } else {
+                                    // On other cards, go to next
+                                    bloc.add(NextFlashcardRequested());
+                                  }
+                                }
                               : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: context.primaryColor,
+                            backgroundColor: state.isLastCard 
+                                ? context.successColor  // Different color for finish
+                                : context.primaryColor,
                             foregroundColor: context.onPrimaryColor,
                           ),
-                          child: Text(AppLocalizations.of(context).next),
+                          child: Text(
+                            state.isLastCard 
+                                ? "Finish"  // Hardcoded for now - can be localized later
+                                : AppLocalizations.of(context).next
+                          ),
                         ),
                       ],
                     ),

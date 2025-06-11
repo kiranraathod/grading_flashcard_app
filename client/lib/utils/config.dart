@@ -7,6 +7,34 @@ enum Environment { dev, staging, prod }
 // Network log level enum
 enum NetworkLogLevel { none, errors, basic, verbose }
 
+// Authentication configuration
+class AuthConfig {
+  // Feature flags - ENABLED for testing
+  static bool enableAuthentication = true;
+  static bool enableUsageLimits = true;
+  static bool enableGuestTracking = true;
+  static bool enableProfileMenu = true; // Keep existing profile menu enabled
+  
+  // Usage limits for guest users
+  static int guestMaxGradingActions = 3;
+  static int authenticatedMaxGradingActions = 5;
+  
+  // Supabase configuration
+  static const String supabaseUrl = 'https://saxopupmwfcfjxuflfrx.supabase.co';
+  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNheG9wdXBtd2ZjZmp4dWZsZnJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkxOTU1NjgsImV4cCI6MjA2NDc3MTU2OH0.1RdIw1v9FG76LJz7SNZY5YW51dcRP4XVCPCBLRgTXVU';
+  
+  // Authentication flow configuration
+  static Duration authSessionTimeout = const Duration(hours: 24);
+  static bool requireEmailVerification = false; // Disable for development
+  static bool enableSocialLogin = true;
+  static bool enableEmailAuth = true; // Enable email/password authentication
+  
+  // Development flags
+  static bool enableAuthDebugLogging = false;  // 🔇 Disable for cleaner testing
+  static bool skipEmailVerification = true; // For development
+  static bool enableDemoMode = true; // 🧪 Enable demo authentication for testing
+}
+
 class AppConfig {
   // Private constructor to prevent instantiation
   AppConfig._();
@@ -19,7 +47,7 @@ class AppConfig {
   static Duration apiTimeout = const Duration(seconds: 45);  // Extended for poor networks
   static int maxRetryAttempts = 1;                          // Reduced for poor networks  
   static Duration retryDelay = const Duration(seconds: 2);   // Reasonable delay
-  static NetworkLogLevel networkLogLevel = NetworkLogLevel.errors;  // Reduce logging
+  static NetworkLogLevel networkLogLevel = NetworkLogLevel.none;  // 🔇 No network logs
   
   // Connection configuration - OPTIMIZED FOR POOR NETWORKS
   static Duration networkCheckInterval = const Duration(minutes: 5);  // Less frequent checks
@@ -54,7 +82,7 @@ class AppConfig {
         case Environment.staging:
           return 'https://staging-api.flashmaster.app';
         case Environment.dev:
-          return 'http://10.0.2.2:5000';
+          return 'http://10.0.2.2:3000'; // 🔧 FIX: Changed from 5000 to 3000 to match server
       }
     }
   }

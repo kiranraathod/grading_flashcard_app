@@ -3,7 +3,7 @@ import '../../models/answer.dart';
 import '../../models/flashcard.dart';
 import '../../models/flashcard_set.dart';
 
-enum StudyStatus { initial, loading, loaded, answering, grading, error }
+enum StudyStatus { initial, loading, loaded, answering, grading, authenticationRequired, completed, error }
 
 class StudyState extends Equatable {
   final StudyStatus status;
@@ -37,6 +37,14 @@ class StudyState extends Equatable {
       currentIndex < flashcardSet!.flashcards.length - 1;
   
   bool get canGoPrevious => currentIndex > 0;
+  
+  /// Check if we're currently on the last card
+  bool get isLastCard =>
+      flashcardSet != null &&
+      currentIndex == flashcardSet!.flashcards.length - 1;
+  
+  /// Check if the deck study session is completed
+  bool get isDeckCompleted => status == StudyStatus.completed;
   
   StudyState copyWith({
     StudyStatus? status,

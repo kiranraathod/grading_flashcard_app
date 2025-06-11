@@ -27,10 +27,21 @@ import 'widgets/error_handler.dart';
 import 'services/initialization_coordinator.dart';
 import 'services/simple_error_handler.dart';
 import 'services/cache_manager.dart';
+import 'services/supabase_service.dart';
+import 'services/authentication_service.dart';
+import 'services/guest_user_manager.dart';
 
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 🎯 TESTING MODE: Only show auth-related and error logs
+  final originalDebugPrint = debugPrint;
+  debugPrint = (String? message, {int? wrapWidth}) {
+    if (message != null && _shouldShowForAuthTesting(message)) {
+      originalDebugPrint(message, wrapWidth: wrapWidth);
+    }
+  };
 
   // Initialize System Stabilization
   await _initializeSystemStabilization();
@@ -38,17 +49,107 @@ void main() async {
   runApp(MyApp());
 }
 
+/// Only show logs relevant for testing authentication trigger logic
+bool _shouldShowForAuthTesting(String message) {
+  // ✅ ALWAYS SHOW: Errors and exceptions
+  if (message.contains('❌') ||
+      message.contains('ERROR') ||
+      message.contains('Exception') ||
+      message.contains('Failed')) {
+    return true;
+  }
+
+  // ✅ SHOW: Authentication trigger logic
+  if (message.contains('🚫 Usage limit reached') ||
+      message.contains('showing auth modal') ||
+      message.contains('Authentication modal') ||
+      message.contains('Grading blocked') ||
+      message.contains('limit reached')) {
+    return true;
+  }
+
+  // ✅ SHOW: Usage count updates (to track progress)
+  if (message.contains('Grading action recorded') ||
+      message.contains('Usage limit') ||
+      message.contains('actions remaining') ||
+      message.contains('canPerformGradingAction')) {
+    return true;
+  }
+
+  // ✅ SHOW: Authentication trigger debugging
+  if (message.contains('🔍 Testing Auth Trigger') ||
+      message.contains('🔍 Can perform action') ||
+      message.contains('🔍 Has reached limit') ||
+      message.contains('🔍 Auth modal dismissed') ||
+      message.contains('🔍 Proceeding with grading') ||
+      message.contains('🔍 StudyBloc Auth Check') ||
+      message.contains('🚫 StudyBloc: Usage limit reached') ||
+      message.contains('🔍 StudyBloc: Proceeding with grading') ||
+      message.contains('🔍 StudyBloc: API call successful') ||
+      message.contains('🚫 StudyScreen: Authentication required') ||
+      message.contains('🔍 Current count check') ||
+      message.contains('🚫 StudyBloc: Usage limit already reached') ||
+      message.contains('🔍 StudyBloc: FlashcardAnswered event received')) {
+    return true;
+  }
+
+  // ✅ SHOW: All API calls (to catch bypassed calls)
+  if (message.contains('🔍 API SERVICE') ||
+      message.contains('gradeAnswer') ||
+      message.contains('API request') ||
+      message.contains('POST /api/grade') ||
+      message.contains('Making API request') ||
+      message.contains('Called from:')) {
+    return true;
+  }
+
+  // ✅ SHOW: Authentication state changes
+  if (message.contains('User signed in') ||
+      message.contains('User signed out') ||
+      message.contains('Auth state changed') ||
+      message.contains('authenticated') ||
+      message.contains('🔍 Google sign-in') ||
+      message.contains('🔍 Email auth') ||
+      message.contains('🧪 Demo') ||
+      message.contains('✅ Google sign-in successful') ||
+      message.contains('✅ Email auth successful') ||
+      message.contains('✅ Demo') ||
+      message.contains('❌ Google sign-in failed') ||
+      message.contains('❌ Email auth failed') ||
+      message.contains('❌ Demo')) {
+    return true;
+  }
+
+  // 🔇 HIDE: All routine operations
+  if (message.contains('SAVING ANSWER') ||
+      message.contains('ADDING RECENT ITEM') ||
+      message.contains('Save SUCCESSFUL') ||
+      message.contains('Found') && message.contains('existing items') ||
+      message.contains('Updating existing item') ||
+      message.contains('Total local answers') ||
+      message.contains('Saved to') ||
+      message.contains('Load') ||
+      message.contains('initialized') ||
+      message.contains('✅') ||
+      message.contains('✓')) {
+    return false;
+  }
+
+  // 🔇 HIDE: Everything else by default
+  return false;
+}
+
 /// Initialize System Stabilization with coordinated service initialization
 Future<void> _initializeSystemStabilization() async {
   final coordinator = InitializationCoordinator();
-  
+
   debugPrint('🚀 Initializing System Stabilization...');
-  
+
   // Register services with dependencies (CacheManager registers itself)
   coordinator.registerService('StorageService');
   coordinator.registerService('UserService', dependencies: ['StorageService']);
   coordinator.registerService('NetworkInfrastructure');
-  
+
   // Initialize storage service first
   await SimpleErrorHandler.safe(
     () async {
@@ -57,12 +158,17 @@ Future<void> _initializeSystemStabilization() async {
       coordinator.markServiceInitialized('StorageService');
     },
     fallbackOperation: () async {
-      coordinator.markServiceFailed('StorageService', 'Storage initialization failed');
-      debugPrint('⚠️ Storage service initialization failed, using memory-only storage');
+      coordinator.markServiceFailed(
+        'StorageService',
+        'Storage initialization failed',
+      );
+      debugPrint(
+        '⚠️ Storage service initialization failed, using memory-only storage',
+      );
     },
     operationName: 'storage_service_initialization',
   );
-  
+
   // Initialize user service (depends on storage)
   await SimpleErrorHandler.safe(
     () async {
@@ -72,31 +178,55 @@ Future<void> _initializeSystemStabilization() async {
       coordinator.markServiceInitialized('UserService');
     },
     fallbackOperation: () async {
-      coordinator.markServiceFailed('UserService', 'User service initialization failed');
+      coordinator.markServiceFailed(
+        'UserService',
+        'User service initialization failed',
+      );
       debugPrint('⚠️ User service initialization failed, using default user');
     },
     operationName: 'user_service_initialization',
   );
-  
+
   // Initialize cache manager (handles its own coordination)
-  await SimpleErrorHandler.safely(
-    () async {
-      final cacheManager = CacheManager();
-      await cacheManager.initialize();
-    },
-    operationName: 'cache_manager_initialization_wrapper',
-  );
-  
+  await SimpleErrorHandler.safely(() async {
+    final cacheManager = CacheManager();
+    await cacheManager.initialize();
+  }, operationName: 'cache_manager_initialization_wrapper');
+
+  // Initialize authentication services (respects feature flags)
+  await SimpleErrorHandler.safely(() async {
+    coordinator.registerService('SupabaseService');
+    coordinator.registerService(
+      'AuthenticationService',
+      dependencies: ['SupabaseService'],
+    );
+    coordinator.registerService('GuestUserManager');
+
+    // Initialize Supabase service
+    coordinator.markServiceInitializing('SupabaseService');
+    await SupabaseService.instance.initialize();
+    coordinator.markServiceInitialized('SupabaseService');
+
+    // Initialize authentication service
+    coordinator.markServiceInitializing('AuthenticationService');
+    await AuthenticationService.instance.initialize();
+    coordinator.markServiceInitialized('AuthenticationService');
+
+    // Initialize guest user manager
+    coordinator.markServiceInitializing('GuestUserManager');
+    await GuestUserManager.instance.initialize();
+    coordinator.markServiceInitialized('GuestUserManager');
+
+    debugPrint('✅ Authentication services initialized');
+  }, operationName: 'authentication_services_initialization');
+
   // Initialize network infrastructure
-  await SimpleErrorHandler.safely(
-    () async {
-      coordinator.markServiceInitializing('NetworkInfrastructure');
-      await _initializeNetworkInfrastructure();
-      coordinator.markServiceInitialized('NetworkInfrastructure');
-    },
-    operationName: 'network_infrastructure_initialization',
-  );
-  
+  await SimpleErrorHandler.safely(() async {
+    coordinator.markServiceInitializing('NetworkInfrastructure');
+    await _initializeNetworkInfrastructure();
+    coordinator.markServiceInitialized('NetworkInfrastructure');
+  }, operationName: 'network_infrastructure_initialization');
+
   // Report initialization status
   final report = coordinator.getInitializationReport();
   debugPrint('📊 System Stabilization Initialization Report:');
@@ -104,7 +234,7 @@ Future<void> _initializeSystemStabilization() async {
     final statusIcon = status == ServiceStatus.initialized ? '✅' : '❌';
     debugPrint('   $statusIcon $service: $status');
   });
-  
+
   debugPrint('✅ System Stabilization Complete');
 }
 
@@ -189,7 +319,7 @@ class _MyAppState extends State<MyApp> {
             ),
           );
         }
-        
+
         if (snapshot.hasError) {
           return MaterialApp(
             home: Scaffold(
@@ -199,12 +329,12 @@ class _MyAppState extends State<MyApp> {
             ),
           );
         }
-        
+
         return _buildMainApp();
       },
     );
   }
-  
+
   Future<void> _initializeServices() async {
     // Create and register services
     final apiService = ApiService();
@@ -219,7 +349,9 @@ class _MyAppState extends State<MyApp> {
     // Initialize InterviewService and wait for completion
     debugPrint('🔧 Initializing InterviewService...');
     await interviewService.initialize();
-    debugPrint('✅ InterviewService initialized with ${interviewService.questions.length} questions');
+    debugPrint(
+      '✅ InterviewService initialized with ${interviewService.questions.length} questions',
+    );
 
     // Store services for use in _buildMainApp
     _services = {
@@ -233,17 +365,19 @@ class _MyAppState extends State<MyApp> {
       'jobDescription': jobDescriptionService,
     };
   }
-  
+
   Widget _buildMainApp() {
     // Get services from stored map
     final apiService = _services['api'] as ApiService;
-    final speechToTextService = _services['speechToText'] as SpeechToTextService;
+    final speechToTextService =
+        _services['speechToText'] as SpeechToTextService;
     final flashcardService = _services['flashcard'] as FlashcardService;
     final userService = _services['user'] as UserService;
     final networkService = _services['network'] as NetworkService;
     final interviewService = _services['interview'] as InterviewService;
     final recentViewService = _services['recentView'] as RecentViewService;
-    final jobDescriptionService = _services['jobDescription'] as JobDescriptionService;
+    final jobDescriptionService =
+        _services['jobDescription'] as JobDescriptionService;
 
     // Create global instances of BLoCs to be shared across all screens
     final recentViewBloc = RecentViewBloc(recentViewService: recentViewService);
@@ -284,6 +418,13 @@ class _MyAppState extends State<MyApp> {
           ],
           child: MultiProvider(
             providers: [
+              // Authentication Services (respects feature flags)
+              ChangeNotifierProvider.value(value: SupabaseService.instance),
+              ChangeNotifierProvider.value(
+                value: AuthenticationService.instance,
+              ),
+              ChangeNotifierProvider.value(value: GuestUserManager.instance),
+
               // Enhanced Network Services
               ChangeNotifierProvider(create: (_) => ConnectivityService()),
               ChangeNotifierProvider(create: (_) => SyncStatusTracker()),

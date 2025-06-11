@@ -252,7 +252,7 @@ class _InterviewPracticeBatchScreenState extends State<InterviewPracticeBatchScr
       // Update completion status if needed
       for (final answer in gradedAnswers) {
         if (answer.score != null && answer.score! >= 70) {
-          _interviewService.toggleCompletion(answer.questionId);
+          _interviewService.markAsCompleted(answer.questionId);
         }
       }
       

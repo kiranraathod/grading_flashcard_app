@@ -5,8 +5,12 @@ import 'package:provider/provider.dart';
 import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
 import '../utils/theme_provider.dart';
+import '../utils/config.dart';
 import '../screens/settings_screen.dart';
 import '../screens/search/search_results_screen.dart';
+import '../services/authentication_service.dart';
+import '../services/guest_user_manager.dart';
+import 'auth/authentication_modal.dart';
 
 class AppHeader extends StatefulWidget {
   const AppHeader({super.key});
@@ -210,75 +214,27 @@ class _AppHeaderState extends State<AppHeader> {
         
         const SizedBox(width: 8), // Space between buttons
         
-        // Profile Menu Button  
+        // Profile Menu Button with Authentication Enhancement
         SizedBox(
           width: 40,
           height: 40,
-          child: PopupMenuButton<String>(
-            padding: EdgeInsets.zero,
-            offset: const Offset(0, 45),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: context.primaryColor,
-                child: Icon(
-                  Icons.person,
-                  color: context.onPrimaryColor,
-                  size: 18,
+          child: Consumer2<AuthenticationService, GuestUserManager>(
+            builder: (context, authService, guestManager, child) {
+              return PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                offset: const Offset(0, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ),
-            ),
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(Icons.person_outline, size: 18),
-                    const SizedBox(width: 8),
-                    Text(AppLocalizations.of(context).profile),
-                  ],
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  child: _buildProfileAvatar(context, authService),
                 ),
-              ),
-              PopupMenuItem(
-                value: 'settings',
-                child: Row(
-                  children: [
-                    Icon(Icons.settings_outlined, size: 18),
-                    const SizedBox(width: 8),
-                    Text(AppLocalizations.of(context).settings),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout_outlined, size: 18),
-                    const SizedBox(width: 8),
-                    Text(AppLocalizations.of(context).logout),
-                  ],
-                ),
-              ),
-            ],
-            onSelected: (value) {
-              switch (value) {
-                case 'settings':
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
-                  break;
-                case 'logout':
-                  // Handle logout
-                  break;
-              }
+                itemBuilder: (_) => _buildMenuItems(context, authService, guestManager),
+                onSelected: (value) => _handleMenuSelection(value, context, authService),
+              );
             },
           ),
         ),
@@ -286,3 +242,189 @@ class _AppHeaderState extends State<AppHeader> {
     );
   }
 }
+
+  /// Build profile avatar with authentication status indication
+  Widget _buildProfileAvatar(BuildContext context, AuthenticationService authService) {
+    final isAuthenticated = AuthConfig.enableAuthentication && authService.isAuthenticated;
+    
+    return Stack(
+      children: [
+        CircleAvatar(
+          radius: 16,
+          backgroundColor: isAuthenticated 
+            ? Colors.green 
+            : context.primaryColor,
+          child: Icon(
+            Icons.person,
+            color: context.onPrimaryColor,
+            size: 18,
+          ),
+        ),
+        // Authentication status indicator
+        if (AuthConfig.enableAuthentication && isAuthenticated)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  width: 2,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+  
+  /// Build menu items based on authentication state
+  List<PopupMenuEntry<String>> _buildMenuItems(
+    BuildContext context, 
+    AuthenticationService authService, 
+    GuestUserManager guestManager,
+  ) {
+    final items = <PopupMenuEntry<String>>[];
+    
+    // Usage tracking info (if enabled)
+    if (AuthConfig.enableUsageLimits && !authService.isAuthenticated) {
+      final usageMessage = guestManager.getUsageMessage();
+      if (usageMessage.isNotEmpty) {
+        items.add(
+          PopupMenuItem<String>(
+            enabled: false,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                usageMessage,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        );
+        items.add(const PopupMenuDivider());
+      }
+    }
+    
+    // Authentication-based menu items
+    if (AuthConfig.enableAuthentication) {
+      if (authService.isAuthenticated) {
+        // Authenticated user menu
+        items.addAll([
+          PopupMenuItem(
+            value: 'profile',
+            child: Row(
+              children: [
+                const Icon(Icons.person_outline, size: 18),
+                const SizedBox(width: 8),
+                Text(authService.currentUser?.email ?? 'Profile'),
+              ],
+            ),
+          ),
+        ]);
+      } else {
+        // Guest user menu
+        items.addAll([
+          PopupMenuItem(
+            value: 'sign_in',
+            child: Row(
+              children: [
+                const Icon(Icons.login_outlined, size: 18),
+                const SizedBox(width: 8),
+                const Text('Sign In'),
+              ],
+            ),
+          ),
+        ]);
+      }
+      items.add(const PopupMenuDivider());
+    }
+    
+    // Always present menu items
+    items.addAll([
+      PopupMenuItem(
+        value: 'settings',
+        child: Row(
+          children: [
+            const Icon(Icons.settings_outlined, size: 18),
+            const SizedBox(width: 8),
+            Text(AppLocalizations.of(context).settings),
+          ],
+        ),
+      ),
+    ]);
+    
+    // Sign out option for authenticated users
+    if (AuthConfig.enableAuthentication && authService.isAuthenticated) {
+      items.addAll([
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'logout',
+          child: Row(
+            children: [
+              const Icon(Icons.logout_outlined, size: 18),
+              const SizedBox(width: 8),
+              Text(AppLocalizations.of(context).logout),
+            ],
+          ),
+        ),
+      ]);
+    }
+    
+    return items;
+  }
+  /// Handle menu item selection
+  void _handleMenuSelection(String value, BuildContext context, AuthenticationService authService) {
+    switch (value) {
+      case 'sign_in':
+        if (AuthConfig.enableAuthentication) {
+          AuthenticationModal.show(context);
+        }
+        break;
+        
+      case 'profile':
+        // Handle profile navigation
+        debugPrint('Profile selected');
+        break;
+        
+      case 'settings':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        );
+        break;
+        
+      case 'logout':
+        if (AuthConfig.enableAuthentication) {
+          _handleSignOut(context, authService);
+        }
+        break;
+    }
+  }
+  
+  /// Handle user sign out
+  Future<void> _handleSignOut(BuildContext context, AuthenticationService authService) async {
+    // Store ScaffoldMessenger reference before async call to avoid BuildContext across async gaps
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    final success = await authService.signOut();
+    
+    if (success) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: const Text('Successfully signed out'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+    }
+  }
