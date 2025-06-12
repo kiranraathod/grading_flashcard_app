@@ -10,10 +10,11 @@ Welcome to the documentation for the Flashcard Application. This directory conta
 ## Table of Contents
 
 1. [Performance Optimization](#performance-optimization)
-2. [Theme Documentation](#theme-documentation)
-3. [Feature Implementation Guides](#feature-implementation-guides)
-4. [UI Improvements](#ui-improvements)
-5. [Bug Fixes](#bug-fixes)
+2. [Authentication System](#authentication-system)
+3. [Theme Documentation](#theme-documentation)
+4. [Feature Implementation Guides](#feature-implementation-guides)
+5. [UI Improvements](#ui-improvements)
+6. [Bug Fixes](#bug-fixes)
 
 ## Performance Optimization
 
@@ -21,6 +22,25 @@ Documentation for storage and performance improvements across the application.
 
 - **[UserService Hive Migration](performance_optimization/userservice_hive_migration.md)** - Complete migration from SharedPreferences to Hive for UserService
 - **[UserService Migration Complete](performance_optimization/userservice_migration_complete.md)** - Implementation completion summary and validation
+
+## Authentication System
+
+Comprehensive documentation for the Flutter authentication system implementation, covering architecture decisions, challenges, patterns, and future recommendations.
+
+- **[Authentication Documentation](authentication/README.md)** - Main authentication documentation index
+  - [Implementation Approach](authentication/01_implementation_approach.md) - Complete architecture overview and implementation philosophy
+  - [Challenges and Solutions](authentication/02_challenges_and_solutions.md) - Detailed problem-solving documentation for common issues
+  - [Patterns and Best Practices](authentication/03_patterns_and_best_practices.md) - Proven patterns for state management, UI, storage, and testing
+  - [Future Recommendations](authentication/04_future_recommendations.md) - Strategic roadmap for continued development and improvements
+
+**Key Topics Covered:**
+- Riverpod vs Provider state management decisions
+- Guest user management with usage limits (3/5 actions)
+- Supabase integration with secure storage
+- Platform-specific authentication modals
+- Guest-to-authenticated data migration patterns
+- Cross-feature authentication state management
+- Import conflict resolution and compilation fixes
 
 ## Theme Documentation
 

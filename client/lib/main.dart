@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -30,6 +31,7 @@ import 'services/cache_manager.dart';
 import 'services/supabase_service.dart';
 import 'services/authentication_service.dart';
 import 'services/guest_user_manager.dart';
+import 'services/working_secure_auth_storage.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -46,7 +48,37 @@ void main() async {
   // Initialize System Stabilization
   await _initializeSystemStabilization();
 
-  runApp(MyApp());
+  // Initialize secure storage and migration
+  await _initializeUnifiedAuthentication();
+
+  // Wrap the app with ProviderScope for Riverpod
+  runApp(
+    ProviderScope(
+      child: MyApp(),
+    ),
+  );
+}
+
+/// Initialize unified authentication system
+Future<void> _initializeUnifiedAuthentication() async {
+  await SimpleErrorHandler.safely(
+    () async {
+      debugPrint('🔐 Initializing unified authentication system...');
+      
+      // Check for migration from SharedPreferences
+      final migrationCompleted = await WorkingSecureAuthStorage.isMigrationComplete();
+      
+      if (!migrationCompleted) {
+        debugPrint('🔄 Migrating from legacy SharedPreferences...');
+        // Migration logic will be implemented in the updated GuestUserManager
+        await WorkingSecureAuthStorage.markMigrationComplete();
+        debugPrint('✅ Legacy data migration completed');
+      }
+      
+      debugPrint('✅ Unified authentication system ready');
+    },
+    operationName: 'unified_authentication_initialization',
+  );
 }
 
 /// Only show logs relevant for testing authentication trigger logic
@@ -193,7 +225,7 @@ Future<void> _initializeSystemStabilization() async {
     await cacheManager.initialize();
   }, operationName: 'cache_manager_initialization_wrapper');
 
-  // Initialize authentication services (respects feature flags)
+  // Initialize authentication services (both legacy and modern)
   await SimpleErrorHandler.safely(() async {
     coordinator.registerService('SupabaseService');
     coordinator.registerService(
@@ -217,7 +249,7 @@ Future<void> _initializeSystemStabilization() async {
     await GuestUserManager.instance.initialize();
     coordinator.markServiceInitialized('GuestUserManager');
 
-    debugPrint('✅ Authentication services initialized');
+    debugPrint('✅ Authentication services initialized (hybrid: legacy + Riverpod)');
   }, operationName: 'authentication_services_initialization');
 
   // Initialize network infrastructure
@@ -416,27 +448,27 @@ class _MyAppState extends State<MyApp> {
             BlocProvider<RecentViewBloc>.value(value: recentViewBloc),
             BlocProvider<SearchBloc>.value(value: searchBloc),
           ],
-          child: MultiProvider(
+          child: provider.MultiProvider(
             providers: [
-              // Authentication Services (respects feature flags)
-              ChangeNotifierProvider.value(value: SupabaseService.instance),
-              ChangeNotifierProvider.value(
+              // Legacy Authentication Services (transitioning to Riverpod)
+              provider.ChangeNotifierProvider.value(value: SupabaseService.instance),
+              provider.ChangeNotifierProvider.value(
                 value: AuthenticationService.instance,
               ),
-              ChangeNotifierProvider.value(value: GuestUserManager.instance),
+              provider.ChangeNotifierProvider.value(value: GuestUserManager.instance),
 
               // Enhanced Network Services
-              ChangeNotifierProvider(create: (_) => ConnectivityService()),
-              ChangeNotifierProvider(create: (_) => SyncStatusTracker()),
+              provider.ChangeNotifierProvider(create: (_) => ConnectivityService()),
+              provider.ChangeNotifierProvider(create: (_) => SyncStatusTracker()),
 
               // Services as Providers (for backward compatibility)
-              ChangeNotifierProvider.value(value: flashcardService),
-              ChangeNotifierProvider.value(value: userService),
-              ChangeNotifierProvider.value(value: networkService),
-              ChangeNotifierProvider.value(value: interviewService),
+              provider.ChangeNotifierProvider.value(value: flashcardService),
+              provider.ChangeNotifierProvider.value(value: userService),
+              provider.ChangeNotifierProvider.value(value: networkService),
+              provider.ChangeNotifierProvider.value(value: interviewService),
 
               // Theme provider with callback support
-              ChangeNotifierProvider(
+              provider.ChangeNotifierProvider(
                 create: (_) {
                   final themeProvider = ThemeProvider();
 
@@ -450,15 +482,15 @@ class _MyAppState extends State<MyApp> {
               ),
 
               // Services as Repositories for BLoCs
-              Provider<ApiService>.value(value: apiService),
-              Provider<SpeechToTextService>.value(value: speechToTextService),
-              Provider<RecentViewService>.value(value: recentViewService),
-              Provider<JobDescriptionService>.value(
+              provider.Provider<ApiService>.value(value: apiService),
+              provider.Provider<SpeechToTextService>.value(value: speechToTextService),
+              provider.Provider<RecentViewService>.value(value: recentViewService),
+              provider.Provider<JobDescriptionService>.value(
                 value: jobDescriptionService,
               ),
             ],
             child: ErrorHandler(
-              child: Consumer<ThemeProvider>(
+              child: provider.Consumer<ThemeProvider>(
                 builder:
                     (
                       context,

@@ -1,40 +1,79 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/interview_answer.dart';
 import '../models/app_error.dart';
+import '../models/simple_auth_state.dart';
+import '../providers/working_action_tracking_provider.dart';
 import '../services/error_service.dart';
 import '../services/simple_error_handler.dart';
 import '../utils/config.dart';
 import '../web/proxy.dart';
+import '../widgets/working_auth_modal.dart';
 
 class InterviewApiService {
   final ProxyClient client;
   final ErrorService _errorService = ErrorService();
+  final WidgetRef? _ref; // Optional for backward compatibility
 
-  // Constructor
-  InterviewApiService() : client = ProxyClient(AppConfig.apiBaseUrl) {
+  // Constructor with optional Riverpod reference
+  InterviewApiService({WidgetRef? ref})
+    : client = ProxyClient(AppConfig.apiBaseUrl),
+      _ref = ref {
     AppConfig.logNetwork(
       'Interview API Service initialized with server connection: ${AppConfig.apiBaseUrl}',
-      level: NetworkLogLevel.basic
+      level: NetworkLogLevel.basic,
     );
   }
 
-  // Method for grading a single interview answer
-  Future<InterviewAnswer> gradeInterviewAnswer(InterviewAnswer answer) async {
+  // Method for grading a single interview answer with authentication
+  Future<InterviewAnswer> gradeInterviewAnswer(
+    InterviewAnswer answer, {
+    BuildContext? context,
+  }) async {
     AppConfig.logNetwork(
       'Grading interview answer: ${answer.questionText} => ${answer.userAnswer}',
-      level: NetworkLogLevel.verbose
+      level: NetworkLogLevel.verbose,
     );
-    
+
     return await SimpleErrorHandler.safe<InterviewAnswer>(
       () async {
-        final interviewGradeEndpoint = AppConfig.endpoints['interviewGrade'] ?? '/api/interview-grade';
-        
+        // 🎯 NEW: Check authentication and usage limits
+        if (_ref != null && AuthConfig.enableUsageLimits) {
+          final actionTracker = _ref.read(actionTrackerProvider.notifier);
+
+          // Check if user can perform action
+          if (!actionTracker.canPerformAction(ActionType.interviewPractice)) {
+            debugPrint('🚫 Interview grading blocked - usage limit reached');
+
+            // Show authentication modal if context is available
+            if (context != null) {
+              await WorkingAuthModal.show(
+                context,
+                reason: 'interview_limit',
+                onSuccess: () {
+                  debugPrint('✅ Authentication successful - can retry action');
+                },
+              );
+
+              // Return a fallback answer indicating auth is required
+              return _createAuthRequiredAnswer(answer);
+            }
+
+            // No context available, return limit reached answer
+            return _createLimitReachedAnswer(answer);
+          }
+        }
+
+        final interviewGradeEndpoint =
+            AppConfig.endpoints['interviewGrade'] ?? '/api/interview-grade';
+
         AppConfig.logNetwork(
           'Making API request to $interviewGradeEndpoint',
-          level: NetworkLogLevel.basic
+          level: NetworkLogLevel.basic,
         );
-        
+
         final response = await client.post(
           interviewGradeEndpoint,
           body: {
@@ -48,14 +87,22 @@ class InterviewApiService {
 
         if (response.statusCode == 200) {
           final Map<String, dynamic> responseData = jsonDecode(response.body);
-          
-          // Validate response data - simple inline validation
-          if (responseData.containsKey('score') && 
-              responseData.containsKey('feedback') && 
+
+          // Validate response data
+          if (responseData.containsKey('score') &&
+              responseData.containsKey('feedback') &&
               responseData.containsKey('suggestions') &&
               responseData['score'] is num &&
               responseData['feedback'] is String &&
               responseData['suggestions'] is List) {
+            // 🎯 NEW: Record successful action
+            if (_ref != null && AuthConfig.enableUsageLimits) {
+              final actionTracker = _ref.read(actionTrackerProvider.notifier);
+              await actionTracker.recordAction(ActionType.interviewPractice);
+
+              debugPrint('📊 Interview grading action recorded');
+            }
+
             return InterviewAnswer(
               questionId: answer.questionId,
               questionText: answer.questionText,
@@ -102,12 +149,11 @@ class InterviewApiService {
 
   // Helper method to create a fallback answer
   InterviewAnswer createFallbackAnswer(InterviewAnswer answer) {
-    // Create a fallback answer for when the API call fails
     AppConfig.logNetwork(
       'Creating fallback interview answer',
-      level: NetworkLogLevel.basic
+      level: NetworkLogLevel.basic,
     );
-    
+
     return InterviewAnswer(
       questionId: answer.questionId,
       questionText: answer.questionText,
@@ -115,12 +161,62 @@ class InterviewApiService {
       category: answer.category,
       difficulty: answer.difficulty,
       score: 50, // Middle score as fallback
-      feedback: "We couldn't properly analyze your answer. Please try again later.",
+      feedback:
+          "We couldn't properly analyze your answer. Please try again later.",
       suggestions: [
         "Review the key concepts related to this topic",
         "Try to be more specific in your answer",
-        "Structure your response more clearly"
+        "Structure your response more clearly",
       ],
     );
   }
+
+  // Helper method for authentication required response
+  InterviewAnswer _createAuthRequiredAnswer(InterviewAnswer answer) {
+    AppConfig.logNetwork(
+      'Creating authentication required answer',
+      level: NetworkLogLevel.basic,
+    );
+
+    return InterviewAnswer(
+      questionId: answer.questionId,
+      questionText: answer.questionText,
+      userAnswer: answer.userAnswer,
+      category: answer.category,
+      difficulty: answer.difficulty,
+      score: null,
+      feedback: "Please sign in to continue grading your interview answers.",
+      suggestions: [
+        "Create an account to get unlimited grading",
+        "Sign in to save your progress",
+        "Access premium features with an account",
+      ],
+    );
+  }
+
+  // Helper method for limit reached response
+  InterviewAnswer _createLimitReachedAnswer(InterviewAnswer answer) {
+    AppConfig.logNetwork(
+      'Creating limit reached answer',
+      level: NetworkLogLevel.basic,
+    );
+
+    return InterviewAnswer(
+      questionId: answer.questionId,
+      questionText: answer.questionText,
+      userAnswer: answer.userAnswer,
+      category: answer.category,
+      difficulty: answer.difficulty,
+      score: null,
+      feedback:
+          "You've reached your daily limit for interview practice. Sign in for unlimited access!",
+      suggestions: [
+        "Create an account for unlimited practice",
+        "Sign in to continue practicing",
+        "Upgrade to premium for advanced features",
+      ],
+    );
+  }
+
+  // TODO: Re-implement utility methods for authentication checking
 }

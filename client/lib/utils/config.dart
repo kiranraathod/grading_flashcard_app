@@ -9,15 +9,23 @@ enum NetworkLogLevel { none, errors, basic, verbose }
 
 // Authentication configuration
 class AuthConfig {
-  // Feature flags - ENABLED for testing
+  // Feature flags - ENABLED for unified authentication
   static bool enableAuthentication = true;
   static bool enableUsageLimits = true;
   static bool enableGuestTracking = true;
-  static bool enableProfileMenu = true; // Keep existing profile menu enabled
+  static bool enableProfileMenu = true;
   
-  // Usage limits for guest users
-  static int guestMaxGradingActions = 3;
-  static int authenticatedMaxGradingActions = 5;
+  // Unified usage limits for both flashcard and interview features
+  static int guestMaxGradingActions = 3;        // Flashcard grading limit for guests
+  static int guestMaxInterviewActions = 3;      // Interview practice limit for guests
+  static int authenticatedMaxGradingActions = 5; // Flashcard grading limit for authenticated users
+  static int authenticatedMaxInterviewActions = 5; // Interview practice limit for authenticated users
+  
+  // Additional action limits
+  static int guestMaxContentGeneration = 2;     // AI content generation for guests
+  static int authenticatedMaxContentGeneration = 10; // AI content generation for authenticated users
+  static int guestMaxAiAssistance = 3;          // AI assistance for guests
+  static int authenticatedMaxAiAssistance = 15; // AI assistance for authenticated users
   
   // Supabase configuration
   static const String supabaseUrl = 'https://saxopupmwfcfjxuflfrx.supabase.co';
@@ -27,12 +35,17 @@ class AuthConfig {
   static Duration authSessionTimeout = const Duration(hours: 24);
   static bool requireEmailVerification = false; // Disable for development
   static bool enableSocialLogin = true;
-  static bool enableEmailAuth = true; // Enable email/password authentication
+  static bool enableEmailAuth = true;
+  static bool enableAnonymousAuth = true; // Enable guest user support
   
   // Development flags
-  static bool enableAuthDebugLogging = false;  // 🔇 Disable for cleaner testing
-  static bool skipEmailVerification = true; // For development
-  static bool enableDemoMode = true; // 🧪 Enable demo authentication for testing
+  static bool enableAuthDebugLogging = false;
+  static bool skipEmailVerification = true;
+  static bool enableDemoMode = true; // Enable demo authentication for testing
+  
+  // Migration settings
+  static bool enableLegacyMigration = true; // Support migration from SharedPreferences
+  static bool autoMigrateGuestData = true;  // Automatically migrate guest data on auth
 }
 
 class AppConfig {
