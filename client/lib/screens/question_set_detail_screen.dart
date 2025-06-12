@@ -4,7 +4,6 @@ import '../models/interview_question.dart';
 import '../services/interview_service.dart';
 import '../utils/theme_utils.dart';
 import 'interview_practice_screen.dart';
-import 'interview_practice_batch_screen.dart';
 
 class QuestionSetDetailScreen extends StatefulWidget {
   final String setId;
@@ -412,29 +411,6 @@ class _QuestionSetDetailScreenState extends State<QuestionSetDetailScreen> {
                       ),
                     ),
                     const Spacer(),
-                    TextButton.icon(
-                      onPressed: () {
-                        // Navigate to batch practice screen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => InterviewPracticeBatchScreen(
-                              questions: questions,
-                              categoryName: questionSet.title,
-                            ),
-                          ),
-                        ).then((_) {
-                          // Refresh the state when returning from practice
-                          setState(() {});
-                        });
-                      },
-                      icon: const Icon(Icons.play_arrow, size: 18),
-                      label: const Text('Practice All'),
-                      style: TextButton.styleFrom(
-                        backgroundColor: context.primaryColor.withOpacityFix(0.1),
-                        foregroundColor: context.primaryColor,
-                      ),
-                    ),
                   ],
                 ),
               ],

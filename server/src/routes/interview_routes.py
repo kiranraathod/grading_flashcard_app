@@ -32,18 +32,6 @@ def get_interview_grading_controller():
     """Dependency to get an InterviewGradingController instance."""
     return InterviewGradingController()
 
-class InterviewBatchGradeRequest(BaseModel):
-    answers: List[InterviewGradeRequest]
-    
-    @validator('answers')
-    def validate_answers(cls, v):
-        if not v or len(v) == 0:
-            raise ValueError("answers list cannot be empty")
-        return v
-
-class BatchGradeResponseItem(InterviewGradeResponse):
-    questionId: str
-
 @router.post("/interview-grade", response_model=InterviewGradeResponse)
 async def grade_interview_answer(
     request: InterviewGradeRequest,
@@ -87,72 +75,4 @@ async def grade_interview_answer(
         raise HTTPException(
             status_code=500,
             detail=f"An unexpected error occurred during interview answer grading: {str(e)}"
-        )
-
-@router.post("/interview-grade-batch", response_model=List[BatchGradeResponseItem])
-async def grade_interview_answers_batch(
-    request: InterviewBatchGradeRequest,
-    controller: InterviewGradingController = Depends(get_interview_grading_controller)
-):
-    """
-    Grade multiple interview answers in a batch.
-    
-    Args:
-        request: Batch grading request containing a list of answers
-        controller: The interview grading controller dependency
-        
-    Returns:
-        List of grading responses
-    """
-    try:
-        logger.debug(f"Received batch grading request with {len(request.answers)} items")
-        
-        results = []
-        for item in request.answers:
-            # Process each answer
-            logger.debug(f"Grading answer for question {item.questionId}")
-            
-            try:
-                # Grade the individual answer
-                result = await controller.grade_interview_answer(
-                    question_id=item.questionId,
-                    question_text=item.questionText,
-                    user_answer=item.userAnswer,
-                    question_category=item.category,
-                    question_difficulty=item.difficulty
-                )
-                
-                # Add question ID to result for client-side matching
-                result["questionId"] = item.questionId
-                
-                # Add to results list
-                results.append(result)
-                
-            except Exception as item_error:
-                # Log the error but continue processing other items
-                logger.error(f"Error grading question {item.questionId}: {str(item_error)}")
-                logger.error(traceback.format_exc())
-                
-                # ✅ FIXED: Add fallback result instead of skipping
-                fallback_result = {
-                    "questionId": item.questionId,
-                    "score": 50,
-                    "feedback": "We couldn't properly analyze your answer due to a technical issue. Please try again later.",
-                    "suggestions": [
-                        "Review the key concepts related to this topic",
-                        "Try to be more specific in your answer",
-                        "Structure your response more clearly"
-                    ]
-                }
-                results.append(fallback_result)
-        
-        logger.info(f"Batch grading completed for {len(results)} answers")
-        return results
-        
-    except Exception as e:
-        logger.error(f"Error in batch grading endpoint: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(
-            status_code=500,
-            detail=f"An unexpected error occurred during batch grading: {str(e)}"
         )

@@ -15,7 +15,6 @@ import '../utils/category_mapper.dart';
 import '../utils/dialogs/delete_confirmation_dialog.dart';
 import 'create_interview_question_screen.dart';
 import 'interview_practice_screen.dart';
-import 'interview_practice_batch_screen.dart';
 import 'job_description_question_generator_screen.dart';
 import 'create_flashcard_screen.dart';
 
@@ -379,7 +378,7 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                 
                 const SizedBox(height: DS.spacingL),
                 
-                // Questions header with count and practice all button
+                // Questions header with count and refresh button
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -398,51 +397,8 @@ class _InterviewQuestionsScreenState extends State<InterviewQuestionsScreen> {
                         maxLines: 1,
                       ),
                       
-                      // Responsive spacing
-                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingM),
-                      
-                      // Practice all button
-                      ElevatedButton.icon(
-                        onPressed: filteredQuestions.isNotEmpty
-                            ? () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => InterviewPracticeBatchScreen(
-                                      questions: filteredQuestions,
-                                      categoryName: widget.category,
-                                    ),
-                                  ),
-                                ).then((_) {
-                                  // Refresh the questions list when returning
-                                  setState(() {});
-                                });
-                              }
-                            : null,
-                        icon: Icon(
-                          Icons.play_circle,
-                          size: DS.isExtraSmallScreen(context) ? 14 : 16,
-                        ),
-                        label: Text(
-                          'Practice All',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: DS.isExtraSmallScreen(context) ? 8 : 12, 
-                            vertical: 4
-                          ),
-                          textStyle: TextStyle(
-                            fontSize: DS.isExtraSmallScreen(context) ? 11 : 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      
-                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacing2xs : DS.spacingS),
+                      // Responsive spacing - increased since Practice All button removed
+                      SizedBox(width: DS.isExtraSmallScreen(context) ? DS.spacingS : DS.spacingL),
                       
                       // Refresh button
                       TextButton.icon(

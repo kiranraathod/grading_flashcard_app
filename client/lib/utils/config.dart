@@ -59,7 +59,6 @@ class AppConfig {
     'suggestions': '/api/suggestions',
     'feedback': '/api/feedback',
     'interviewGrade': '/api/interview-grade',
-    'interviewGradeBatch': '/api/interview-grade-batch',
     'jobDescriptionAnalyze': '/api/job-description/analyze',
     'jobDescriptionGenerate': '/api/job-description/generate-questions',
     'ping': '/api/ping',

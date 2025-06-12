@@ -153,10 +153,6 @@
       }
     }
   },
-  "practiceAll": "Practice All",
-  "@practiceAll": {
-    "description": "Button to practice all questions"
-  },
   "refresh": "Refresh",
   "@refresh": {
     "description": "Button to refresh content"
@@ -404,20 +400,6 @@
   "submitThisAnswer": "Submit This Answer",
   "@submitThisAnswer": {
     "description": "Button to submit current answer"
-  },
-  "gradeAllFormat": "Grade All ({completed}/{total})",
-  "@gradeAllFormat": {
-    "description": "Button to grade all questions with completion count",
-    "placeholders": {
-      "completed": {
-        "type": "int",
-        "example": "3"
-      },
-      "total": {
-        "type": "int",
-        "example": "10"
-      }
-    }
   },
 
   "study": "Study",

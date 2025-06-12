@@ -10,7 +10,6 @@ import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
 import 'dart:async';
 import 'interview_result_screen.dart';
-import 'interview_batch_result_screen.dart';
 
 class InterviewPracticeScreen extends StatefulWidget {
   final InterviewQuestion question;
@@ -36,7 +35,6 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
   Timer? _timer;
   final TextEditingController _userAnswerController = TextEditingController();
   bool _isGrading = false;
-  bool _isSubmittingBatch = false;
   bool _hasLoadedInitialAnswer = false;
   
   // ✨ NEW: Enhanced UI state variables
@@ -313,194 +311,6 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error grading answer: ${e.toString()}'),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
-
-  // Submit all answers for batch grading
-  void _submitAllAnswers() async {
-    debugPrint('=== BATCH GRADING DEBUG START ===');
-
-    // ✅ STEP 1: Save current answer first (critical!)
-    _saveCurrentAnswer();
-    debugPrint('✓ Current answer saved for question ${widget.question.id}');
-
-    // ✅ STEP 2: Sync between local and global storage to ensure we have ALL answers
-    debugPrint('Synchronizing local and global answer storage...');
-
-    // First, push all local answers to global storage
-    for (final entry in _userAnswers.entries) {
-      _interviewService.saveUserAnswer(entry.key, entry.value);
-      debugPrint(
-        '✓ Synced local->global: $entry.key = $entry.value.length chars',
-      );
-    }
-
-    // Then, pull any global answers that might not be in local storage
-    for (final question in widget.questionList) {
-      final globalAnswer = _interviewService.getUserAnswer(question.id);
-      if (globalAnswer.isNotEmpty) {
-        if (!_userAnswers.containsKey(question.id) ||
-            _userAnswers[question.id]!.isEmpty) {
-          _userAnswers[question.id] = globalAnswer;
-          debugPrint(
-            '✓ Synced global->local: $question.id = $globalAnswer.length chars',
-          );
-        }
-      }
-    }
-
-    // ✅ STEP 3: Collect ALL answers using BOTH sources for maximum coverage
-    final Map<String, String> allAnswers = {};
-
-    // Collect from local state first
-    allAnswers.addAll(_userAnswers);
-    debugPrint('Local answers collected: ${_userAnswers.length}');
-
-    // Ensure we haven't missed any from global storage
-    for (final question in widget.questionList) {
-      final globalAnswer = _interviewService.getUserAnswer(question.id);
-      if (globalAnswer.trim().isNotEmpty) {
-        // Use global answer if local is empty or doesn't exist
-        if (!allAnswers.containsKey(question.id) ||
-            allAnswers[question.id]!.trim().isEmpty) {
-          allAnswers[question.id] = globalAnswer;
-          debugPrint(
-            '✓ Using global answer for $question.id: $globalAnswer.length chars',
-          );
-        }
-      }
-    }
-
-    debugPrint('Total questions in list: ${widget.questionList.length}');
-    debugPrint('Total answers collected: ${allAnswers.length}');
-    debugPrint('Local _userAnswers map: $_userAnswers');
-    debugPrint('Final allAnswers map: $allAnswers');
-
-    // ✅ STEP 4: Validate we have at least one valid answer (200-300 words)
-    final validAnswers = allAnswers.entries
-        .where((entry) {
-          final wordCount = _getWordCount(entry.value.trim());
-          return wordCount >= 200 && wordCount <= 300;
-        })
-        .toList();
-    
-    if (validAnswers.isEmpty) {
-      debugPrint('❌ No valid answers found to submit (all answers must be 200-300 words)');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Please provide at least one answer with 200-300 words before submitting',
-          ),
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
-
-    debugPrint('Valid answers found: ${validAnswers.length}');
-
-    // ✅ STEP 5: Create answer objects for ALL questions (including empty ones for tracking)
-    final List<InterviewAnswer> answersList =
-        widget.questionList.map((question) {
-          final userAnswer = allAnswers[question.id] ?? "";
-
-          debugPrint(
-            'Creating answer object for $question.id: "$userAnswer" ($userAnswer.length chars)',
-          );
-
-          return InterviewAnswer(
-            questionId: question.id,
-            questionText: question.text,
-            userAnswer: userAnswer,
-            category: question.category,
-            difficulty: question.difficulty,
-          );
-        }).toList();
-
-    // ✅ STEP 6: Filter for only valid answered questions for API call (200-300 words)
-    final answeredQuestions =
-        answersList
-            .where((answer) {
-              final wordCount = _getWordCount(answer.userAnswer.trim());
-              return wordCount >= 200 && wordCount <= 300;
-            })
-            .toList();
-
-    debugPrint('Valid questions being sent to API: ${answeredQuestions.length}');
-    for (final answer in answeredQuestions) {
-      final wordCount = _getWordCount(answer.userAnswer);
-      debugPrint('- API $answer.questionId: $wordCount words (valid)');
-    }
-    debugPrint('=== BATCH GRADING DEBUG END ===');
-
-    // ✅ STEP 7: Proceed with API call
-    setState(() {
-      _isSubmittingBatch = true;
-    });
-
-    try {
-      // Show loading indicator
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Grading ${answeredQuestions.length} valid answers...'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-
-      // Grade all answered questions as a batch
-      final gradedAnswers = await _interviewApiService.gradeBatchAnswers(
-        answeredQuestions,
-      );
-
-      debugPrint('✅ Received ${gradedAnswers.length} graded answers from API');
-
-      // Check if widget is still mounted before using BuildContext
-      if (!mounted) return;
-
-      // ✨ AUTOMATIC COMPLETION: Mark all submitted questions as completed
-      for (final answer in gradedAnswers) {
-        _interviewService.markAsCompleted(answer.questionId);
-        debugPrint(
-          '✓ Automatically marked $answer.questionId as completed (met word requirements)',
-        );
-      }
-
-      setState(() {
-        _isSubmittingBatch = false;
-      });
-
-      // Navigate to batch results screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder:
-              (context) => InterviewBatchResultScreen(
-                answers: gradedAnswers,
-                onContinue: () {
-                  if (mounted) {
-                    Navigator.pop(context); // Close result screen
-                    Navigator.pop(context); // Go back to questions screen
-                  }
-                },
-              ),
-        ),
-      );
-    } catch (e) {
-      debugPrint('❌ Error during batch grading: $e');
-
-      // Check if widget is still mounted before using BuildContext
-      if (!mounted) return;
-
-      setState(() {
-        _isSubmittingBatch = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error grading answers: ${e.toString()}'),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -889,10 +699,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     _saveCurrentAnswer();
 
     // Show summary of current state
-    final validAnsweredCount = _getValidAnsweredQuestionCount();
-    debugPrint(
-      'Navigation summary: Valid answers $validAnsweredCount/${widget.questionList.length} questions',
-    );
+    debugPrint('Navigation summary: Moving to next question');
     debugPrint('Local answers: ${_userAnswers.keys.toList()}');
 
     if (widget.currentIndex < widget.questionList.length - 1) {
@@ -933,36 +740,6 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
     }
 
     debugPrint('=== NAVIGATION COMPLETE ===');
-  }
-
-  // Helper method to get valid answered question count (200-300 words)
-  int _getValidAnsweredQuestionCount() {
-    // Save current answer first to ensure accurate count
-    final currentText = _userAnswerController.text.trim();
-    final currentWordCount = _getWordCount(currentText);
-    if (currentWordCount >= 200 && currentWordCount <= 300) {
-      _userAnswers[widget.question.id] = currentText;
-      _interviewService.saveUserAnswer(widget.question.id, currentText);
-    }
-
-    int count = 0;
-    for (final question in widget.questionList) {
-      final localAnswer = _userAnswers[question.id];
-      final globalAnswer = _interviewService.getUserAnswer(question.id);
-
-      String answer = localAnswer ?? globalAnswer;
-      if (answer.isNotEmpty) {
-        final wordCount = _getWordCount(answer);
-        if (wordCount >= 200 && wordCount <= 300) {
-          count++;
-        }
-      }
-    }
-
-    debugPrint(
-      'Current valid answered question count: $count/${widget.questionList.length}',
-    );
-    return count;
   }
 
   // ✨ UPDATED: Word-based quality helpers (200-300 words required)
@@ -1682,72 +1459,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                                       ),
                                     ),
                                   ),
-                                  
-                                  // Grade All button (enhanced styling)
-                                  if (widget.questionList.length > 1) ...[
-                                    const SizedBox(width: DS.spacingM),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          gradient: _getValidAnsweredQuestionCount() > 0
-                                              ? const LinearGradient(
-                                                  colors: [Color(0xFF10B981), Color(0xFF34D399)],
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                )
-                                              : null,
-                                          color: _getValidAnsweredQuestionCount() > 0 
-                                              ? null 
-                                              : context.surfaceVariantColor,
-                                          borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                                          boxShadow: _getValidAnsweredQuestionCount() > 0 ? [
-                                            BoxShadow(
-                                              color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ] : null,
-                                        ),
-                                        child: ElevatedButton.icon(
-                                          onPressed: () {
-                                            final validCount = _getValidAnsweredQuestionCount();
-                                            if (validCount > 0) {
-                                              _submitAllAnswers();
-                                            } else {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text('Please provide at least one answer with 200-300 words before submitting'),
-                                                  duration: Duration(seconds: 3),
-                                                ),
-                                              );
-                                            }
-                                          },
-                                          icon: Icon(
-                                            _getValidAnsweredQuestionCount() > 0 ? Icons.grading : Icons.grading_outlined,
-                                            size: 16,
-                                          ),
-                                          label: Text(
-                                            'Grade All\n(${_getValidAnsweredQuestionCount()}/${widget.questionList.length})',
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(fontSize: 11, height: 1.2),
-                                          ),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.transparent,
-                                            foregroundColor: _getValidAnsweredQuestionCount() > 0
-                                                ? Colors.white
-                                                : context.onSurfaceVariantColor,
-                                            shadowColor: Colors.transparent,
-                                            padding: const EdgeInsets.symmetric(vertical: DS.spacingS),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(DS.borderRadiusSmall),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
                                   ],
-                                ],
                               ),
                       ],
                     ),
@@ -1755,8 +1467,8 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                 ],
               ),
 
-              // Show loading overlay during grading or batch submission
-              if (_isGrading || _isSubmittingBatch)
+              // Show loading overlay during grading
+              if (_isGrading)
                 Container(
                   color: context.surfaceColor.withOpacityFix(0.5),
                   child: Center(
@@ -1770,9 +1482,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
                         ),
                         const SizedBox(height: DS.spacingM),
                         Text(
-                          _isSubmittingBatch
-                              ? 'Grading all answers...'
-                              : 'Grading your answer...',
+                          'Grading your answer...',
                           style: context.bodyLarge?.copyWith(
                             color: context.onSurfaceColor,
                           ),
