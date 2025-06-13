@@ -1,9 +1,0 @@
-// Temporary replacement for the last part of interview_api_service.dart
-        "Sign in to continue practicing",
-        "Upgrade to premium for advanced features"
-      ],
-    );
-  }
-
-  // TODO: Re-implement utility methods for authentication checking after fixing syntax issues
-}
