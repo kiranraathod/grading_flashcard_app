@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../services/authentication_service.dart';
-import '../../services/guest_user_manager.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/working_auth_provider.dart';
+import '../../providers/working_action_tracking_provider.dart';
+import '../../models/simple_auth_state.dart';
 import '../../utils/config.dart';
 
 /// Material Design 3 authentication modal with progressive enhancement
 /// 
 /// Follows zero-disruption principle by only showing when authentication is enabled.
 /// Implements modern authentication UX with accessibility-first design.
-class AuthenticationModal extends StatefulWidget {
+/// 
+/// MIGRATION: Converted from Provider to Riverpod
+/// - StatefulWidget → ConsumerStatefulWidget
+/// - Provider.of → ref.watch/ref.read
+/// - Consumer → Direct state watching
+class AuthenticationModal extends ConsumerStatefulWidget {
   const AuthenticationModal({super.key});
   
   /// Show authentication modal if feature is enabled
@@ -26,10 +32,10 @@ class AuthenticationModal extends StatefulWidget {
   }
   
   @override
-  State<AuthenticationModal> createState() => _AuthenticationModalState();
+  ConsumerState<AuthenticationModal> createState() => _AuthenticationModalState();
 }
 
-class _AuthenticationModalState extends State<AuthenticationModal> 
+class _AuthenticationModalState extends ConsumerState<AuthenticationModal> 
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
@@ -73,11 +79,14 @@ class _AuthenticationModalState extends State<AuthenticationModal>
       _emailFocus.requestFocus();
     });
   }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     
+    // Watch authentication state using Riverpod
+    final authState = ref.watch(authNotifierProvider);    
     return AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
@@ -103,7 +112,7 @@ class _AuthenticationModalState extends State<AuthenticationModal>
                     const SizedBox(height: 24),
                     _buildAuthForm(context, colorScheme),
                     const SizedBox(height: 24),
-                    _buildActionButtons(context, colorScheme),
+                    _buildActionButtons(context, colorScheme, authState),
                     const SizedBox(height: 16),
                     _buildToggleMode(context),
                   ],
@@ -114,8 +123,7 @@ class _AuthenticationModalState extends State<AuthenticationModal>
         );
       },
     );
-  }
-  
+  }  
   Widget _buildHeader(BuildContext context, ColorScheme colorScheme) {
     return Column(
       children: [
@@ -146,43 +154,58 @@ class _AuthenticationModalState extends State<AuthenticationModal>
       ],
     );
   }
+
   Widget _buildUsageInfo(BuildContext context) {
-    return Consumer<GuestUserManager>(
-      builder: (context, guestManager, child) {
-        if (!AuthConfig.enableUsageLimits) return const SizedBox.shrink();
-        
-        final message = guestManager.getUsageMessage();
-        if (message.isEmpty) return const SizedBox.shrink();
-        
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(8),
+    if (!AuthConfig.enableUsageLimits) return const SizedBox.shrink();
+    
+    // Watch action tracking state using Riverpod
+    final actionState = ref.watch(actionTrackerProvider);
+    
+    // Build usage message from action state
+    String usageMessage = '';
+    if (actionState.hasReachedLimit) {
+      usageMessage = 'You\'ve reached your daily limit. Sign in for unlimited access!';
+    } else {
+      final remainingActions = _calculateRemainingActions(actionState);
+      if (remainingActions <= 3) {
+        usageMessage = '$remainingActions actions remaining today. Sign in for unlimited access!';
+      }
+    }
+    
+    if (usageMessage.isEmpty) return const SizedBox.shrink();
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
+            size: 20,
           ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.info_outline,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              usageMessage,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onPrimaryContainer,
-                size: 20,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  message,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
   
+  int _calculateRemainingActions(UserActionState actionState) {
+    const dailyLimit = 10; // Default guest user limit
+    final usedActions = actionState.actionCounts.values.fold(0, (sum, count) => sum + count);
+    return (dailyLimit - usedActions).clamp(0, dailyLimit);
+  }  
   Widget _buildAuthForm(BuildContext context, ColorScheme colorScheme) {
     return Column(
       children: [
@@ -232,82 +255,78 @@ class _AuthenticationModalState extends State<AuthenticationModal>
       ],
     );
   }
-  Widget _buildActionButtons(BuildContext context, ColorScheme colorScheme) {
-    return Consumer<AuthenticationService>(
-      builder: (context, authService, child) {
-        final isLoading = authService.authState == AuthState.loading;
+
+  Widget _buildActionButtons(BuildContext context, ColorScheme colorScheme, AuthState authState) {
+    final isLoading = authState is AuthStateLoading;
+    
+    return Column(
+      children: [
+        // Primary action button (Email sign in/up)
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: FilledButton(
+            onPressed: isLoading ? null : _handleEmailAuth,
+            child: isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(_isSignUp ? 'Create Account' : 'Sign In'),
+          ),
+        ),
         
-        return Column(
+        const SizedBox(height: 12),
+        
+        // Divider with "or"
+        Row(
           children: [
-            // Primary action button (Email sign in/up)
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton(
-                onPressed: isLoading ? null : _handleEmailAuth,
-                child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(_isSignUp ? 'Create Account' : 'Sign In'),
+            const Expanded(child: Divider()),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'or',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-            
-            const SizedBox(height: 12),
-            
-            // Divider with "or"
-            Row(
-              children: [
-                const Expanded(child: Divider()),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'or',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                const Expanded(child: Divider()),
-              ],
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Google sign in button
-            if (AuthConfig.enableSocialLogin)
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: isLoading ? null : _handleGoogleSignIn,
-                  icon: const Icon(Icons.login),
-                  label: const Text('Continue with Google'),
-                ),
-              ),
-              
-            // Demo sign in button (for testing when auth is broken)
-            if (AuthConfig.enableDemoMode) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: OutlinedButton.icon(
-                  onPressed: isLoading ? null : _handleDemoSignIn,
-                  icon: const Icon(Icons.science),
-                  label: const Text('Demo Sign-In (Testing)'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.orange,
-                    side: const BorderSide(color: Colors.orange),
-                  ),
-                ),
-              ),
-            ],
+            const Expanded(child: Divider()),
           ],
-        );
-      },
+        ),
+        
+        const SizedBox(height: 12),        
+        // Google sign in button
+        if (AuthConfig.enableSocialLogin)
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: isLoading ? null : _handleGoogleSignIn,
+              icon: const Icon(Icons.login),
+              label: const Text('Continue with Google'),
+            ),
+          ),
+          
+        // Demo sign in button (for testing when auth is broken)
+        if (AuthConfig.enableDemoMode) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: isLoading ? null : _handleDemoSignIn,
+              icon: const Icon(Icons.science),
+              label: const Text('Demo Sign-In (Testing)'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.orange,
+                side: const BorderSide(color: Colors.orange),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
   
@@ -325,6 +344,7 @@ class _AuthenticationModalState extends State<AuthenticationModal>
       ),
     );
   }
+
   Future<void> _handleEmailAuth() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -335,62 +355,87 @@ class _AuthenticationModalState extends State<AuthenticationModal>
     }
     
     debugPrint('🔍 Email auth attempt: ${_isSignUp ? "signup" : "signin"} for $email');
-    final authService = Provider.of<AuthenticationService>(context, listen: false);
     
-    bool success;
-    if (_isSignUp) {
-      success = await authService.signUpWithEmail(email, password);
-    } else {
-      success = await authService.signInWithEmail(email, password);
-    }
+    // Use Riverpod notifier instead of Provider service
+    final authNotifier = ref.read(authNotifierProvider.notifier);
     
-    debugPrint('🔍 Email auth result: $success');
-    if (success && mounted) {
-      Navigator.of(context).pop();
-      _showSnackBar('Welcome to FlashMaster!');
-      debugPrint('✅ Email auth successful - modal closed');
-    } else if (mounted) {
-      final errorMsg = authService.errorMessage ?? 'Authentication failed';
-      _showSnackBar(errorMsg);
-      debugPrint('❌ Email auth failed: $errorMsg');
+    try {
+      if (_isSignUp) {
+        await authNotifier.signUpWithEmail(email, password);
+      } else {
+        await authNotifier.signInWithEmail(email, password);
+      }
+      
+      final currentState = ref.read(authNotifierProvider);
+      
+      if (currentState is AuthStateAuthenticated && mounted) {
+        Navigator.of(context).pop();
+        _showSnackBar('Welcome to FlashMaster!');
+        debugPrint('✅ Email auth successful - modal closed');
+      } else if (currentState is AuthStateError && mounted) {
+        _showSnackBar(currentState.message);
+        debugPrint('❌ Email auth failed: ${currentState.message}');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Authentication failed. Please try again.');
+        debugPrint('❌ Email auth exception: $e');
+      }
     }
-  }
-  
+  }  
   Future<void> _handleDemoSignIn() async {
     debugPrint('🧪 Demo sign-in attempt started');
-    final authService = Provider.of<AuthenticationService>(context, listen: false);
     
-    final success = await authService.signInDemo();
+    // Use Riverpod notifier for demo sign-in
+    final authNotifier = ref.read(authNotifierProvider.notifier);
     
-    debugPrint('🧪 Demo sign-in result: $success');
-    if (success && mounted) {
-      Navigator.of(context).pop();
-      _showSnackBar('Demo authentication successful! You now have 5 grading actions.');
-      debugPrint('✅ Demo sign-in successful - modal closed');
-    } else if (mounted) {
-      _showSnackBar('Demo authentication failed');
-      debugPrint('❌ Demo sign-in failed');
+    try {
+      await authNotifier.signInDemo();
+      
+      final currentState = ref.read(authNotifierProvider);
+      
+      if (currentState is AuthStateAuthenticated && mounted) {
+        Navigator.of(context).pop();
+        _showSnackBar('Demo authentication successful! You now have unlimited grading actions.');
+        debugPrint('✅ Demo sign-in successful - modal closed');
+      } else if (currentState is AuthStateError && mounted) {
+        _showSnackBar(currentState.message);
+        debugPrint('❌ Demo sign-in failed: ${currentState.message}');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Demo authentication failed');
+        debugPrint('❌ Demo sign-in exception: $e');
+      }
     }
   }
   
   Future<void> _handleGoogleSignIn() async {
     debugPrint('🔍 Google sign-in attempt started');
-    final authService = Provider.of<AuthenticationService>(context, listen: false);
     
-    final success = await authService.signInWithGoogle();
+    // Use Riverpod notifier for Google sign-in
+    final authNotifier = ref.read(authNotifierProvider.notifier);
     
-    debugPrint('🔍 Google sign-in result: $success');
-    if (success && mounted) {
-      Navigator.of(context).pop();
-      _showSnackBar('Welcome to FlashMaster!');
-      debugPrint('✅ Google sign-in successful - modal closed');
-    } else if (mounted) {
-      final errorMsg = authService.errorMessage ?? 'Google sign-in failed';
-      _showSnackBar(errorMsg);
-      debugPrint('❌ Google sign-in failed: $errorMsg');
+    try {
+      await authNotifier.signInWithGoogle();
+      
+      final currentState = ref.read(authNotifierProvider);
+      
+      if (currentState is AuthStateAuthenticated && mounted) {
+        Navigator.of(context).pop();
+        _showSnackBar('Welcome to FlashMaster!');
+        debugPrint('✅ Google sign-in successful - modal closed');
+      } else if (currentState is AuthStateError && mounted) {
+        _showSnackBar(currentState.message);
+        debugPrint('❌ Google sign-in failed: ${currentState.message}');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Google sign-in failed. Please try again.');
+        debugPrint('❌ Google sign-in exception: $e');
+      }
     }
-  }
-  
+  }  
   void _showSnackBar(String message) {
     if (!mounted) return;
     

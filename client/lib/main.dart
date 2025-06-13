@@ -29,8 +29,6 @@ import 'services/initialization_coordinator.dart';
 import 'services/simple_error_handler.dart';
 import 'services/cache_manager.dart';
 import 'services/supabase_service.dart';
-import 'services/authentication_service.dart';
-import 'services/guest_user_manager.dart';
 import 'services/working_secure_auth_storage.dart';
 
 void main() async {
@@ -225,31 +223,17 @@ Future<void> _initializeSystemStabilization() async {
     await cacheManager.initialize();
   }, operationName: 'cache_manager_initialization_wrapper');
 
-  // Initialize authentication services (both legacy and modern)
+  // Initialize authentication services (Riverpod-only after Phase 2 migration)
   await SimpleErrorHandler.safely(() async {
     coordinator.registerService('SupabaseService');
-    coordinator.registerService(
-      'AuthenticationService',
-      dependencies: ['SupabaseService'],
-    );
-    coordinator.registerService('GuestUserManager');
 
-    // Initialize Supabase service
+    // Initialize Supabase service (still needed for actual authentication)
     coordinator.markServiceInitializing('SupabaseService');
     await SupabaseService.instance.initialize();
     coordinator.markServiceInitialized('SupabaseService');
 
-    // Initialize authentication service
-    coordinator.markServiceInitializing('AuthenticationService');
-    await AuthenticationService.instance.initialize();
-    coordinator.markServiceInitialized('AuthenticationService');
-
-    // Initialize guest user manager
-    coordinator.markServiceInitializing('GuestUserManager');
-    await GuestUserManager.instance.initialize();
-    coordinator.markServiceInitialized('GuestUserManager');
-
-    debugPrint('✅ Authentication services initialized (hybrid: legacy + Riverpod)');
+    debugPrint('✅ Authentication services initialized (Riverpod-only)');
+    debugPrint('📋 Phase 2 Migration: Removed AuthenticationService and GuestUserManager Provider dependencies');
   }, operationName: 'authentication_services_initialization');
 
   // Initialize network infrastructure
@@ -450,18 +434,14 @@ class _MyAppState extends State<MyApp> {
           ],
           child: provider.MultiProvider(
             providers: [
-              // Legacy Authentication Services (transitioning to Riverpod)
+              // Core Infrastructure Services (keeping for other app components)
               provider.ChangeNotifierProvider.value(value: SupabaseService.instance),
-              provider.ChangeNotifierProvider.value(
-                value: AuthenticationService.instance,
-              ),
-              provider.ChangeNotifierProvider.value(value: GuestUserManager.instance),
 
               // Enhanced Network Services
               provider.ChangeNotifierProvider(create: (_) => ConnectivityService()),
               provider.ChangeNotifierProvider(create: (_) => SyncStatusTracker()),
 
-              // Services as Providers (for backward compatibility)
+              // Application Services (for backward compatibility with non-migrated screens)
               provider.ChangeNotifierProvider.value(value: flashcardService),
               provider.ChangeNotifierProvider.value(value: userService),
               provider.ChangeNotifierProvider.value(value: networkService),
