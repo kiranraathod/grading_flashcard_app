@@ -10,7 +10,7 @@ import '../services/error_service.dart';
 import '../services/simple_error_handler.dart';
 import '../utils/config.dart';
 import '../web/proxy.dart';
-import '../widgets/working_auth_modal.dart';
+import '../widgets/auth/authentication_modal.dart';
 
 class InterviewApiService {
   final ProxyClient client;
@@ -49,14 +49,10 @@ class InterviewApiService {
 
             // Show authentication modal if context is available
             if (context != null) {
-              await WorkingAuthModal.show(
-                context,
-                reason: 'interview_limit',
-                onSuccess: () {
-                  debugPrint('✅ Authentication successful - can retry action');
-                },
-              );
-
+              debugPrint('🔓 Interview practice requires authentication - showing unified modal');
+              await AuthenticationModal.show(context);
+              debugPrint('✅ Authentication modal shown for interview practice');
+              
               // Return a fallback answer indicating auth is required
               return _createAuthRequiredAnswer(answer);
             }

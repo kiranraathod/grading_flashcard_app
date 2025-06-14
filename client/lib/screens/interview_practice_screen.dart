@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/interview_question.dart';
 import '../models/interview_answer.dart';
 import '../services/interview_service.dart';
@@ -11,7 +12,7 @@ import '../utils/design_system.dart';
 import 'dart:async';
 import 'interview_result_screen.dart';
 
-class InterviewPracticeScreen extends StatefulWidget {
+class InterviewPracticeScreen extends ConsumerStatefulWidget {
   final InterviewQuestion question;
   final List<InterviewQuestion> questionList;
   final int currentIndex;
@@ -24,11 +25,11 @@ class InterviewPracticeScreen extends StatefulWidget {
   });
 
   @override
-  State<InterviewPracticeScreen> createState() =>
+  ConsumerState<InterviewPracticeScreen> createState() =>
       _InterviewPracticeScreenState();
 }
 
-class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
+class _InterviewPracticeScreenState extends ConsumerState<InterviewPracticeScreen> {
   // State variables
   int _timeTaken = 0;
   late InterviewService _interviewService;
@@ -47,11 +48,14 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
 
   // This field is set during grading and used for tracking the latest grade
   InterviewAnswer? _gradedAnswer;
-  final InterviewApiService _interviewApiService = InterviewApiService();
+  late final InterviewApiService _interviewApiService;
 
   @override
   void initState() {
     super.initState();
+
+    // 🎯 FIXED: Initialize InterviewApiService with Riverpod ref for authentication
+    _interviewApiService = InterviewApiService(ref: ref);
 
     // Note: _loadCurrentAnswer() moved to didChangeDependencies()
     // to ensure _interviewService is initialized first
@@ -147,7 +151,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _interviewService = Provider.of<InterviewService>(context);
+    _interviewService = provider.Provider.of<InterviewService>(context);
 
     // ✅ FIXED: Load answer after service is initialized
     if (!_hasLoadedInitialAnswer) {
@@ -245,7 +249,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       );
 
       // Record the view in the global RecentViewBloc to ensure it appears in Recent tab
-      context.read<RecentViewBloc>().add(
+      provider.Provider.of<RecentViewBloc>(context, listen: false).add(
         RecordInterviewQuestionView(
           question: widget.question,
           category: widget.question.subtopic.isNotEmpty ? widget.question.subtopic : widget.question.category, // 🔧 Use subtopic for better navigation
@@ -256,6 +260,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       // Grade the answer using the specialized interview API service
       final gradedAnswer = await _interviewApiService.gradeInterviewAnswer(
         answer,
+        context: context,  // 🎯 FIXED: Pass context for authentication modal
       );
 
       // Fixed: Added mounted check before updating state after async operation
@@ -271,7 +276,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       _interviewService.markAsCompleted(widget.question.id);
 
       // Record the view again with completed status
-      context.read<RecentViewBloc>().add(
+      provider.Provider.of<RecentViewBloc>(context, listen: false).add(
         RecordInterviewQuestionView(
           question: widget.question,
           category: widget.question.subtopic.isNotEmpty ? widget.question.subtopic : widget.question.category, // 🔧 Use subtopic for better navigation
@@ -831,7 +836,7 @@ class _InterviewPracticeScreenState extends State<InterviewPracticeScreen> {
       builder: (context) {
         // Record view when the screen first loads
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          context.read<RecentViewBloc>().add(
+          provider.Provider.of<RecentViewBloc>(context, listen: false).add(
             RecordInterviewQuestionView(
               question: widget.question,
               category: widget.question.subtopic.isNotEmpty ? widget.question.subtopic : widget.question.category, // 🔧 Use subtopic for better navigation
