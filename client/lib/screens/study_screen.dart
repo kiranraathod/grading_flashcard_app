@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:provider/provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../blocs/study/study_bloc.dart';
@@ -31,42 +32,23 @@ class StudyScreen extends StatelessWidget {
     // Get a reference to the FlashcardService for updating progress
     final flashcardService = Provider.of<FlashcardService>(context, listen: false);
     
-    // Create the study bloc outside the build method to ensure it persists
-    final studyBloc = StudyBloc(
-      apiService: ApiService(),
-      flashcardService: flashcardService,
-    )..add(StudyStarted(flashcardSet: set));
-    
-    // No longer create a new RecentViewBloc here as we're using the global one
-    
-    return BlocProvider<StudyBloc>.value(
-      value: studyBloc,
-      child: Builder(
-        builder: (context) {
-          return PopScope(
-            // Capture when user navigates back
-            canPop: true,
-            onPopInvokedWithResult: (bool didPop, value) async {
-              if (didPop) {
-                try {
-                  final bloc = BlocProvider.of<StudyBloc>(context);
-                  if (bloc.state.flashcardSet != null) {
-                    // Save progress when navigating back
-                    await flashcardService.updateFlashcardSet(bloc.state.flashcardSet!);
-                    debugPrint('Progress saved on back navigation');
-                  }
-                } catch (e) {
-                  debugPrint('Error saving progress on back: $e');
-                }
-              }
-              // Do not return anything as this is a Future<void> function
-            },
-            child: StudyView(
-              flashcardService: flashcardService,
-            ),
-          );
-        }
-      ),
+    // 🆕 Use Consumer to get Riverpod ref for action tracking
+    return riverpod.Consumer(
+      builder: (context, ref, child) {
+        // Create the study bloc with Riverpod ref for action tracking
+        final studyBloc = StudyBloc(
+          apiService: ApiService(),
+          flashcardService: flashcardService,
+          ref: ref, // 🆕 Pass Riverpod ref for action tracking
+        )..add(StudyStarted(flashcardSet: set));
+        
+        // No longer create a new RecentViewBloc here as we're using the global one
+        
+        return BlocProvider<StudyBloc>.value(
+          value: studyBloc,
+          child: StudyView(flashcardService: flashcardService),
+        );
+      },
     );
   }
 }

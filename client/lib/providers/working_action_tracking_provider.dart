@@ -5,7 +5,7 @@ import '../providers/working_auth_provider.dart';
 import '../services/working_secure_auth_storage.dart';
 import '../utils/config.dart';
 
-/// Simple action tracking provider
+/// Reactive action tracking provider that responds to authentication changes
 class SimpleActionTracker extends StateNotifier<UserActionState> {
   final Ref ref;
   
@@ -15,6 +15,110 @@ class SimpleActionTracker extends StateNotifier<UserActionState> {
     lastReset: DateTime(2000),
   )) {
     _initializeTracking();
+    _listenToAuthChanges(); // 🆕 Add auth state listener
+  }
+
+  /// 🆕 Listen to authentication state changes and react accordingly
+  void _listenToAuthChanges() {
+    ref.listen<AuthState>(authNotifierProvider, (previous, next) async {
+      debugPrint('🔄 Action tracker: Auth state changed from ${previous?.runtimeType} to ${next.runtimeType}');
+      
+      // Handle authentication transition
+      if (previous is! AuthStateAuthenticated && next is AuthStateAuthenticated) {
+        debugPrint('✨ User authenticated - refreshing action limits and counts');
+        await _handleUserAuthenticated(next);
+      } 
+      // Handle logout transition
+      else if (previous is AuthStateAuthenticated && next is! AuthStateAuthenticated) {
+        debugPrint('👋 User logged out - resetting to guest limits');
+        await _handleUserLoggedOut();
+      }
+      // Handle any other auth state change
+      else if (previous != null && _getUserId(previous) != _getUserId(next)) {
+        debugPrint('🔄 User changed - reloading action data');
+        await _reloadActionData();
+      }
+    });
+  }
+
+  /// 🆕 Handle user authentication - refresh limits and optionally reset counts
+  Future<void> _handleUserAuthenticated(AuthStateAuthenticated authState) async {
+    try {
+      final userId = _getUserId(authState);
+      if (userId == null) return;
+
+      // Update daily limits to authenticated limits
+      final newLimits = _getDailyLimits();
+      
+      // Option 1: Reset counts to give fresh authenticated quota
+      // This gives user their full authenticated limit immediately
+      final resetCounts = <String, int>{};
+      
+      // Option 2: Keep existing counts but update limits
+      // Uncomment this if you want to preserve existing action counts:
+      // final existingActions = await WorkingSecureAuthStorage.getUserActions(userId);
+      // final resetCounts = existingActions;
+      
+      state = state.copyWith(
+        actionCounts: resetCounts,
+        dailyLimits: newLimits,
+        lastReset: DateTime.now(),
+        hasReachedLimit: _checkIfLimitReached(resetCounts, newLimits),
+      );
+      
+      // Store the reset counts
+      await WorkingSecureAuthStorage.storeUserActions(userId, resetCounts);
+      
+      debugPrint('🎉 Authenticated user limits applied:');
+      debugPrint('   - Flashcard grading: ${resetCounts['flashcard_grading'] ?? 0}/${newLimits['flashcard_grading']}');
+      debugPrint('   - Interview practice: ${resetCounts['interview_practice'] ?? 0}/${newLimits['interview_practice']}');
+      
+    } catch (e) {
+      debugPrint('❌ Failed to handle user authentication: $e');
+    }
+  }
+
+  /// 🆕 Handle user logout - reset to guest limits
+  Future<void> _handleUserLoggedOut() async {
+    try {
+      // Reset to guest limits and clear actions
+      final guestLimits = _getDailyLimits();
+      
+      state = state.copyWith(
+        actionCounts: {},
+        dailyLimits: guestLimits,
+        lastReset: DateTime.now(),
+        hasReachedLimit: false,
+      );
+      
+      debugPrint('👋 Reset to guest limits');
+    } catch (e) {
+      debugPrint('❌ Failed to handle user logout: $e');
+    }
+  }
+
+  /// 🆕 Reload action data when user changes
+  Future<void> _reloadActionData() async {
+    try {
+      final authState = ref.read(authNotifierProvider);
+      final userId = _getUserId(authState);
+      
+      if (userId != null) {
+        await _loadUserActions(userId);
+        await _checkDailyReset();
+      } else {
+        // 🆕 Handle guest users - set up guest limits without storage
+        state = state.copyWith(
+          actionCounts: {},
+          dailyLimits: _getDailyLimits(),
+          lastReset: DateTime.now(),
+          hasReachedLimit: false,
+        );
+        debugPrint('✅ Guest user action data reloaded');
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to reload action data: $e');
+    }
   }
 
   Future<void> _initializeTracking() async {
@@ -25,11 +129,33 @@ class SimpleActionTracker extends StateNotifier<UserActionState> {
       if (userId != null) {
         await _loadUserActions(userId);
         await _checkDailyReset();
+      } else {
+        // 🆕 Initialize guest user tracking even without userId
+        debugPrint('🎯 Initializing guest user tracking');
+        state = state.copyWith(
+          actionCounts: {},
+          dailyLimits: _getDailyLimits(), // Set up guest limits
+          lastReset: DateTime.now(),
+          hasReachedLimit: false,
+        );
+        debugPrint('✅ Guest user tracking initialized with limits: ${state.dailyLimits}');
       }
       
       debugPrint('✅ Action tracking initialized');
     } catch (e) {
       debugPrint('❌ Action tracking initialization failed: $e');
+      // 🆕 Fallback: Set up basic guest tracking even if initialization fails
+      try {
+        state = state.copyWith(
+          actionCounts: {},
+          dailyLimits: _getDailyLimits(),
+          lastReset: DateTime.now(),
+          hasReachedLimit: false,
+        );
+        debugPrint('✅ Fallback guest tracking initialized');
+      } catch (fallbackError) {
+        debugPrint('❌ Fallback initialization also failed: $fallbackError');
+      }
     }
   }
 
@@ -88,7 +214,6 @@ class SimpleActionTracker extends StateNotifier<UserActionState> {
       };
     }
   }
-
   Future<void> _checkDailyReset() async {
     final now = DateTime.now();
     final lastReset = state.lastReset;
@@ -106,17 +231,27 @@ class SimpleActionTracker extends StateNotifier<UserActionState> {
     final authState = ref.read(authNotifierProvider);
     final userId = _getUserId(authState);
     
+    // 🆕 Always reset state, regardless of userId
+    state = state.copyWith(
+      actionCounts: {},
+      lastReset: DateTime.now(),
+      hasReachedLimit: false,
+    );
+    
+    // 🆕 Only try to store if we have a userId (authenticated users)
     if (userId != null) {
-      state = state.copyWith(
-        actionCounts: {},
-        lastReset: DateTime.now(),
-        hasReachedLimit: false,
-      );
-      
-      await WorkingSecureAuthStorage.storeUserActions(userId, {});
-      debugPrint('✅ Daily actions reset');
+      try {
+        await WorkingSecureAuthStorage.storeUserActions(userId, {});
+        debugPrint('✅ Daily actions reset and stored for user $userId');
+      } catch (e) {
+        debugPrint('⚠️ Failed to store reset actions for user $userId: $e');
+      }
+    } else {
+      debugPrint('✅ Daily actions reset for guest user (no storage)');
     }
-  }  Future<bool> recordAction(ActionType actionType, {
+  }
+
+  Future<bool> recordAction(ActionType actionType, {
     Map<String, dynamic>? metadata,
   }) async {
     if (!AuthConfig.enableUsageLimits) {
@@ -128,11 +263,7 @@ class SimpleActionTracker extends StateNotifier<UserActionState> {
       final authState = ref.read(authNotifierProvider);
       final userId = _getUserId(authState);
       
-      if (userId == null) {
-        debugPrint('❌ No user ID available for action recording');
-        return false;
-      }
-
+      // 🆕 Don't require userId for guest users - they can still use in-memory tracking
       await _checkDailyReset();
       
       final actionKey = _getActionKey(actionType);
@@ -150,12 +281,20 @@ class SimpleActionTracker extends StateNotifier<UserActionState> {
       
       state = state.copyWith(
         actionCounts: newCounts,
-        hasReachedLimit: _checkIfLimitReached(newCounts),
+        hasReachedLimit: _checkIfLimitReached(newCounts, state.dailyLimits),
       );
       
-      await WorkingSecureAuthStorage.storeUserActions(userId, newCounts);
-      
-      debugPrint('📊 Action recorded: $actionKey (${newCounts[actionKey]}/$limit)');
+      // 🆕 Only try to store if we have a userId (authenticated users)
+      if (userId != null) {
+        try {
+          await WorkingSecureAuthStorage.storeUserActions(userId, newCounts);
+          debugPrint('📊 Action recorded and stored: $actionKey (${newCounts[actionKey]}/$limit)');
+        } catch (e) {
+          debugPrint('⚠️ Failed to store action for user $userId: $e');
+        }
+      } else {
+        debugPrint('📊 Action recorded (guest): $actionKey (${newCounts[actionKey]}/$limit)');
+      }
       
       if (newCounts[actionKey] == limit - 1) {
         debugPrint('⚠️ Approaching limit: 1 action remaining');
@@ -169,7 +308,10 @@ class SimpleActionTracker extends StateNotifier<UserActionState> {
   }
 
   bool canPerformAction(ActionType actionType) {
-    if (!AuthConfig.enableUsageLimits) return true;
+    if (!AuthConfig.enableUsageLimits) {
+      debugPrint('💡 Usage limits disabled - allowing action');
+      return true;
+    }
     
     final actionKey = _getActionKey(actionType);
     final currentCount = state.actionCounts[actionKey] ?? 0;
@@ -177,8 +319,17 @@ class SimpleActionTracker extends StateNotifier<UserActionState> {
     
     final canPerform = currentCount < limit;
     
+    // 🆕 Enhanced debugging
+    debugPrint('🔍 canPerformAction($actionType):');
+    debugPrint('  - actionKey: $actionKey');
+    debugPrint('  - currentCount: $currentCount');
+    debugPrint('  - limit: $limit');
+    debugPrint('  - canPerform: $canPerform');
+    debugPrint('  - state.dailyLimits: ${state.dailyLimits}');
+    debugPrint('  - state.actionCounts: ${state.actionCounts}');
+    
     if (!canPerform) {
-      debugPrint('🔍 Action check failed: $actionKey ($currentCount/$limit)');
+      debugPrint('🚫 Action check failed: $actionKey ($currentCount/$limit)');
     }
     
     return canPerform;
@@ -205,9 +356,10 @@ class SimpleActionTracker extends StateNotifier<UserActionState> {
     }
   }
 
-  bool _checkIfLimitReached(Map<String, int> counts) {
+  /// 🔧 Updated to accept custom limits parameter
+  bool _checkIfLimitReached(Map<String, int> counts, Map<String, int> limits) {
     for (final entry in counts.entries) {
-      final limit = state.dailyLimits[entry.key] ?? 0;
+      final limit = limits[entry.key] ?? 0;
       if (entry.value >= limit) {
         return true;
       }
@@ -218,39 +370,42 @@ class SimpleActionTracker extends StateNotifier<UserActionState> {
   String getUsageMessage(ActionType actionType) {
     if (!AuthConfig.enableUsageLimits) return '';
     
+    final remaining = getRemainingActions(actionType);
     final authState = ref.read(authNotifierProvider);
     final isAuthenticated = authState is AuthStateAuthenticated;
     
-    final actionKey = _getActionKey(actionType);
-    final currentCount = state.actionCounts[actionKey] ?? 0;
-    final limit = state.dailyLimits[actionKey] ?? 0;
-    final remaining = limit - currentCount;
-    
-    if (isAuthenticated) {
-      return 'Actions used: $currentCount/$limit';
-    }
-    
     if (remaining <= 0) {
-      return 'Daily limit reached. Sign in for more actions!';
-    } else if (remaining <= 1) {
-      return '$remaining action remaining. Sign in for more!';
+      return isAuthenticated 
+        ? 'Daily limit reached. Resets at midnight.'
+        : 'Guest limit reached. Sign in for more actions.';
+    } else if (remaining == 1) {
+      return '$remaining action remaining today';
     } else {
       return '$remaining actions remaining today';
     }
   }
 
+  /// Debug method to reset all action counts (for testing purposes)
   Future<void> resetActions() async {
-    final authState = ref.read(authNotifierProvider);
-    final userId = _getUserId(authState);
-    
-    if (userId != null) {
-      state = state.copyWith(
-        actionCounts: {},
-        hasReachedLimit: false,
-      );
+    try {
+      final authState = ref.read(authNotifierProvider);
+      final userId = _getUserId(authState);
       
-      await WorkingSecureAuthStorage.storeUserActions(userId, {});
-      debugPrint('🔄 Actions reset for testing');
+      if (userId != null) {
+        // Reset all action counts to zero
+        state = state.copyWith(
+          actionCounts: {},
+          lastReset: DateTime.now(),
+          hasReachedLimit: false,
+        );
+        
+        // Store the reset counts
+        await WorkingSecureAuthStorage.storeUserActions(userId, {});
+        
+        debugPrint('🔄 Debug: All action counts reset to zero');
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to reset actions: $e');
     }
   }
 }

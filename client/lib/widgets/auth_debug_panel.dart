@@ -7,6 +7,7 @@ import '../providers/working_auth_provider.dart';
 import '../providers/working_action_tracking_provider.dart';
 import '../models/simple_auth_state.dart';
 import '../services/supabase_service.dart';
+import '../services/usage_limit_enforcer.dart';
 import '../utils/config.dart';
 
 /// Authentication Debug Panel migrated to Riverpod
@@ -277,18 +278,28 @@ class _AuthDebugPanelState extends ConsumerState<AuthDebugPanel> {
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        'Session: ${guestId ?? _getUserId(currentUser)}\n'
-                        'Actions Used: $usedActions\n'
-                        'Max Actions: $maxActions\n'
-                        'Remaining: $remainingActions\n'
-                        'Auth State: ${authState.runtimeType}\n'
-                        'Has Reached Limit: ${actionState.hasReachedLimit}\n'
-                        'Last Reset: ${actionState.lastReset}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontFamily: 'monospace',
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      Builder(
+                        builder: (context) {
+                          // Get comprehensive usage summary from enforcer
+                          final usageLimitEnforcer = ref.read(usageLimitEnforcerProvider);
+                          final usageSummary = usageLimitEnforcer.getUsageSummary();
+                          
+                          return Text(
+                            'Session: ${guestId ?? _getUserId(currentUser)}\n'
+                            'Combined Usage: ${usageSummary['totalUsed']}/${usageSummary['maxActions']}\n'
+                            'Remaining: ${usageSummary['remaining']}\n'
+                            'Can Perform: ${usageSummary['canPerform']}\n'
+                            'Auth State: ${authState.runtimeType}\n'
+                            'Authenticated: ${usageSummary['authenticated']}\n'
+                            'Has Reached Limit: ${actionState.hasReachedLimit}\n'
+                            'Last Reset: ${actionState.lastReset}\n'
+                            'Action Breakdown: ${usageSummary['actionCounts']}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

@@ -8,9 +8,9 @@ import '../models/simple_auth_state.dart';
 import '../providers/working_action_tracking_provider.dart';
 import '../services/error_service.dart';
 import '../services/simple_error_handler.dart';
+import '../services/usage_limit_enforcer.dart';
 import '../utils/config.dart';
 import '../web/proxy.dart';
-import '../widgets/auth/authentication_modal.dart';
 
 class InterviewApiService {
   final ProxyClient client;
@@ -39,27 +39,29 @@ class InterviewApiService {
 
     return await SimpleErrorHandler.safe<InterviewAnswer>(
       () async {
-        // 🎯 NEW: Check authentication and usage limits
+        // 🎯 NEW: Enhanced quota enforcement with automatic retry after authentication
         if (_ref != null && AuthConfig.enableUsageLimits) {
-          final actionTracker = _ref.read(actionTrackerProvider.notifier);
+          final usageLimitEnforcer = _ref.read(usageLimitEnforcerProvider);
 
-          // Check if user can perform action
-          if (!actionTracker.canPerformAction(ActionType.interviewPractice)) {
-            debugPrint('🚫 Interview grading blocked - usage limit reached');
+          // Check if user can perform action (handles authentication automatically)
+          final canProceed = await usageLimitEnforcer.enforceLimit(
+            ActionType.interviewPractice,
+            context: context,
+            source: 'InterviewApiService.gradeInterviewAnswer',
+          );
 
-            // Show authentication modal if context is available
+          if (!canProceed) {
+            debugPrint('🚫 Interview grading blocked - user cannot perform action');
+            
+            // Return appropriate fallback based on context availability
             if (context != null) {
-              debugPrint('🔓 Interview practice requires authentication - showing unified modal');
-              await AuthenticationModal.show(context);
-              debugPrint('✅ Authentication modal shown for interview practice');
-              
-              // Return a fallback answer indicating auth is required
               return _createAuthRequiredAnswer(answer);
+            } else {
+              return _createLimitReachedAnswer(answer);
             }
-
-            // No context available, return limit reached answer
-            return _createLimitReachedAnswer(answer);
           }
+          
+          debugPrint('✅ Interview grading quota check passed - proceeding with API call');
         }
 
         final interviewGradeEndpoint =
@@ -91,12 +93,16 @@ class InterviewApiService {
               responseData['score'] is num &&
               responseData['feedback'] is String &&
               responseData['suggestions'] is List) {
-            // 🎯 NEW: Record successful action
+            // 🎯 NEW: Record successful action using centralized enforcer
             if (_ref != null && AuthConfig.enableUsageLimits) {
               final actionTracker = _ref.read(actionTrackerProvider.notifier);
               await actionTracker.recordAction(ActionType.interviewPractice);
 
+              // Debug: Show updated usage
+              final usageLimitEnforcer = _ref.read(usageLimitEnforcerProvider);
+              final updatedSummary = usageLimitEnforcer.getUsageSummary();
               debugPrint('📊 Interview grading action recorded');
+              debugPrint('📊 Updated total usage: ${updatedSummary['totalUsed']}/${updatedSummary['maxActions']}');
             }
 
             return InterviewAnswer(
@@ -213,6 +219,4 @@ class InterviewApiService {
       ],
     );
   }
-
-  // TODO: Re-implement utility methods for authentication checking
 }

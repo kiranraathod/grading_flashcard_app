@@ -1,13 +1,15 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/answer.dart';
 import '../../models/app_error.dart';
 import '../../models/flashcard.dart';
+import '../../models/simple_auth_state.dart';
+import '../../providers/working_action_tracking_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/error_service.dart';
 import '../../services/flashcard_service.dart';
-import '../../services/guest_user_manager.dart';
-import '../../utils/config.dart';
+import '../../services/usage_limit_enforcer.dart';
 import 'study_event.dart';
 import 'study_state.dart';
 
@@ -15,12 +17,15 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
   final ApiService _apiService;
   final FlashcardService _flashcardService;
   final ErrorService _errorService = ErrorService();
+  final WidgetRef _ref; // 🆕 Add Riverpod ref for action tracking
 
   StudyBloc({
     required ApiService apiService,
     required FlashcardService flashcardService,
+    required WidgetRef ref, // 🆕 Inject Riverpod ref
   }) : _apiService = apiService,
        _flashcardService = flashcardService,
+       _ref = ref,
        super(const StudyState()) {
     on<StudyStarted>(_onStudyStarted);
     on<FlashcardAnswered>(_onFlashcardAnswered);
@@ -69,23 +74,21 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     ));
 
     try {
-      // 🎯 SMART AUTHENTICATION CHECK - Only trigger when truly needed
-      final guestManager = GuestUserManager.instance;
+      // 🎯 NEW: Use centralized usage limit enforcer for consistent checking
+      final usageLimitEnforcer = _ref.read(usageLimitEnforcerProvider);
       
-      // Log current state for testing
-      debugPrint('🔍 StudyBloc Auth Check - Current usage: ${guestManager.currentUsageCount}/${guestManager.maxActions}');
-      debugPrint('🔍 Can perform action: ${guestManager.canPerformGradingAction()}');
-      debugPrint('🔍 Has reached limit: ${guestManager.hasReachedLimit}');
+      // Get usage summary for debugging
+      final usageSummary = usageLimitEnforcer.getUsageSummary();
+      debugPrint('🔍 StudyBloc Auth Check - Usage Summary: $usageSummary');
       
-      // 🔧 SMART FIX: Only prevent action if user has EXCEEDED their limit
-      // This allows users to complete their allotted actions (1, 2, 3) without interruption
-      final hasExceededLimit = AuthConfig.enableUsageLimits && 
-                               (guestManager.currentUsageCount >= guestManager.maxActions);
+      // Check if user can perform ANY action (combined quota)
+      final canPerform = usageLimitEnforcer.canPerformAnyAction();
       
-      debugPrint('🔍 Current count check: ${guestManager.currentUsageCount} >= ${guestManager.maxActions} = $hasExceededLimit');
+      debugPrint('🔍 StudyBloc: Can perform action: $canPerform');
+      debugPrint('🔍 StudyBloc: Total usage: ${usageSummary['totalUsed']}/${usageSummary['maxActions']}');
       
-      if (hasExceededLimit) {
-        debugPrint('🚫 StudyBloc: Usage limit exceeded - preventing new grading action');
+      if (!canPerform) {
+        debugPrint('🚫 StudyBloc: Combined usage limit exceeded - preventing new grading action');
         debugPrint('🔐 StudyBloc: User must authenticate before proceeding');
         
         // Emit authentication required state immediately - don't process the answer
@@ -111,9 +114,14 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
       final gradedAnswer = await _apiService.gradeAnswer(answer);
       debugPrint('🔍 API call completed - processing response');
       
-      // 🎯 IMPORTANT: Record grading action AFTER successful grading
+      // 🎯 IMPORTANT: Record grading action AFTER successful grading using centralized enforcer
       debugPrint('🔍 StudyBloc: API call successful - recording grading action');
-      await guestManager.recordGradingAction();
+      final actionTracker = _ref.read(actionTrackerProvider.notifier);
+      await actionTracker.recordAction(ActionType.flashcardGrading);
+      
+      // Debug: Show updated usage after recording
+      final updatedSummary = usageLimitEnforcer.getUsageSummary();
+      debugPrint('📊 Updated usage after recording: ${updatedSummary['totalUsed']}/${updatedSummary['maxActions']}');
       
       // 🎯 FIRST: Process the score and update completion status
       debugPrint('📊 Answer score received: ${gradedAnswer.score} for card ${event.flashcard.id}');
