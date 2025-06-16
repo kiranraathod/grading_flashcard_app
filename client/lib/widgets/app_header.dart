@@ -10,7 +10,7 @@ import '../utils/config.dart';
 import '../screens/settings_screen.dart';
 import '../screens/search/search_results_screen.dart';
 import '../providers/working_auth_provider.dart';
-import '../providers/working_action_tracking_provider.dart';
+import '../providers/unified_action_tracking_provider.dart';
 import '../models/simple_auth_state.dart';
 import 'auth/authentication_modal.dart';
 
@@ -236,7 +236,7 @@ class _AppHeaderState extends ConsumerState<AppHeader> {
   Widget _buildProfileMenuButton(BuildContext context) {
     // Watch authentication state using Riverpod
     final authState = ref.watch(authNotifierProvider);
-    final actionState = ref.watch(actionTrackerProvider);
+    final actionState = ref.watch(unifiedActionTrackerProvider);
 
     return PopupMenuButton<String>(
       padding: EdgeInsets.zero,

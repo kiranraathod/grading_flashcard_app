@@ -252,9 +252,11 @@ class InterviewService extends ChangeNotifier {
             debugPrint('  Match result: $result');
             if (result) {
               debugPrint('  ✅ MATCHED!');
-            } else if (kDebugMode) {
-              // Only show NO MATCH in debug mode to reduce spam
-              debugPrint('  ❌ NO MATCH');
+            } else {
+              // 🔇 REDUCED: Only log NO MATCH occasionally to prevent spam
+              if (DateTime.now().millisecond % 100 == 0) {
+                debugPrint('  ❌ NO MATCH (logging reduced to prevent spam)');
+              }
             }
 
             return result;

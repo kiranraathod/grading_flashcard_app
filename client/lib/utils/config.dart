@@ -15,17 +15,21 @@ class AuthConfig {
   static bool enableGuestTracking = true;
   static bool enableProfileMenu = true;
   
-  // Unified usage limits for both flashcard and interview features
-  static int guestMaxGradingActions = 3;        // Flashcard grading limit for guests
-  static int guestMaxInterviewActions = 3;      // Interview practice limit for guests
-  static int authenticatedMaxGradingActions = 5; // Flashcard grading limit for authenticated users
-  static int authenticatedMaxInterviewActions = 5; // Interview practice limit for authenticated users
+  // 🎯 COMBINED QUOTA SYSTEM: 
+  // - Guests: 3 total actions across all features
+  // - Authenticated: 5 total actions across all features
+  // (Individual limits are set dynamically in UnifiedActionTracker)
   
-  // Additional action limits
-  static int guestMaxContentGeneration = 2;     // AI content generation for guests
-  static int authenticatedMaxContentGeneration = 10; // AI content generation for authenticated users
-  static int guestMaxAiAssistance = 3;          // AI assistance for guests
-  static int authenticatedMaxAiAssistance = 15; // AI assistance for authenticated users
+  // Legacy configuration values (kept for compatibility)
+  static int guestMaxGradingActions = 3;        
+  static int guestMaxInterviewActions = 3;      
+  static int guestMaxContentGeneration = 2;     
+  static int guestMaxAiAssistance = 3;          
+  
+  static int authenticatedMaxGradingActions = 5; 
+  static int authenticatedMaxInterviewActions = 5; 
+  static int authenticatedMaxContentGeneration = 10; 
+  static int authenticatedMaxAiAssistance = 15;
   
   // Supabase configuration
   static const String supabaseUrl = 'https://saxopupmwfcfjxuflfrx.supabase.co';
@@ -39,7 +43,7 @@ class AuthConfig {
   static bool enableAnonymousAuth = true; // Enable guest user support
   
   // Development flags
-  static bool enableAuthDebugLogging = false;
+  static bool enableAuthDebugLogging = false; // 🔇 Disabled for clean logs
   static bool skipEmailVerification = true;
   static bool enableDemoMode = true; // Enable demo authentication for testing
   
@@ -56,14 +60,14 @@ class AppConfig {
   static Environment _environment = Environment.dev;
   static Environment get environment => _environment;
   
-  // Network configuration - BALANCED FOR STABILITY + POOR NETWORK HANDLING
-  static Duration apiTimeout = const Duration(seconds: 45);  // Extended for poor networks
-  static int maxRetryAttempts = 1;                          // Reduced for poor networks  
-  static Duration retryDelay = const Duration(seconds: 2);   // Reasonable delay
-  static NetworkLogLevel networkLogLevel = NetworkLogLevel.none;  // 🔇 No network logs
+  // Network configuration - OPTIMIZED FOR CLEAN LOGGING
+  static Duration apiTimeout = const Duration(seconds: 30);     // Reduced timeout
+  static int maxRetryAttempts = 1;                              // Minimal retries  
+  static Duration retryDelay = const Duration(seconds: 2);      // Quick retry
+  static NetworkLogLevel networkLogLevel = NetworkLogLevel.none; // 🔇 No network logs
   
-  // Connection configuration - OPTIMIZED FOR POOR NETWORKS
-  static Duration networkCheckInterval = const Duration(minutes: 5);  // Less frequent checks
+  // Connection configuration - REDUCED FREQUENCY
+  static Duration networkCheckInterval = const Duration(minutes: 10); // 🔧 Reduced from 5 to 10 minutes
   static Duration connectivityTimeout = const Duration(seconds: 5);
   
   // API endpoints (moved from Constants)

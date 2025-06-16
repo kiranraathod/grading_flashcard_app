@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/flashcard.dart';
 import '../models/answer.dart';
 import '../models/flashcard_set.dart';
+import '../models/simple_auth_state.dart';
 import '../services/api_service.dart';
 import '../services/speech_to_text_service.dart';
 import '../services/network_service.dart';
-import '../services/guest_user_manager.dart';
+import '../services/unified_action_middleware.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/answer_input_widget.dart';
-import '../widgets/auth/authentication_modal.dart';
-import '../utils/config.dart';
 import 'result_screen.dart';
 
-class FlashcardScreen extends StatefulWidget {
+class FlashcardScreen extends ConsumerStatefulWidget {
   final List<Flashcard> flashcards;
   final int initialCardIndex;
   final String? setTitle; // Optional set title for display
@@ -36,10 +35,10 @@ class FlashcardScreen extends StatefulWidget {
   }
 
   @override
-  State<FlashcardScreen> createState() => _FlashcardScreenState();
+  ConsumerState<FlashcardScreen> createState() => _FlashcardScreenState();
 }
 
-class _FlashcardScreenState extends State<FlashcardScreen> {
+class _FlashcardScreenState extends ConsumerState<FlashcardScreen> {
   late int _currentIndex;
   String _userAnswer = '';
   bool _isSubmitting = false;
@@ -51,13 +50,9 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialCardIndex;
-  }
-  
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _apiService = Provider.of<ApiService>(context);
-    _speechToTextService = Provider.of<SpeechToTextService>(context);
+    // Initialize services directly since we're using Riverpod now
+    _apiService = ApiService();
+    _speechToTextService = SpeechToTextService();
   }
 
   void _nextCard() {
@@ -107,7 +102,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
 
     try {
       // Check network connectivity
-      final networkService = Provider.of<NetworkService>(context, listen: false);
+      final networkService = NetworkService();
       
       if (!networkService.isOnline) {
         // Handle offline mode
@@ -126,66 +121,47 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
         correctAnswer: currentCard.answer,
       );
 
-      // 🎯 AUTHENTICATION TRIGGER LOGIC - WITH TESTING LOGS
-      final guestManager = GuestUserManager.instance;
+      // 🎯 UPDATED: Use unified action middleware for authentication and quota enforcement
+      final middleware = ref.read(unifiedActionMiddlewareProvider);
       
       // Log current state for testing
-      debugPrint('🔍 Testing Auth Trigger - Current usage: ${guestManager.currentUsageCount}/${guestManager.maxActions}');
-      debugPrint('🔍 Can perform action: ${guestManager.canPerformGradingAction()}');
-      debugPrint('🔍 Has reached limit: ${guestManager.hasReachedLimit}');
+      final usageSummary = middleware.getUsageSummary();
+      debugPrint('🔍 Testing Auth Trigger - Current usage: ${usageSummary['totalUsage']}/${usageSummary['totalLimit']}');
+      debugPrint('🔍 Can perform action: ${middleware.canPerformAction(ActionType.flashcardGrading)}');
       
-      // Check if usage limits are enabled and user has reached the limit
-      if (AuthConfig.enableUsageLimits && !guestManager.canPerformGradingAction()) {
-        debugPrint('🚫 Usage limit reached - showing auth modal');
+      // Use executeWithQuota for atomic quota check and consumption
+      final gradedAnswer = await middleware.executeWithQuota<Answer>(
+        ActionType.flashcardGrading,
+        () async {
+          debugPrint('🔍 Proceeding with grading - calling API');
+          return await _apiService.gradeAnswer(answer);
+        },
+        context: context,
+        source: 'FlashcardScreen.submitAnswer',
+      );
+      
+      if (gradedAnswer == null) {
+        // Action was blocked by quota enforcement
+        debugPrint('❌ Grading action blocked by quota enforcement');
+        final statusMessage = middleware.getStatusMessage();
         
-        // Show authentication modal
-        await AuthenticationModal.show(context);
-        
-        debugPrint('🔍 Auth modal dismissed - checking if user authenticated');
-        
-        // Check if widget is still mounted after async operation
         if (!mounted) return;
         
-        // After modal is dismissed, check if user is now authenticated
-        if (!guestManager.canPerformGradingAction()) {
-          debugPrint('❌ User still not authenticated - blocking grading action');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(guestManager.getUsageMessage()),
-              backgroundColor: Colors.blue,
-            ),
-          );
-          setState(() {
-            _isSubmitting = false;
-          });
-          return;
-        } else {
-          debugPrint('✅ User authenticated - allowing grading action');
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(statusMessage),
+            backgroundColor: Colors.blue,
+          ),
+        );
+        setState(() {
+          _isSubmitting = false;
+        });
+        return;
       }
-
-      debugPrint('🔍 Proceeding with grading - calling API');
-      final gradedAnswer = await _apiService.gradeAnswer(answer);
       
-      // Record grading action AFTER successful grading
-      debugPrint('🔍 API call successful - recording grading action');
-      await guestManager.recordGradingAction();
-      
-      // 🚨 POST-ACTION AUTHENTICATION CHECK: Check if user has now reached limit
-      final hasNowReachedLimit = AuthConfig.enableUsageLimits && 
-                                 (guestManager.currentUsageCount >= guestManager.maxActions);
-      
-      if (hasNowReachedLimit) {
-        debugPrint('🚨 FlashcardScreen: Usage limit reached after recording action (${guestManager.currentUsageCount}/${guestManager.maxActions})');
-        debugPrint('🔐 FlashcardScreen: Showing authentication modal');
-        
-        if (!mounted) return;
-        
-        // Show authentication modal
-        await AuthenticationModal.show(context);
-        
-        if (!mounted) return;
-      }
+      debugPrint('✅ Grading completed successfully');
+      final updatedSummary = middleware.getUsageSummary();
+      debugPrint('📊 Updated usage: ${updatedSummary['totalUsage']}/${updatedSummary['totalLimit']}');
       
       if (!mounted) return;
       
@@ -225,7 +201,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
   @override
   Widget build(BuildContext context) {
     final currentCard = widget.flashcards[_currentIndex];
-    final networkService = Provider.of<NetworkService>(context);
+    final networkService = NetworkService();
     
     return Scaffold(
       appBar: AppBar(

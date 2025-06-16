@@ -54,26 +54,26 @@ def create_app():
     # Add middleware for request/response logging
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
-        """Log request and response details."""
+        """Log only essential request information."""
         request_id = request.headers.get('X-Request-ID', 'unknown')
-        logger.debug(f'[{request_id}] Request path: {request.url.path}')
         
-        # Log request headers at debug level
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f'[{request_id}] Request Headers: {dict(request.headers)}')
+        # Only log non-ping API calls and errors
+        if request.url.path not in ['/api/ping', '/']:
+            logger.info(f'[{request_id}] {request.method} {request.url.path}')
         
         # Process the request and get response
         try:
             response = await call_next(request)
-            logger.debug(f'[{request_id}] Response Status: {response.status_code}')
             
-            # Log response headers at debug level
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f'[{request_id}] Response Headers: {dict(response.headers)}')
+            # Only log errors and important API calls
+            if response.status_code >= 400:
+                logger.warning(f'[{request_id}] {request.method} {request.url.path} - Status: {response.status_code}')
+            elif request.url.path not in ['/api/ping', '/'] and response.status_code == 200:
+                logger.info(f'[{request_id}] ✅ {request.method} {request.url.path} - Success')
                 
             return response
         except Exception as e:
-            logger.error(f'[{request_id}] Unhandled error during request processing: {str(e)}')
+            logger.error(f'[{request_id}] ❌ {request.method} {request.url.path} - Error: {str(e)}')
             return JSONResponse(
                 status_code=500,
                 content={"detail": "Internal server error"}
@@ -133,8 +133,11 @@ if __name__ == '__main__':
     # Get configuration from centralized config
     debug = config.DEBUG
     port = config.PORT
+    log_level = config.LOG_LEVEL
     
-    logger.info(f"Starting server on port {port} with debug={debug}")
+    logger.info(f"🚀 FlashMaster API Server Starting")
+    logger.info(f"📊 Port: {port} | Debug: {debug} | Log Level: {log_level}")
+    logger.info(f"🔧 LLM Model: {config.LLM_MODEL}")
     
     # Run with Uvicorn with increased timeout settings
     uvicorn.run(
@@ -143,5 +146,6 @@ if __name__ == '__main__':
         port=port, 
         reload=debug,
         timeout_keep_alive=120,
-        timeout_graceful_shutdown=120
+        timeout_graceful_shutdown=120,
+        log_level=log_level.lower()  # Pass log level to uvicorn
     )

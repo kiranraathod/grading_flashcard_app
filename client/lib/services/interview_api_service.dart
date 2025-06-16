@@ -5,10 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/interview_answer.dart';
 import '../models/app_error.dart';
 import '../models/simple_auth_state.dart';
-import '../providers/working_action_tracking_provider.dart';
+import '../providers/unified_action_tracking_provider.dart';
 import '../services/error_service.dart';
 import '../services/simple_error_handler.dart';
-import '../services/usage_limit_enforcer.dart';
+import '../services/unified_usage_limit_enforcer.dart';
 import '../utils/config.dart';
 import '../web/proxy.dart';
 
@@ -39,9 +39,9 @@ class InterviewApiService {
 
     return await SimpleErrorHandler.safe<InterviewAnswer>(
       () async {
-        // 🎯 NEW: Enhanced quota enforcement with automatic retry after authentication
+        // 🎯 UPDATED: Enhanced quota enforcement using unified system
         if (_ref != null && AuthConfig.enableUsageLimits) {
-          final usageLimitEnforcer = _ref.read(usageLimitEnforcerProvider);
+          final usageLimitEnforcer = _ref.read(unifiedUsageLimitEnforcerProvider);
 
           // Check if user can perform action (handles authentication automatically)
           final canProceed = await usageLimitEnforcer.enforceLimit(
@@ -93,16 +93,16 @@ class InterviewApiService {
               responseData['score'] is num &&
               responseData['feedback'] is String &&
               responseData['suggestions'] is List) {
-            // 🎯 NEW: Record successful action using centralized enforcer
+            // 🎯 UPDATED: Record successful action using unified system
             if (_ref != null && AuthConfig.enableUsageLimits) {
-              final actionTracker = _ref.read(actionTrackerProvider.notifier);
+              final actionTracker = _ref.read(unifiedActionTrackerProvider.notifier);
               await actionTracker.recordAction(ActionType.interviewPractice);
 
               // Debug: Show updated usage
-              final usageLimitEnforcer = _ref.read(usageLimitEnforcerProvider);
+              final usageLimitEnforcer = _ref.read(unifiedUsageLimitEnforcerProvider);
               final updatedSummary = usageLimitEnforcer.getUsageSummary();
               debugPrint('📊 Interview grading action recorded');
-              debugPrint('📊 Updated total usage: ${updatedSummary['totalUsed']}/${updatedSummary['maxActions']}');
+              debugPrint('📊 Updated total usage: ${updatedSummary['totalUsage']}/${updatedSummary['totalLimit']}');
             }
 
             return InterviewAnswer(

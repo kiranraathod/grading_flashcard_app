@@ -13,9 +13,9 @@ class AppConfig:
     """Application configuration class."""
     
     # Server configuration
-    DEBUG: bool = os.getenv('DEBUG', 'True').lower() == 'true'
+    DEBUG: bool = os.getenv('DEBUG', 'False').lower() == 'true'  # 🔧 Changed to False by default
     PORT: int = int(os.getenv('PORT', 3000))
-    LOG_LEVEL: str = os.getenv('LOG_LEVEL', 'DEBUG')
+    LOG_LEVEL: str = os.getenv('LOG_LEVEL', 'INFO')  # 🔧 Changed from DEBUG to INFO
     
     # LLM Service configuration
     LLM_MODEL: str = os.getenv('LLM_MODEL', 'gemini-2.0-flash')

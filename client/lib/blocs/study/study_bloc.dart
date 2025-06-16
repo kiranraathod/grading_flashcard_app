@@ -5,11 +5,11 @@ import '../../models/answer.dart';
 import '../../models/app_error.dart';
 import '../../models/flashcard.dart';
 import '../../models/simple_auth_state.dart';
-import '../../providers/working_action_tracking_provider.dart';
+import '../../providers/unified_action_tracking_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/error_service.dart';
 import '../../services/flashcard_service.dart';
-import '../../services/usage_limit_enforcer.dart';
+import '../../services/unified_usage_limit_enforcer.dart';
 import 'study_event.dart';
 import 'study_state.dart';
 
@@ -74,33 +74,9 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     ));
 
     try {
-      // 🎯 NEW: Use centralized usage limit enforcer for consistent checking
-      final usageLimitEnforcer = _ref.read(usageLimitEnforcerProvider);
-      
-      // Get usage summary for debugging
-      final usageSummary = usageLimitEnforcer.getUsageSummary();
-      debugPrint('🔍 StudyBloc Auth Check - Usage Summary: $usageSummary');
-      
-      // Check if user can perform ANY action (combined quota)
-      final canPerform = usageLimitEnforcer.canPerformAnyAction();
-      
-      debugPrint('🔍 StudyBloc: Can perform action: $canPerform');
-      debugPrint('🔍 StudyBloc: Total usage: ${usageSummary['totalUsed']}/${usageSummary['maxActions']}');
-      
-      if (!canPerform) {
-        debugPrint('🚫 StudyBloc: Combined usage limit exceeded - preventing new grading action');
-        debugPrint('🔐 StudyBloc: User must authenticate before proceeding');
-        
-        // Emit authentication required state immediately - don't process the answer
-        emit(state.copyWith(
-          status: StudyStatus.authenticationRequired,
-          gradedAnswer: null, // Don't show any answer result
-        ));
-        return;
-      }
-
-      // 🔄 PROCEED WITH GRADING - user is within their usage limits
-      debugPrint('🔍 StudyBloc: Proceeding with grading - calling API');
+      // 🎯 SIMPLIFIED: Authentication is now handled at UI level
+      // StudyBloc just processes grading and records actions
+      debugPrint('🔍 StudyBloc: Processing grading request for card ${event.flashcard.id}');
 
       final answer = Answer(
         flashcardId: event.flashcard.id,
@@ -114,14 +90,15 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
       final gradedAnswer = await _apiService.gradeAnswer(answer);
       debugPrint('🔍 API call completed - processing response');
       
-      // 🎯 IMPORTANT: Record grading action AFTER successful grading using centralized enforcer
+      // 🎯 UPDATED: Record grading action AFTER successful grading using unified system
       debugPrint('🔍 StudyBloc: API call successful - recording grading action');
-      final actionTracker = _ref.read(actionTrackerProvider.notifier);
+      final actionTracker = _ref.read(unifiedActionTrackerProvider.notifier);
       await actionTracker.recordAction(ActionType.flashcardGrading);
       
       // Debug: Show updated usage after recording
+      final usageLimitEnforcer = _ref.read(unifiedUsageLimitEnforcerProvider);
       final updatedSummary = usageLimitEnforcer.getUsageSummary();
-      debugPrint('📊 Updated usage after recording: ${updatedSummary['totalUsed']}/${updatedSummary['maxActions']}');
+      debugPrint('📊 Updated usage after recording: ${updatedSummary['totalUsage']}/${updatedSummary['totalLimit']}');
       
       // 🎯 FIRST: Process the score and update completion status
       debugPrint('📊 Answer score received: ${gradedAnswer.score} for card ${event.flashcard.id}');

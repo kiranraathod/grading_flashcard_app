@@ -9,9 +9,11 @@ import '../blocs/study/study_state.dart';
 import '../blocs/recent_view/recent_view_bloc.dart';
 import '../blocs/recent_view/recent_view_event.dart';
 import '../models/flashcard_set.dart';
+import '../models/simple_auth_state.dart';
 import '../services/api_service.dart';
 import '../services/flashcard_service.dart';
 import '../services/speech_to_text_service.dart';
+import '../services/unified_action_middleware.dart';
 import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
 import '../utils/app_localizations_extension.dart';
@@ -22,15 +24,18 @@ import 'create_flashcard_screen.dart';
 import 'result_screen.dart';
 
 
-class StudyScreen extends StatelessWidget {
+class StudyScreen extends riverpod.ConsumerWidget {
   final FlashcardSet set;
   
   const StudyScreen({super.key, required this.set});
   
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, riverpod.WidgetRef ref) {
     // Get a reference to the FlashcardService for updating progress
     final flashcardService = Provider.of<FlashcardService>(context, listen: false);
+    
+    // 🔧 FIX: Capture ref for use in nested callbacks
+    final widgetRef = ref;
     
     // 🆕 Use Consumer to get Riverpod ref for action tracking
     return riverpod.Consumer(
@@ -46,7 +51,10 @@ class StudyScreen extends StatelessWidget {
         
         return BlocProvider<StudyBloc>.value(
           value: studyBloc,
-          child: StudyView(flashcardService: flashcardService),
+          child: StudyView(
+            flashcardService: flashcardService,
+            widgetRef: widgetRef, // 🔧 FIX: Pass ref to StatefulWidget
+          ),
         );
       },
     );
@@ -55,8 +63,13 @@ class StudyScreen extends StatelessWidget {
 
 class StudyView extends StatefulWidget {
   final FlashcardService flashcardService;
+  final riverpod.WidgetRef widgetRef; // 🔧 FIX: Accept ref for authentication
   
-  const StudyView({super.key, required this.flashcardService});
+  const StudyView({
+    super.key, 
+    required this.flashcardService,
+    required this.widgetRef, // 🔧 FIX: Required ref parameter
+  });
 
   @override
   State<StudyView> createState() => _StudyViewState();
@@ -396,8 +409,29 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                   ),
                   AnswerInputWidget(
                     speechService: _speechService,
-                    onSubmit: (answer) {
+                    onSubmit: (answer) async {
                       if (state.currentFlashcard != null) {
+                        // 🎯 NEW: Authentication enforcement at UI level
+                        final middleware = widget.widgetRef.read(unifiedActionMiddlewareProvider);
+                        
+                        // Check if user can perform this action (shows auth modal if needed)
+                        final canProceed = await middleware.checkQuotaOnly(
+                          ActionType.flashcardGrading,
+                          context: context,
+                          source: 'StudyScreen.onSubmit',
+                        );
+                        
+                        if (!canProceed) {
+                          debugPrint('🚫 StudyScreen: Action blocked by quota enforcement');
+                          // Don't proceed with grading - user cancelled or still blocked
+                          return;
+                        }
+                        
+                        debugPrint('✅ StudyScreen: Quota check passed - proceeding with grading');
+                        
+                        // 🔧 FIX: Check if widget is still mounted before using context
+                        if (!mounted) return;
+                        
                         // Show a brief loading indicator to indicate processing
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(

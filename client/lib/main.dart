@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +30,8 @@ import 'services/initialization_coordinator.dart';
 import 'services/simple_error_handler.dart';
 import 'services/cache_manager.dart';
 import 'services/supabase_service.dart';
-import 'services/working_secure_auth_storage.dart';
+// 🆕 NEW UNIFIED IMPORTS
+import 'utils/storage_migration_utility.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -57,20 +59,46 @@ void main() async {
   );
 }
 
-/// Initialize unified authentication system
+/// 🔄 REFACTORED: Initialize unified authentication and storage system
 Future<void> _initializeUnifiedAuthentication() async {
   await SimpleErrorHandler.safely(
     () async {
-      debugPrint('🔐 Initializing unified authentication system...');
+      debugPrint('🔐 Initializing unified authentication and storage system...');
       
-      // Check for migration from SharedPreferences
-      final migrationCompleted = await WorkingSecureAuthStorage.isMigrationComplete();
+      // 1. Perform complete storage migration
+      debugPrint('🔄 Starting comprehensive storage migration...');
+      final migrationResult = await StorageMigrationUtility.performFullMigration();
       
-      if (!migrationCompleted) {
-        debugPrint('🔄 Migrating from legacy SharedPreferences...');
-        // Migration logic will be implemented in the updated GuestUserManager
-        await WorkingSecureAuthStorage.markMigrationComplete();
-        debugPrint('✅ Legacy data migration completed');
+      if (migrationResult.success) {
+        debugPrint('✅ Storage migration completed successfully');
+        debugPrint('   - Migrated users: ${migrationResult.migratedUsers.length}');
+        debugPrint('   - Cleaned legacy keys: ${migrationResult.cleanedKeys.length}');
+        
+        // 2. Verify migration integrity
+        final verification = await StorageMigrationUtility.verifyMigration();
+        if (verification.success) {
+          debugPrint('✅ Migration verification passed');
+        } else {
+          debugPrint('⚠️ Migration verification found issues:');
+          for (final error in verification.errors) {
+            debugPrint('   - $error');
+          }
+        }
+        
+        // 3. Generate and log migration report (debug mode only)
+        if (kDebugMode) {
+          final report = StorageMigrationUtility.generateMigrationReport(
+            migrationResult, 
+            verification
+          );
+          debugPrint('📊 Migration Report:\n$report');
+        }
+      } else {
+        debugPrint('❌ Storage migration failed:');
+        for (final error in migrationResult.errors) {
+          debugPrint('   - $error');
+        }
+        debugPrint('⚠️ Continuing with current storage state...');
       }
       
       debugPrint('✅ Unified authentication system ready');

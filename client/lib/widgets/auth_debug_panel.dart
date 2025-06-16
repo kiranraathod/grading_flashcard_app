@@ -4,10 +4,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/working_auth_provider.dart';
-import '../providers/working_action_tracking_provider.dart';
+import '../providers/unified_action_tracking_provider.dart';
 import '../models/simple_auth_state.dart';
 import '../services/supabase_service.dart';
-import '../services/usage_limit_enforcer.dart';
+import '../services/unified_usage_limit_enforcer.dart';
 import '../utils/config.dart';
 
 /// Authentication Debug Panel migrated to Riverpod
@@ -30,21 +30,18 @@ class _AuthDebugPanelState extends ConsumerState<AuthDebugPanel> {
   Widget build(BuildContext context) {
     // Watch Riverpod providers instead of Consumer2
     final authState = ref.watch(authNotifierProvider);
-    final actionState = ref.watch(actionTrackerProvider);
+    final actionState = ref.watch(unifiedActionTrackerProvider);
 
     final isAuthenticated = authState is AuthStateAuthenticated;
     final currentUser = isAuthenticated ? authState.user : null;
     final guestId = authState is AuthStateGuest ? authState.guestId : null;
 
-    // Calculate usage metrics from action state
-    final usedActions = actionState.actionCounts.values.fold(
-      0,
-      (sum, count) => sum + count,
-    );
-    final maxActions =
-        isAuthenticated
-            ? AuthConfig.authenticatedMaxGradingActions
-            : AuthConfig.guestMaxGradingActions;
+    // 🔧 FIX: Use unified usage summary instead of old single-feature calculation
+    final usageLimitEnforcer = ref.read(unifiedUsageLimitEnforcerProvider);
+    final usageSummary = usageLimitEnforcer.getUsageSummary();
+    
+    final usedActions = usageSummary['totalUsage'] as int;
+    final maxActions = usageSummary['totalLimit'] as int;
     final remainingActions = (maxActions - usedActions).clamp(0, maxActions);
 
     return Column(
@@ -221,8 +218,8 @@ class _AuthDebugPanelState extends ConsumerState<AuthDebugPanel> {
                       child: ElevatedButton.icon(
                         onPressed: () {
                           ref
-                              .read(actionTrackerProvider.notifier)
-                              .resetActions();
+                              .read(unifiedActionTrackerProvider.notifier)
+                              .resetAllActions();
                           setState(() {});
                         },
                         icon: const Icon(Icons.refresh, size: 16),
@@ -241,7 +238,7 @@ class _AuthDebugPanelState extends ConsumerState<AuthDebugPanel> {
                         onPressed: () {
                           // Simulate usage by triggering an action
                           ref
-                              .read(actionTrackerProvider.notifier)
+                              .read(unifiedActionTrackerProvider.notifier)
                               .recordAction(ActionType.flashcardGrading);
                           setState(() {});
                         },
@@ -281,14 +278,14 @@ class _AuthDebugPanelState extends ConsumerState<AuthDebugPanel> {
                       Builder(
                         builder: (context) {
                           // Get comprehensive usage summary from enforcer
-                          final usageLimitEnforcer = ref.read(usageLimitEnforcerProvider);
+                          final usageLimitEnforcer = ref.read(unifiedUsageLimitEnforcerProvider);
                           final usageSummary = usageLimitEnforcer.getUsageSummary();
                           
                           return Text(
                             'Session: ${guestId ?? _getUserId(currentUser)}\n'
-                            'Combined Usage: ${usageSummary['totalUsed']}/${usageSummary['maxActions']}\n'
-                            'Remaining: ${usageSummary['remaining']}\n'
-                            'Can Perform: ${usageSummary['canPerform']}\n'
+                            'Combined Usage: ${usageSummary['totalUsage']}/${usageSummary['totalLimit']}\n'
+                            'Remaining: ${usageSummary['totalRemaining']}\n'
+                            'Can Perform: ${usageSummary['canPerformAny']}\n'
                             'Auth State: ${authState.runtimeType}\n'
                             'Authenticated: ${usageSummary['authenticated']}\n'
                             'Has Reached Limit: ${actionState.hasReachedLimit}\n'

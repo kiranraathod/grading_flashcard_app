@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/working_auth_provider.dart';
-import '../../providers/working_action_tracking_provider.dart';
+import '../../providers/unified_action_tracking_provider.dart';
 import '../../models/simple_auth_state.dart';
 import '../../utils/config.dart';
 
@@ -159,7 +159,7 @@ class _AuthenticationModalState extends ConsumerState<AuthenticationModal>
     if (!AuthConfig.enableUsageLimits) return const SizedBox.shrink();
     
     // Watch action tracking state using Riverpod
-    final actionState = ref.watch(actionTrackerProvider);
+    final actionState = ref.watch(unifiedActionTrackerProvider);
     
     // Build usage message from action state
     String usageMessage = '';
