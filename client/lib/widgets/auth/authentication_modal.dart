@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/working_auth_provider.dart';
-import '../../providers/unified_action_tracking_provider.dart';
 import '../../models/simple_auth_state.dart';
 import '../../utils/config.dart';
 
@@ -107,8 +106,6 @@ class _AuthenticationModalState extends ConsumerState<AuthenticationModal>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _buildHeader(context, colorScheme),
-                    const SizedBox(height: 20), // MD3 spacing
-                    _buildUsageInfo(context),
                     const SizedBox(height: 24),
                     _buildAuthForm(context, colorScheme),
                     const SizedBox(height: 24),
@@ -145,7 +142,7 @@ class _AuthenticationModalState extends ConsumerState<AuthenticationModal>
         Text(
           _isSignUp 
             ? 'Get unlimited flashcard grading actions'
-            : 'Access your unlimited grading actions',
+            : 'You\'ve reached your daily limit. Sign in for 5 more grading attempts and additional features.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
@@ -155,57 +152,6 @@ class _AuthenticationModalState extends ConsumerState<AuthenticationModal>
     );
   }
 
-  Widget _buildUsageInfo(BuildContext context) {
-    if (!AuthConfig.enableUsageLimits) return const SizedBox.shrink();
-    
-    // Watch action tracking state using Riverpod
-    final actionState = ref.watch(unifiedActionTrackerProvider);
-    
-    // Build usage message from action state
-    String usageMessage = '';
-    if (actionState.hasReachedLimit) {
-      usageMessage = 'You\'ve reached your daily limit. Sign in for unlimited access!';
-    } else {
-      final remainingActions = _calculateRemainingActions(actionState);
-      if (remainingActions <= 3) {
-        usageMessage = '$remainingActions actions remaining today. Sign in for unlimited access!';
-      }
-    }
-    
-    if (usageMessage.isEmpty) return const SizedBox.shrink();
-    
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.info_outline,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              usageMessage,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  int _calculateRemainingActions(UserActionState actionState) {
-    const dailyLimit = 10; // Default guest user limit
-    final usedActions = actionState.actionCounts.values.fold(0, (sum, count) => sum + count);
-    return (dailyLimit - usedActions).clamp(0, dailyLimit);
-  }  
   Widget _buildAuthForm(BuildContext context, ColorScheme colorScheme) {
     return Column(
       children: [

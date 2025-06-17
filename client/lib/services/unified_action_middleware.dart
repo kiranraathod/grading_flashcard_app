@@ -26,10 +26,37 @@ class UnifiedActionMiddleware {
     
     debugPrint('🛡️ UnifiedActionMiddleware: Executing $actionType from ${source ?? "unknown"}');
     
+    // 🎯 FIX: Check quota and handle auth modal BEFORE async operations
+    final canPerformAny = enforcer.canPerformAnyAction();
+    final usageSummary = enforcer.getUsageSummary();
+    
+    debugPrint('🔍 Pre-action quota check:');
+    debugPrint('  - Can perform any: $canPerformAny');
+    debugPrint('  - Usage: ${usageSummary['totalUsage']}/${usageSummary['totalLimit']}');
+    debugPrint('  - Authenticated: ${usageSummary['authenticated']}');
+    
+    if (!canPerformAny) {
+      // Handle authentication modal immediately with valid context
+      final authHandled = await enforcer.enforceLimit(
+        actionType,
+        context: context,
+        source: source,
+      );
+      
+      if (!authHandled) {
+        debugPrint('🚫 UnifiedActionMiddleware: Action blocked - user at quota limit (pre-check)');
+        return null;
+      }
+    }
+    
+    // 🎯 FIX: Add state synchronization delay for auth transitions
+    await Future.delayed(const Duration(milliseconds: 50));
+    
     // Use atomic executeAction method for clean quota enforcement + recording
+    // Note: Pass null context after async gap to avoid BuildContext warnings
     final quotaConsumed = await enforcer.executeAction(
       actionType,
-      context: context,
+      context: null, // Don't pass context across async gaps
       source: source,
       metadata: metadata,
     );
@@ -39,9 +66,18 @@ class UnifiedActionMiddleware {
       return null;
     }
     
+    // 🚨 CRITICAL FIX: Double-check quota after executeAction for race conditions
+    final finalCheck = enforcer.canPerformAnyAction();
+    if (!finalCheck) {
+      debugPrint('🚨 UnifiedActionMiddleware: RACE CONDITION DETECTED - User at limit after quota check');
+      debugPrint('🚫 Blocking action to prevent quota bypass');
+      return null;
+    }
+    
     try {
       // Execute the action (quota already consumed)
-      debugPrint('⚡ UnifiedActionMiddleware: Executing action...');
+      debugPrint('⚡ UnifiedActionMiddleware: Quota verified - executing action...');
+      debugPrint('🔍 FINAL CHECK: About to call action() - if you see API logs after this, quota was properly verified');
       final result = await action();
       
       // Log success with updated usage
@@ -84,9 +120,9 @@ class UnifiedActionMiddleware {
     Map<String, dynamic>? metadata,
   }) async {
     final tracker = ref.read(unifiedActionTrackerProvider.notifier);
-    final success = await tracker.recordAction(actionType, metadata: metadata);
+    final result = await tracker.recordAction(actionType, metadata: metadata);
     
-    if (success) {
+    if (result.success) {
       final usageSummary = getUsageSummary();
       debugPrint('📊 UnifiedActionMiddleware: Action recorded manually');
       debugPrint('📊 Current usage: ${usageSummary['totalUsage']}/${usageSummary['totalLimit']}');
@@ -94,7 +130,7 @@ class UnifiedActionMiddleware {
       debugPrint('❌ UnifiedActionMiddleware: Failed to record action');
     }
     
-    return success;
+    return result.success;
   }
 
   /// Get current usage summary (enhanced with unified data)

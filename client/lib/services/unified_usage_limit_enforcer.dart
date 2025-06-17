@@ -48,9 +48,12 @@ class UnifiedUsageLimitEnforcer {
     if (!canPerformAny) {
       debugPrint('🚫 COMBINED usage limit exceeded: $totalUsage/$totalLimit');
       
-      // Trigger authentication modal if context is available
-      if (context != null) {
-        debugPrint('🔓 Showing authentication modal for usage limit exceeded');
+      // 🎯 NEW FIX: Only show auth modal for guest users, not authenticated users
+      final isAuthenticated = authState is AuthStateAuthenticated;
+      
+      if (!isAuthenticated && context != null) {
+        // Guest user reached limit - show authentication modal to get more actions
+        debugPrint('🔓 Guest user limit exceeded - showing authentication modal');
         await _triggerAuthenticationModal(context);
         
         // After authentication modal closes, re-check the quota
@@ -74,11 +77,19 @@ class UnifiedUsageLimitEnforcer {
           return true;
         } else {
           debugPrint('❌ User still cannot perform action after authentication');
+          debugPrint('🚫 Modal was dismissed without authentication - blocking action');
           return false;
         }
+      } else {
+        // Authenticated user reached limit - show limit reached message, no auth modal
+        if (isAuthenticated) {
+          debugPrint('🚫 Authenticated user reached daily limit ($totalUsage/$totalLimit) - no auth modal shown');
+          debugPrint('💡 User should see "Daily limit reached" message instead');
+        } else {
+          debugPrint('🚫 Guest user reached limit - no context for auth modal');
+        }
+        return false;
       }
-      
-      return false;
     }
     
     debugPrint('✅ Usage limit check passed: $remaining remaining for $actionType');
@@ -92,30 +103,39 @@ class UnifiedUsageLimitEnforcer {
     String? source,
     Map<String, dynamic>? metadata,
   }) async {
-    // Check if action is allowed
+    debugPrint('🔍 ExecuteAction START: $actionType from ${source ?? "unknown"}');
+    
+    // Check if action is allowed (context may be null to avoid async BuildContext issues)
     final canProceed = await enforceLimit(
       actionType,
       context: context,
       source: source,
     );
     
+    debugPrint('🔍 ExecuteAction: enforceLimit returned: $canProceed');
+    
     if (!canProceed) {
+      debugPrint('🚫 ExecuteAction: Action blocked by enforceLimit - returning false');
       return false;
     }
     
-    // Consume the quota atomically
+    // Consume the quota atomically with enhanced feedback
     final tracker = ref.read(unifiedActionTrackerProvider.notifier);
-    final success = await tracker.recordAction(actionType, metadata: metadata);
+    final result = await tracker.recordAction(actionType, metadata: metadata);
     
-    if (success) {
-      final newTotalCount = tracker.getTotalUsage();
-      final remaining = tracker.getRemainingActions(actionType);
-      debugPrint('📊 Action consumed: $actionType (remaining: $remaining, total: $newTotalCount)');
+    if (result.success) {
+      debugPrint('📊 Action consumed: $actionType');
+      if (result.remainingActions != null) {
+        debugPrint('📊 Remaining actions: ${result.remainingActions}');
+      }
+      if (result.warningMessage != null) {
+        debugPrint('⚠️ Warning: ${result.warningMessage}');
+      }
     } else {
-      debugPrint('❌ Failed to record action: $actionType');
+      debugPrint('❌ Failed to record action: ${result.errorMessage}');
     }
     
-    return success;
+    return result.success;
   }
 
   /// Get remaining actions for current user across all types

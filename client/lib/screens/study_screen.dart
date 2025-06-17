@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:provider/provider.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../blocs/study/study_bloc.dart';
+import '../widgets/daily_limit_modal.dart';
+import '../widgets/auth/authentication_modal.dart';
+import '../providers/working_auth_provider.dart';
+import '../providers/unified_action_tracking_provider.dart';
 import '../blocs/study/study_event.dart';
 import '../blocs/study/study_state.dart';
 import '../blocs/recent_view/recent_view_bloc.dart';
@@ -19,7 +23,6 @@ import '../utils/design_system.dart';
 import '../utils/app_localizations_extension.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/answer_input_widget.dart';
-import '../widgets/auth/authentication_modal.dart';
 import 'create_flashcard_screen.dart';
 import 'result_screen.dart';
 
@@ -42,7 +45,7 @@ class StudyScreen extends riverpod.ConsumerWidget {
       builder: (context, ref, child) {
         // Create the study bloc with Riverpod ref for action tracking
         final studyBloc = StudyBloc(
-          apiService: ApiService(),
+          apiService: ApiService(), // 🎯 Simple API service - quota handled by middleware in UI
           flashcardService: flashcardService,
           ref: ref, // 🆕 Pass Riverpod ref for action tracking
         )..add(StudyStarted(flashcardSet: set));
@@ -164,9 +167,18 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
         
         // Handle error messages
         if (state.status == StudyStatus.error) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.errorMessage ?? 'An error occurred')),
-          );
+          // Check if this is a daily limit error
+          final errorMessage = state.errorMessage ?? 'An error occurred';
+          
+          if (errorMessage.contains('Daily limit reached')) {
+            // Show Material Design 3 daily limit modal instead of SnackBar
+            _showDailyLimitModal(context);
+          } else {
+            // Show SnackBar for other errors
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(errorMessage)),
+            );
+          }
         }
         
         // Handle deck completion - navigate back to home screen
@@ -411,13 +423,18 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                     speechService: _speechService,
                     onSubmit: (answer) async {
                       if (state.currentFlashcard != null) {
+                        // 🔧 FIX: Capture context and messenger before async operations
+                        final currentContext = context;
+                        final messenger = ScaffoldMessenger.of(currentContext);
+                        final localizations = AppLocalizations.of(currentContext);
+                        
                         // 🎯 NEW: Authentication enforcement at UI level
                         final middleware = widget.widgetRef.read(unifiedActionMiddlewareProvider);
                         
                         // Check if user can perform this action (shows auth modal if needed)
                         final canProceed = await middleware.checkQuotaOnly(
                           ActionType.flashcardGrading,
-                          context: context,
+                          context: currentContext,
                           source: 'StudyScreen.onSubmit',
                         );
                         
@@ -429,13 +446,13 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                         
                         debugPrint('✅ StudyScreen: Quota check passed - proceeding with grading');
                         
-                        // 🔧 FIX: Check if widget is still mounted before using context
+                        // 🔧 FIX: Check if widget is still mounted after async operation
                         if (!mounted) return;
                         
                         // Show a brief loading indicator to indicate processing
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(
-                            content: Text(AppLocalizations.of(context).processingAnswer),
+                            content: Text(localizations.processingAnswer),
                             duration: Duration(milliseconds: 500),
                           )
                         );
@@ -529,6 +546,36 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
           ),
         );
       },
+    );
+  }
+
+  /// Show Material Design 3 daily limit modal
+  void _showDailyLimitModal(BuildContext context) {
+    final ref = riverpod.ProviderScope.containerOf(context);
+    final authState = ref.read(authNotifierProvider);
+    final tracker = ref.read(unifiedActionTrackerProvider.notifier);
+    
+    final isAuthenticated = authState is AuthStateAuthenticated;
+    final totalUsage = tracker.getTotalUsage();
+    final totalLimit = tracker.getTotalLimit();
+    
+    // Calculate reset time - more user-friendly format
+    final resetTime = 'tomorrow at midnight';
+    
+    QuotaLimitHandler.showLimitReached(
+      context,
+      isAuthenticated: isAuthenticated,
+      currentUsage: totalUsage,
+      totalLimit: totalLimit,
+      resetTime: resetTime,
+      onSignInPressed: () {
+        // Show authentication modal
+        AuthenticationModal.show(context);
+      },
+      onUpgradePressed: isAuthenticated ? () {
+        // Handle upgrade action - could navigate to premium screen
+        debugPrint('🚀 User wants to upgrade to premium');
+      } : null,
     );
   }
 }

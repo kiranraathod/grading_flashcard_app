@@ -1,15 +1,14 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../models/answer.dart';
+import '../../models/answer.dart' as answer_model;
 import '../../models/app_error.dart';
 import '../../models/flashcard.dart';
 import '../../models/simple_auth_state.dart';
-import '../../providers/unified_action_tracking_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/error_service.dart';
 import '../../services/flashcard_service.dart';
-import '../../services/unified_usage_limit_enforcer.dart';
+import '../../services/unified_action_middleware.dart';
 import 'study_event.dart';
 import 'study_state.dart';
 
@@ -78,27 +77,61 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
       // StudyBloc just processes grading and records actions
       debugPrint('🔍 StudyBloc: Processing grading request for card ${event.flashcard.id}');
 
-      final answer = Answer(
+      final answer = answer_model.Answer(
         flashcardId: event.flashcard.id,
         question: event.flashcard.question,
         userAnswer: event.answer,
         correctAnswer: event.flashcard.answer,
       );
       
-      // Enhanced API call with explicit timeout and error handling
-      debugPrint('🔍 Making API call for card: ${event.flashcard.id}');
-      final gradedAnswer = await _apiService.gradeAnswer(answer);
-      debugPrint('🔍 API call completed - processing response');
+      // 🎯 UPDATED: Use unified action middleware for authentication and quota enforcement
+      final middleware = _ref.read(unifiedActionMiddlewareProvider);
       
-      // 🎯 UPDATED: Record grading action AFTER successful grading using unified system
-      debugPrint('🔍 StudyBloc: API call successful - recording grading action');
-      final actionTracker = _ref.read(unifiedActionTrackerProvider.notifier);
-      await actionTracker.recordAction(ActionType.flashcardGrading);
+      // 🎯 FIX: Pre-check quota status for better error handling
+      final canPerform = middleware.canPerformAnyAction();
+      final usageSummary = middleware.getUsageSummary();
       
-      // Debug: Show updated usage after recording
-      final usageLimitEnforcer = _ref.read(unifiedUsageLimitEnforcerProvider);
-      final updatedSummary = usageLimitEnforcer.getUsageSummary();
-      debugPrint('📊 Updated usage after recording: ${updatedSummary['totalUsage']}/${updatedSummary['totalLimit']}');
+      debugPrint('🔍 StudyBloc - Pre-action check:');
+      debugPrint('  - Can perform: $canPerform');
+      debugPrint('  - Usage: ${usageSummary['totalUsage']}/${usageSummary['totalLimit']}');
+      debugPrint('  - Authenticated: ${usageSummary['authenticated']}');
+      
+      if (!canPerform) {
+        // Emit quota error immediately without attempting API call
+        final statusMessage = middleware.getStatusMessage();
+        debugPrint('🚫 StudyBloc: Quota limit reached, emitting error state');
+        
+        emit(state.copyWith(
+          status: StudyStatus.error,
+          errorMessage: '📊 Daily limit reached! $statusMessage',
+        ));
+        return;
+      }
+      
+      // Use executeWithQuota for atomic quota check and consumption
+      final gradedAnswer = await middleware.executeWithQuota<answer_model.Answer>(
+        ActionType.flashcardGrading,
+        () async {
+          debugPrint('🔍 StudyBloc: Proceeding with grading - calling API');
+          return await _apiService.gradeAnswer(answer);
+        },
+        source: 'StudyBloc.FlashcardAnswered',
+      );
+      
+      if (gradedAnswer == null) {
+        // Action was blocked by quota enforcement (secondary check)
+        debugPrint('❌ StudyBloc: Grading action blocked by middleware');
+        final statusMessage = middleware.getStatusMessage();
+        
+        // Emit error state with quota message
+        emit(state.copyWith(
+          status: StudyStatus.error,
+          errorMessage: '📊 Daily limit reached! $statusMessage',
+        ));
+        return;
+      }
+      
+      debugPrint('🔍 StudyBloc: API call completed - processing response');
       
       // 🎯 FIRST: Process the score and update completion status
       debugPrint('📊 Answer score received: ${gradedAnswer.score} for card ${event.flashcard.id}');

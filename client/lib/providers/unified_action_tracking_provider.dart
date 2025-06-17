@@ -216,16 +216,33 @@ class UnifiedActionTracker extends StateNotifier<UserActionState> {
       final now = DateTime.now();
       final lastReset = state.lastReset;
       
-      // Check if we need to reset (different day)
-      if (now.day != lastReset.day || 
-          now.month != lastReset.month || 
-          now.year != lastReset.year) {
-        
-        debugPrint('🔄 Daily reset triggered: ${lastReset.day}/${lastReset.month} → ${now.day}/${now.month}');
+      // Handle edge cases: future dates (clock changes), very old dates
+      if (lastReset.isAfter(now)) {
+        debugPrint('🔄 Future reset date detected (clock change?) - forcing reset');
+        await _performDailyReset();
+        return;
+      }
+      
+      // Check if more than 24 hours have passed (handles clock changes better)
+      final hoursSinceReset = now.difference(lastReset).inHours;
+      if (hoursSinceReset >= 24) {
+        debugPrint('🔄 Daily reset triggered: ${hoursSinceReset}h since last reset');
+        await _performDailyReset();
+        return;
+      }
+      
+      // Standard day change check (more reliable than date comparison)
+      final nowDate = DateTime(now.year, now.month, now.day);
+      final resetDate = DateTime(lastReset.year, lastReset.month, lastReset.day);
+      
+      if (nowDate.isAfter(resetDate)) {
+        debugPrint('🔄 Daily reset triggered: ${resetDate.day}/${resetDate.month} → ${nowDate.day}/${nowDate.month}');
         await _performDailyReset();
       }
     } catch (e) {
       debugPrint('❌ Daily reset check failed: $e');
+      // Fallback: if reset logic fails, don't block the user
+      // but log the error for debugging
     }
   }
 
@@ -252,12 +269,12 @@ class UnifiedActionTracker extends StateNotifier<UserActionState> {
   }
 
   /// Record an action and update storage
-  Future<bool> recordAction(ActionType actionType, {
+  Future<ActionResult> recordAction(ActionType actionType, {
     Map<String, dynamic>? metadata,
   }) async {
     if (!AuthConfig.enableUsageLimits) {
       debugPrint('💡 Usage limits disabled - allowing action');
-      return true;
+      return ActionResult.success();
     }
 
     try {
@@ -270,41 +287,60 @@ class UnifiedActionTracker extends StateNotifier<UserActionState> {
       final actionKey = _getActionKey(actionType);
       final currentCount = state.actionCounts[actionKey] ?? 0;
       final limit = state.dailyLimits[actionKey] ?? 0;
+      final totalUsage = getTotalUsage();
+      final totalLimit = getTotalLimit();
       
-      // Check if action is allowed
-      if (currentCount >= limit) {
-        debugPrint('🚫 Action blocked - limit exceeded: $currentCount/$limit for $actionKey');
-        
-        // Update state to reflect limit reached
+      // Check combined quota limit (primary check)
+      if (totalUsage >= totalLimit) {
+        debugPrint('🚫 Action blocked - combined quota exceeded: $totalUsage/$totalLimit');
         state = state.copyWith(hasReachedLimit: true);
-        return false;
+        return ActionResult.limitReached(
+          currentUsage: totalUsage,
+          limit: totalLimit,
+          resetTime: _getTimeUntilReset(),
+        );
       }
 
       // Record the action
       final newCounts = Map<String, int>.from(state.actionCounts);
       newCounts[actionKey] = currentCount + 1;
+      final newTotalUsage = newCounts.values.fold(0, (sum, count) => sum + count);
       
       // Update state immediately
       state = state.copyWith(
         actionCounts: newCounts,
-        hasReachedLimit: _checkIfLimitReached(newCounts, state.dailyLimits),
+        hasReachedLimit: newTotalUsage >= totalLimit,
       );
       
       // Update storage asynchronously
       _updateStorageAsync(userId, newCounts);
       
-      debugPrint('📊 Action recorded: $actionKey (${newCounts[actionKey]}/$limit)');
+      debugPrint('📊 Action recorded: $actionKey (${newCounts[actionKey]}/$limit, total: $newTotalUsage/$totalLimit)');
       
-      // Warn when approaching limit
-      if (newCounts[actionKey] == limit - 1) {
-        debugPrint('⚠️ Approaching limit: 1 action remaining for $actionKey');
-      }
+      // Return success with usage info
+      return ActionResult.success(
+        remainingActions: totalLimit - newTotalUsage,
+        warningMessage: _getWarningMessage(totalLimit - newTotalUsage, authState is AuthStateAuthenticated),
+      );
       
-      return true;
     } catch (e) {
       debugPrint('❌ Failed to record action: $e');
-      return true; // Fail open to not block user
+      return ActionResult.error('Failed to record action: $e');
     }
+  }
+
+  /// Get warning message when approaching limit
+  String? _getWarningMessage(int remaining, bool isAuthenticated) {
+    if (remaining <= 0) return null;
+    if (remaining == 1) {
+      return isAuthenticated 
+        ? 'This is your last action today!'
+        : 'This is your last guest action! Sign in for more.';
+    }
+    if (remaining == 2 && !isAuthenticated) {
+      return '2 actions left! Sign in to get 5 daily actions.';
+    }
+    return null;
   }
 
   /// Update storage asynchronously (non-blocking)
@@ -342,9 +378,45 @@ class UnifiedActionTracker extends StateNotifier<UserActionState> {
     return (limit - currentCount).clamp(0, limit);
   }
 
+  /// Get comprehensive usage status for UI
+  UsageStatus getUsageStatus() {
+    final authState = ref.read(authNotifierProvider);
+    final isAuthenticated = authState is AuthStateAuthenticated;
+    final totalUsage = getTotalUsage();
+    final totalLimit = getTotalLimit();
+    final remainingActions = totalLimit - totalUsage;
+    final resetTime = _getTimeUntilReset();
+    
+    return UsageStatus(
+      totalUsage: totalUsage,
+      totalLimit: totalLimit,
+      remainingActions: remainingActions,
+      isAuthenticated: isAuthenticated,
+      resetTime: resetTime,
+      progressPercentage: (totalUsage / totalLimit * 100).clamp(0, 100).round(),
+      canPerformActions: remainingActions > 0,
+      statusMessage: _getOverallStatusMessage(remainingActions, resetTime, isAuthenticated),
+    );
+  }
+
   /// Get total usage across all action types
   int getTotalUsage() {
     return state.actionCounts.values.fold(0, (sum, count) => sum + count);
+  }
+
+  /// Get overall status message
+  String _getOverallStatusMessage(int remaining, String resetTime, bool isAuthenticated) {
+    if (remaining <= 0) {
+      return isAuthenticated 
+        ? 'Daily limit reached. Resets in $resetTime.'
+        : 'Guest limit reached. Sign in for 5 daily actions!';
+    } else if (remaining == 1) {
+      return '1 action remaining (resets in $resetTime)';
+    } else if (remaining <= 2 && !isAuthenticated) {
+      return '$remaining actions left. Sign in for more!';
+    } else {
+      return '$remaining actions remaining today';
+    }
   }
 
   /// Get total limit across all action types
@@ -366,13 +438,32 @@ class UnifiedActionTracker extends StateNotifier<UserActionState> {
     final isAuthenticated = authState is AuthStateAuthenticated;
     
     if (remaining <= 0) {
+      final resetTime = _getTimeUntilReset();
       return isAuthenticated 
-        ? 'Daily limit reached. Resets at midnight.'
+        ? 'Daily limit reached. Resets in $resetTime.'
         : 'Guest limit reached. Sign in for more actions.';
     } else if (remaining == 1) {
-      return '$remaining action remaining today';
+      final resetTime = _getTimeUntilReset();
+      return '$remaining action remaining (resets in $resetTime)';
     } else {
       return '$remaining actions remaining today';
+    }
+  }
+
+  /// Get user-friendly time until reset
+  String _getTimeUntilReset() {
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    final diff = tomorrow.difference(now);
+    
+    if (diff.inHours > 1) {
+      return '${diff.inHours} hours';
+    } else if (diff.inHours == 1) {
+      return '1 hour ${diff.inMinutes % 60}min';
+    } else if (diff.inMinutes > 1) {
+      return '${diff.inMinutes} minutes';
+    } else {
+      return '1 minute';
     }
   }
 
@@ -477,6 +568,12 @@ class UnifiedActionTracker extends StateNotifier<UserActionState> {
 // ✅ UPDATED PROVIDER DEFINITIONS
 final unifiedActionTrackerProvider = StateNotifierProvider<UnifiedActionTracker, UserActionState>((ref) {
   return UnifiedActionTracker(ref);
+});
+
+// Enhanced usage status provider
+final usageStatusProvider = Provider<UsageStatus>((ref) {
+  final tracker = ref.watch(unifiedActionTrackerProvider.notifier);
+  return tracker.getUsageStatus();
 });
 
 // Convenience providers for specific action types

@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Import your app's modules
 import 'package:flutter_flashcard_app/models/simple_auth_state.dart';
-import 'package:flutter_flashcard_app/providers/working_action_tracking_provider.dart';
-import 'package:flutter_flashcard_app/services/usage_limit_enforcer.dart';
-import 'package:flutter_flashcard_app/services/action_middleware.dart';
+import 'package:flutter_flashcard_app/providers/unified_action_tracking_provider.dart';
+import 'package:flutter_flashcard_app/services/unified_usage_limit_enforcer.dart';
+import 'package:flutter_flashcard_app/services/unified_action_middleware.dart';
 import 'package:flutter_flashcard_app/utils/config.dart';
 
 void main() {
@@ -26,20 +26,20 @@ void main() {
     });
 
     testWidgets('Guest user quota enforcement across features', (tester) async {
-      final enforcer = container.read(usageLimitEnforcerProvider);
+      final enforcer = container.read(unifiedUsageLimitEnforcerProvider);
 
       // Initially should be able to perform actions
       expect(enforcer.canPerformAnyAction(), true);
-      expect(enforcer.getRemainingActions(), 3);
+      expect(enforcer.getTotalRemainingActions(), 3);
 
       // Simulate 2 flashcard grading actions
-      await container.read(actionTrackerProvider.notifier)
+      await container.read(unifiedActionTrackerProvider.notifier)
           .recordAction(ActionType.flashcardGrading);
-      await container.read(actionTrackerProvider.notifier)
+      await container.read(unifiedActionTrackerProvider.notifier)
           .recordAction(ActionType.flashcardGrading);
 
       // Should have 1 action remaining
-      expect(enforcer.getRemainingActions(), 1);
+      expect(enforcer.getTotalRemainingActions(), 1);
       expect(enforcer.canPerformAnyAction(), true);
 
       // 3rd action (interview practice) should still be allowed
@@ -50,11 +50,11 @@ void main() {
       expect(canProceedInterview, true);
 
       // Record the 3rd action
-      await container.read(actionTrackerProvider.notifier)
+      await container.read(unifiedActionTrackerProvider.notifier)
           .recordAction(ActionType.interviewPractice);
 
       // Now should be at limit
-      expect(enforcer.getRemainingActions(), 0);
+      expect(enforcer.getTotalRemainingActions(), 0);
       expect(enforcer.canPerformAnyAction(), false);
 
       // 4th action should be blocked regardless of type
@@ -72,25 +72,25 @@ void main() {
     });
 
     testWidgets('Usage summary shows combined totals', (tester) async {
-      final enforcer = container.read(usageLimitEnforcerProvider);
+      final enforcer = container.read(unifiedUsageLimitEnforcerProvider);
 
       // Record mixed actions
-      await container.read(actionTrackerProvider.notifier)
+      await container.read(unifiedActionTrackerProvider.notifier)
           .recordAction(ActionType.flashcardGrading);
-      await container.read(actionTrackerProvider.notifier)
+      await container.read(unifiedActionTrackerProvider.notifier)
           .recordAction(ActionType.interviewPractice);
 
       final summary = enforcer.getUsageSummary();
       
-      expect(summary['totalUsed'], 2);
-      expect(summary['maxActions'], 3);
-      expect(summary['remaining'], 1);
-      expect(summary['canPerform'], true);
+      expect(summary['totalUsage'], 2);
+      expect(summary['totalLimit'], 3);
+      expect(summary['totalRemaining'], 1);
+      expect(summary['canPerformAny'], true);
       expect(summary['authenticated'], false);
     });
 
     testWidgets('Action middleware enforces limits correctly', (tester) async {
-      final middleware = container.read(actionMiddlewareProvider);
+      final middleware = container.read(unifiedActionMiddlewareProvider);
 
       // Execute actions through middleware
       final result1 = await middleware.executeWithQuota(
@@ -124,13 +124,13 @@ void main() {
 
       // Verify usage
       final summary = middleware.getUsageSummary();
-      expect(summary['totalUsed'], 3);
-      expect(summary['remaining'], 0);
+      expect(summary['totalUsage'], 3);
+      expect(summary['totalRemaining'], 0);
     });
 
     testWidgets('Cross-feature consistency test', (tester) async {
       // This test simulates the exact scenario from the bug report
-      final enforcer = container.read(usageLimitEnforcerProvider);
+      final enforcer = container.read(unifiedUsageLimitEnforcerProvider);
 
       // User completes 3 flashcard grading actions
       for (int i = 0; i < 3; i++) {
@@ -140,13 +140,13 @@ void main() {
         );
         expect(canProceed, true, reason: 'Flashcard action ${i + 1} should be allowed');
         
-        await container.read(actionTrackerProvider.notifier)
+        await container.read(unifiedActionTrackerProvider.notifier)
             .recordAction(ActionType.flashcardGrading);
       }
 
       // Verify we're at the limit
       expect(enforcer.canPerformAnyAction(), false);
-      expect(enforcer.getRemainingActions(), 0);
+      expect(enforcer.getTotalRemainingActions(), 0);
 
       // Attempt interview practice (this should be blocked)
       final canProceedInterview = await enforcer.enforceLimit(
@@ -157,33 +157,33 @@ void main() {
     });
 
     testWidgets('Usage summary accuracy test', (tester) async {
-      final enforcer = container.read(usageLimitEnforcerProvider);
+      final enforcer = container.read(unifiedUsageLimitEnforcerProvider);
       
       // Start with clean state
       final initialSummary = enforcer.getUsageSummary();
-      expect(initialSummary['totalUsed'], 0);
-      expect(initialSummary['maxActions'], 3);
-      expect(initialSummary['remaining'], 3);
+      expect(initialSummary['totalUsage'], 0);
+      expect(initialSummary['totalLimit'], 3);
+      expect(initialSummary['totalRemaining'], 3);
       
       // Add one action
-      await container.read(actionTrackerProvider.notifier)
+      await container.read(unifiedActionTrackerProvider.notifier)
           .recordAction(ActionType.flashcardGrading);
       
       final afterOneSummary = enforcer.getUsageSummary();
-      expect(afterOneSummary['totalUsed'], 1);
-      expect(afterOneSummary['remaining'], 2);
-      expect(afterOneSummary['canPerform'], true);
+      expect(afterOneSummary['totalUsage'], 1);
+      expect(afterOneSummary['totalRemaining'], 2);
+      expect(afterOneSummary['canPerformAny'], true);
       
       // Add two more actions
-      await container.read(actionTrackerProvider.notifier)
+      await container.read(unifiedActionTrackerProvider.notifier)
           .recordAction(ActionType.interviewPractice);
-      await container.read(actionTrackerProvider.notifier)
+      await container.read(unifiedActionTrackerProvider.notifier)
           .recordAction(ActionType.flashcardGrading);
       
       final afterThreeSummary = enforcer.getUsageSummary();
-      expect(afterThreeSummary['totalUsed'], 3);
-      expect(afterThreeSummary['remaining'], 0);
-      expect(afterThreeSummary['canPerform'], false);
+      expect(afterThreeSummary['totalUsage'], 3);
+      expect(afterThreeSummary['totalRemaining'], 0);
+      expect(afterThreeSummary['canPerformAny'], false);
     });
   });
 }
