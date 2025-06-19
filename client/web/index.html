@@ -32,21 +32,36 @@
   <title>FlashMaster - AI-Powered Learning</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- 🚀 TASK 1: Beautiful Loading Screen CSS - Optimized for Poor Network -->
+  <!-- 🚀 FlashMaster Clean Bookshelf Animation -->
   <style>
+    /* CSS Custom Properties (converted from SCSS variables) */
+    :root {
+      --thickness: 5px;
+      --duration: 2500ms;
+      --delay: calc(var(--duration) / 6);
+      --flashmaster-teal: #009688;
+    }
+
+    /* Clean Body and Container */
+    body {
+      background-color: var(--flashmaster-teal);
+      width: 100%;
+      height: 100vh;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+    }
+
     .loading-container {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: var(--flashmaster-teal);
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: white;
       z-index: 9999;
       opacity: 1;
       transition: opacity 0.8s ease-out;
@@ -57,106 +72,295 @@
       pointer-events: none;
     }
 
-    .logo {
-      font-size: 3.5rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      text-align: center;
-      animation: logoFloat 3s ease-in-out infinite alternate;
-      text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    /* Perfectly Centered Bookshelf Animation */
+    .bookshelf_wrapper {
+      position: relative;
+      top: 0;
+      left: 0;
+      transform: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-top: -60px; /* Move entire bookshelf up to center properly */
     }
 
-    .tagline {
-      font-size: 1.3rem;
-      font-weight: 300;
-      margin-bottom: 2.5rem;
-      opacity: 0.9;
-      text-align: center;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-
-    .spinner {
-      width: 60px;
-      height: 60px;
-      border: 5px solid rgba(255, 255, 255, 0.3);
-      border-top: 5px solid white;
-      border-radius: 50%;
-      animation: spin 1.2s linear infinite;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-
-    .loading-text {
-      font-size: 1.1rem;
-      opacity: 0.9;
-      animation: pulse 2s ease-in-out infinite;
-      margin-bottom: 1.5rem;
-      text-align: center;
-    }
-
-    .progress-container {
+    .books_list {
+      margin: 0;
       width: 300px;
-      margin-bottom: 1rem;
+      padding: 0;
+      position: relative;
+      height: 140px; /* Restore height for proper book positioning */
+      margin-bottom: 0;
     }
 
-    .progress-bar {
+    /* Original Book Item Styling */
+    .book_item {
+      position: absolute;
+      bottom: 0; /* Position books at bottom of container */
+      box-sizing: border-box;
+      list-style: none;
+      width: 40px;
+      height: 120px;
+      opacity: 0;
+      background-color: var(--flashmaster-teal);
+      border: var(--thickness) solid white;
+      transform-origin: bottom left; /* Keep original transform origin */
+      transform: translateX(300px);
+      animation: travel var(--duration) linear infinite;
+    }
+
+    /* First Book - Tallest with horizontal lines */
+    .book_item.first {
+      bottom: 0; /* Keep at bottom like others */
+      height: 140px;
+    }
+
+    .book_item.first::before,
+    .book_item.first::after {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 0;
       width: 100%;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 3px;
-      overflow: hidden;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+      height: var(--thickness);
+      background-color: white;
     }
 
-    .progress-fill {
+    .book_item.first::after {
+      top: initial;
+      bottom: 10px;
+    }
+
+    /* Second Book - Double lines top and bottom */
+    .book_item.second::before,
+    .book_item.second::after {
+      box-sizing: border-box;
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 0;
+      width: 100%;
+      height: calc(var(--thickness) * 3.5);
+      border-top: var(--thickness) solid white;
+      border-bottom: var(--thickness) solid white;
+    }
+
+    .book_item.second::after {
+      top: initial;
+      bottom: 10px;
+    }
+
+    /* Third Book - Circles top and bottom */
+    .book_item.third::before,
+    .book_item.third::after {
+      box-sizing: border-box;
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 9px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: var(--thickness) solid white;
+    }
+
+    .book_item.third::after {
+      top: initial;
+      bottom: 10px;
+    }
+
+    /* Fourth Book - Taller with center double line */
+    .book_item.fourth {
+      bottom: 0; /* Keep at bottom like others */
+      height: 130px;
+    }
+
+    .book_item.fourth::before {
+      box-sizing: border-box;
+      content: '';
+      position: absolute;
+      top: 46px;
+      left: 0;
+      width: 100%;
+      height: calc(var(--thickness) * 3.5);
+      border-top: var(--thickness) solid white;
+      border-bottom: var(--thickness) solid white;
+    }
+
+    /* Fifth Book - Same as second book but shorter */
+    .book_item.fifth {
+      bottom: 0; /* Keep at bottom like others */
+      height: 100px;
+    }
+
+    .book_item.fifth::before,
+    .book_item.fifth::after {
+      box-sizing: border-box;
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 0;
+      width: 100%;
+      height: calc(var(--thickness) * 3.5);
+      border-top: var(--thickness) solid white;
+      border-bottom: var(--thickness) solid white;
+    }
+
+    .book_item.fifth::after {
+      top: initial;
+      bottom: 10px;
+    }
+
+    /* Sixth Book - Line and circle */
+    .book_item.sixth {
+      bottom: 0; /* Keep at bottom like others */
+      height: 140px;
+    }
+
+    .book_item.sixth::before {
+      box-sizing: border-box;
+      content: '';
+      position: absolute;
+      bottom: 31px;
+      left: 0px;
+      width: 100%;
+      height: var(--thickness);
+      background-color: white;
+    }
+
+    .book_item.sixth::after {
+      box-sizing: border-box;
+      content: '';
+      position: absolute;
+      bottom: 10px;
+      left: 9px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: var(--thickness) solid white;
+    }
+
+    /* Animation Delays (converted from SCSS nth-child) */
+    .book_item:nth-child(2) {
+      animation-delay: calc(var(--delay) * 1);
+    }
+
+    .book_item:nth-child(3) {
+      animation-delay: calc(var(--delay) * 2);
+    }
+
+    .book_item:nth-child(4) {
+      animation-delay: calc(var(--delay) * 3);
+    }
+
+    .book_item:nth-child(5) {
+      animation-delay: calc(var(--delay) * 4);
+    }
+
+    .book_item:nth-child(6) {
+      animation-delay: calc(var(--delay) * 5);
+    }
+
+    /* Shelf with moving polka dots */
+    .shelf {
+      width: 300px;
+      height: var(--thickness);
+      margin: 0;
+      background-color: white;
+      position: relative;
+      /* Shelf sits immediately below books_list - no gap */
+    }
+
+    .shelf::before,
+    .shelf::after {
+      content: '';
+      position: absolute;
+      width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, #fff 0%, #f0f0f0 100%);
-      border-radius: 3px;
-      animation: progressFill 7s ease-in-out;
-      transform-origin: left;
-      box-shadow: 0 0 10px rgba(255,255,255,0.5);
+      /* Polka dot pattern (converted from SCSS mixin) */
+      background: var(--flashmaster-teal);
+      background-image: radial-gradient(rgba(255,255,255,0.5) 30%, transparent 0);
+      background-size: 10px 10px;
+      background-position: 0 -2.5px;
+      top: 200%;
+      left: 5%;
+      animation: move calc(var(--duration) / 10) linear infinite;
     }
 
-    .network-status {
-      font-size: 0.9rem;
-      opacity: 0.8;
-      margin-top: 1rem;
-      text-align: center;
-      font-style: italic;
+    .shelf::after {
+      top: 400%;
+      left: 7.5%;
     }
 
-    /* 🚀 OPTIMIZED: Animations for poor network feedback */
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    /* Original Travel Animation (exact conversion from SCSS) */
+    @keyframes travel {
+      0% {
+        opacity: 0;
+        transform: translateX(300px) rotateZ(0deg) scaleY(1);
+      }
+      
+      6.5% {
+        transform: translateX(279.5px) rotateZ(0deg) scaleY(1.1);
+      }
+      
+      8.8% {
+        transform: translateX(273.6px) rotateZ(0deg) scaleY(1);
+      }
+      
+      10% {
+        opacity: 1;
+        transform: translateX(270px) rotateZ(0deg);
+      }
+      
+      17.6% {
+        transform: translateX(247.2px) rotateZ(-30deg);
+      }
+      
+      45% {
+        transform: translateX(165px) rotateZ(-30deg);
+      }
+      
+      49.5% {
+        transform: translateX(151.5px) rotateZ(-45deg);
+      }
+      
+      61.5% {
+        transform: translateX(115.5px) rotateZ(-45deg);
+      }
+      
+      67% {
+        transform: translateX(99px) rotateZ(-60deg);
+      }
+      
+      76% {
+        transform: translateX(72px) rotateZ(-60deg);
+      }
+      
+      83.5% {
+        opacity: 1;
+        transform: translateX(49.5px) rotateZ(-90deg);
+      }
+      
+      90% {
+        opacity: 0;
+      }
+      
+      100% {
+        opacity: 0;
+        transform: translateX(0px) rotateZ(-90deg);
+      }
     }
 
-    @keyframes logoFloat {
-      0% { transform: translateY(0px); }
-      100% { transform: translateY(-12px); }
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 0.9; }
-      50% { opacity: 1; }
-    }
-
-    @keyframes progressFill {
-      0% { transform: scaleX(0); }
-      25% { transform: scaleX(0.3); }
-      50% { transform: scaleX(0.6); }
-      75% { transform: scaleX(0.8); }
-      100% { transform: scaleX(1); }
-    }
-
-    /* 🚀 NETWORK AWARE: Extended animation for slow loading */
-    @keyframes slowNetworkPulse {
-      0%, 100% { opacity: 0.7; }
-      50% { opacity: 1; }
-    }
-
-    .slow-network {
-      animation: slowNetworkPulse 1.5s ease-in-out infinite;
+    /* Moving polka dots animation */
+    @keyframes move {
+      from {
+        background-position-x: 0;
+      }
+      
+      to {
+        background-position-x: 10px;
+      }
     }
 
     /* Hide loading screen after Flutter loads */
@@ -164,104 +368,67 @@
       display: none;
     }
 
-    /* 🚀 RESPONSIVE: Mobile optimization */
+    /* Responsive Design */
     @media (max-width: 768px) {
-      .logo {
-        font-size: 2.8rem;
-      }
-      .tagline {
-        font-size: 1.1rem;
-        padding: 0 2rem;
-      }
-      .progress-container {
-        width: 250px;
+      .bookshelf_wrapper {
+        transform: scale(0.8);
       }
     }
 
     @media (max-width: 480px) {
-      .logo {
-        font-size: 2.2rem;
+      .bookshelf_wrapper {
+        transform: scale(0.7);
       }
-      .tagline {
-        font-size: 1rem;
-        padding: 0 1.5rem;
+    }
+
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      .book_item,
+      .shelf::before,
+      .shelf::after {
+        animation: none;
       }
-      .progress-container {
-        width: 200px;
+      
+      .book_item {
+        opacity: 1;
+        transform: translateX(0px) rotateZ(-90deg);
+        position: static;
+        display: inline-block;
+        margin: 0 2px;
+        width: 30px;
+        height: 80px;
+        top: auto;
+      }
+      
+      .books_list {
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        height: auto;
       }
     }
   </style>
 </head>
 <body>
-  <!-- 🚀 TASK 1: Loading Screen HTML - Optimized for Poor Network -->
+  <!-- 🚀 FlashMaster Clean Bookshelf Loading Screen -->
   <div id="loading-screen" class="loading-container">
-    <div class="logo">📚 FlashMaster</div>
-    <div class="tagline">AI-Powered Learning Platform</div>
-    <div class="spinner"></div>
-    <div class="loading-text" id="loading-text">Loading your learning experience...</div>
-    <div class="progress-container">
-      <div class="progress-bar">
-        <div class="progress-fill"></div>
-      </div>
+    <!-- Clean Bookshelf Animation Only -->
+    <div class="bookshelf_wrapper">
+      <ul class="books_list">
+        <li class="book_item first"></li>
+        <li class="book_item second"></li>
+        <li class="book_item third"></li>
+        <li class="book_item fourth"></li>
+        <li class="book_item fifth"></li>
+        <li class="book_item sixth"></li>
+      </ul>
+      <div class="shelf"></div>
     </div>
-    <div class="network-status" id="network-status">Preparing your personalized learning...</div>
   </div>
 
-  <!-- 🚀 TASK 1: Smart Loading Script - Network Aware -->
+  <!-- 🚀 Simple Loading Script -->
   <script>
-    // 🚀 NETWORK AWARE: Track loading progress and adapt to slow networks
-    let loadingStartTime = Date.now();
-    let isSlowNetwork = false;
-    
-    // 🚀 POOR NETWORK: Update loading messages for slow connections
-    const loadingMessages = [
-      "Loading your learning experience...",
-      "Preparing AI-powered study tools...", 
-      "Setting up your flashcard environment...",
-      "Almost ready for your learning session...",
-      "Just a moment longer..."
-    ];
-    
-    const slowNetworkMessages = [
-      "Working hard to load your content...",
-      "Great things take time - almost there!",
-      "Optimizing your learning experience...",
-      "Thanks for your patience...",
-      "Nearly ready - hang tight!"
-    ];
-    
-    let messageIndex = 0;
-    
-    function updateLoadingMessage() {
-      const loadingTextEl = document.getElementById('loading-text');
-      const networkStatusEl = document.getElementById('network-status');
-      const elapsed = Date.now() - loadingStartTime;
-      
-      // 🚀 SLOW NETWORK DETECTION: After 3 seconds, assume slow network
-      if (elapsed > 3000 && !isSlowNetwork) {
-        isSlowNetwork = true;
-        loadingTextEl.classList.add('slow-network');
-        networkStatusEl.textContent = "Slow network detected - optimizing load...";
-        networkStatusEl.classList.add('slow-network');
-      }
-      
-      // 🚀 DYNAMIC MESSAGES: Change message every 2 seconds
-      if (elapsed > 2000) {
-        const messages = isSlowNetwork ? slowNetworkMessages : loadingMessages;
-        messageIndex = Math.floor((elapsed - 2000) / 2000) % messages.length;
-        loadingTextEl.textContent = messages[messageIndex];
-      }
-      
-      // 🚀 EXTENDED PATIENCE: Extra encouragement for very slow networks
-      if (elapsed > 8000) {
-        networkStatusEl.textContent = "Almost there! Loading in progress...";
-      }
-    }
-    
-    // Update messages every second
-    const messageInterval = setInterval(updateLoadingMessage, 1000);
-    
-    // 🚀 SMOOTH TRANSITION: Hide loading screen when Flutter loads
+    // Simple transition when Flutter loads
     window.addEventListener('load', function(ev) {
       _flutter.loader.loadEntrypoint({
         serviceWorker: {
@@ -270,20 +437,15 @@
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
             appRunner.runApp().then(function(app) {
-              // 🚀 PERFORMANCE: Small delay to ensure Flutter is fully rendered
+              // Small delay to ensure Flutter is fully rendered
               setTimeout(function() {
                 const loadingScreen = document.getElementById('loading-screen');
-                const loadingTime = Date.now() - loadingStartTime;
-                
-                // 🚀 ANALYTICS: Log loading performance
-                console.log(`📊 Loading completed in ${loadingTime}ms ${isSlowNetwork ? '(slow network)' : '(normal network)'}`);
                 
                 if (loadingScreen) {
                   loadingScreen.classList.add('fade-out');
                   setTimeout(function() {
                     loadingScreen.style.display = 'none';
                     document.body.classList.add('flutter-loaded');
-                    clearInterval(messageInterval);
                   }, 800);
                 }
               }, 300);
@@ -293,15 +455,13 @@
       });
     });
 
-    // 🚀 FAILSAFE: Remove loading screen after 20 seconds regardless
+    // Failsafe: Remove loading screen after 20 seconds
     setTimeout(function() {
       const loadingScreen = document.getElementById('loading-screen');
       if (loadingScreen && loadingScreen.style.display !== 'none') {
-        console.log('⚠️ Loading screen removed after timeout');
         loadingScreen.classList.add('fade-out');
         setTimeout(function() {
           loadingScreen.style.display = 'none';
-          clearInterval(messageInterval);
         }, 800);
       }
     }, 20000);
