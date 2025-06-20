@@ -25,12 +25,15 @@ logger = logging.getLogger(__name__)
 def create_app():
     """Create and configure the FastAPI application."""
     
-    # Validate configuration before starting
-    config_error = config.validate_config()
-    if config_error:
-        logger.error(f"Configuration error: {config_error}")
-        # Continue with warning since we can use fallback grading
-        logger.warning("⚠️ Starting with limited functionality due to configuration error")
+    # Comprehensive environment validation
+    logger.info("🔧 Starting FlashMaster API Server - Environment Validation")
+    environment_valid = config.log_environment_summary()
+    
+    if not environment_valid:
+        logger.error("❌ Critical environment configuration issues detected")
+        logger.warning("⚠️ Starting with limited functionality - some features may not work")
+    else:
+        logger.info("✅ Environment validation passed - all systems ready")
     
     app = FastAPI(
         title="Flashcard Grading API",
@@ -41,10 +44,13 @@ def create_app():
         openapi_url="/api/openapi.json"
     )
     
-    # Configure CORS based on settings
+    # Configure CORS with environment-based origins
+    cors_origins = config.get_cors_origins()
+    logger.info(f"🌐 CORS Origins configured: {cors_origins}")
+    
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=config.CORS_ORIGINS,
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],  # Can be restricted in production
         allow_headers=["*"],  # Can be restricted in production
