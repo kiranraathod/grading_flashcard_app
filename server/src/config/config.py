@@ -26,6 +26,12 @@ class AppConfig:
     # API Keys
     GOOGLE_API_KEY: str = os.getenv('GOOGLE_API_KEY', '')
     
+    # Database settings (NEW for Task 2.2)
+    SUPABASE_URL: str = os.getenv('SUPABASE_URL', '')
+    SUPABASE_ANON_KEY: str = os.getenv('SUPABASE_ANON_KEY', '')
+    DB_POOL_SIZE: int = int(os.getenv('DB_POOL_SIZE', 20))
+    DB_TIMEOUT: int = int(os.getenv('DB_TIMEOUT', 30))
+    
     # CORS settings - Smart environment-based configuration
     @classmethod
     def get_cors_origins(cls) -> list:
@@ -137,6 +143,11 @@ class AppConfig:
             'LOG_LEVEL': os.getenv('LOG_LEVEL'),
             'LLM_TIMEOUT': os.getenv('LLM_TIMEOUT'),
             'LLM_MAX_TOKENS': os.getenv('LLM_MAX_TOKENS'),
+            'LLM_TEMPERATURE': os.getenv('LLM_TEMPERATURE'),
+            'SUPABASE_URL': os.getenv('SUPABASE_URL'),
+            'SUPABASE_ANON_KEY': os.getenv('SUPABASE_ANON_KEY'),
+            'DB_POOL_SIZE': os.getenv('DB_POOL_SIZE'),
+            'DB_TIMEOUT': os.getenv('DB_TIMEOUT'),
             'LLM_TEMPERATURE': os.getenv('LLM_TEMPERATURE'),
             'DB_URL': os.getenv('DB_URL'),
         }
