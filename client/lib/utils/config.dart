@@ -90,15 +90,16 @@ class AppConfig {
   // API base URL configuration (moved from Constants)
   static String get apiBaseUrl {
     if (kIsWeb) {
-      return 'http://localhost:3000'; // Point to the proxy server for web
+      // 🚀 CONNECT TO PRODUCTION BACKEND - Live API with database integration
+      return 'https://grading-app-5o9m.onrender.com';
     } else {
       switch (_environment) {
         case Environment.prod:
-          return 'https://api.flashmaster.app';
+          return 'https://grading-app-5o9m.onrender.com'; // Production backend
         case Environment.staging:
-          return 'https://staging-api.flashmaster.app';
+          return 'https://grading-app-5o9m.onrender.com'; // Use same backend for staging
         case Environment.dev:
-          return 'http://10.0.2.2:3000'; // 🔧 FIX: Changed from 5000 to 3000 to match server
+          return 'https://grading-app-5o9m.onrender.com'; // Use production backend for dev too
       }
     }
   }
@@ -146,7 +147,7 @@ class AppConfig {
         retryDelay = const Duration(seconds: 2);
         networkLogLevel = NetworkLogLevel.verbose;
         networkCheckInterval = const Duration(seconds: 30);
-        connectivityTimeout = const Duration(seconds: 5);
+        connectivityTimeout = const Duration(seconds: 45);
         break;
         
       case Environment.staging:
