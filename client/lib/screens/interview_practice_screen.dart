@@ -9,7 +9,7 @@ import '../blocs/recent_view/recent_view_bloc.dart';
 import '../blocs/recent_view/recent_view_event.dart';
 import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
-import 'dart:async';
+import '../widgets/compact_countdown_timer.dart';
 import 'interview_result_screen.dart';
 
 class InterviewPracticeScreen extends ConsumerStatefulWidget {
@@ -31,14 +31,12 @@ class InterviewPracticeScreen extends ConsumerStatefulWidget {
 
 class _InterviewPracticeScreenState extends ConsumerState<InterviewPracticeScreen> {
   // State variables
-  int _timeTaken = 0;
   late InterviewService _interviewService;
-  Timer? _timer;
   final TextEditingController _userAnswerController = TextEditingController();
   bool _isGrading = false;
   bool _hasLoadedInitialAnswer = false;
   
-  // ✨ NEW: Enhanced UI state variables
+  // ✨ Enhanced UI state variables
   final FocusNode _answerFocusNode = FocusNode();
   bool _isTextFieldFocused = false;
 
@@ -70,8 +68,7 @@ class _InterviewPracticeScreenState extends ConsumerState<InterviewPracticeScree
       });
     });
 
-    // Start a timer to track how long the user spends on this question
-    _startTimer();
+    // Note: Timer is now handled by CompactCountdownTimer widget
   }
 
   // Load any saved answer for the current question
@@ -178,8 +175,7 @@ class _InterviewPracticeScreenState extends ConsumerState<InterviewPracticeScree
       debugPrint('✓ Final save on dispose: ${widget.question.id}');
     }
 
-    // Cancel timer and dispose controller
-    _timer?.cancel();
+    // Dispose controller
     _userAnswerController.dispose();
 
     // Show final summary
@@ -680,20 +676,47 @@ class _InterviewPracticeScreenState extends ConsumerState<InterviewPracticeScree
     debugPrint('=== PREVIOUS NAVIGATION COMPLETE ===');
   }
 
-  // Start the timer to track practice time
-  void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        _timeTaken++;
-      });
-    });
+  // ✨ Countdown timer callback methods
+  void _onTimerStateChanged(bool isRunning, int timeRemaining) {
+    // Timer state is managed by CompactCountdownTimer widget
+    // This callback can be used for additional logic if needed
+    debugPrint('Timer state: running=$isRunning, remaining=${timeRemaining}s');
   }
 
-  // Format the time in MM:SS format
-  String _formatTime(int seconds) {
-    int minutes = seconds ~/ 60;
-    int remainingSeconds = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
+  void _onTimerCompleted() {
+    // Show completion dialog when timer reaches zero
+    _showTimerCompletionDialog();
+  }
+
+  void _showTimerCompletionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        icon: Icon(
+          Icons.timer_off,
+          color: Theme.of(context).colorScheme.primary,
+          size: 32,
+        ),
+        title: const Text('Time\'s Up!'),
+        content: const Text(
+          'Your practice session time has ended. You can continue working or submit your answer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Continue'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _submitSingleAnswer();
+            },
+            child: const Text('Submit Answer'),
+          ),
+        ],
+      ),
+    );
   }
 
   // Navigate to the next question
@@ -1019,34 +1042,13 @@ class _InterviewPracticeScreenState extends ConsumerState<InterviewPracticeScree
                     ),
                     child: Row(
                       children: [
-                        // Timer icon with background
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF10B981),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.timer,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                        ),
-                        
-                        const SizedBox(width: 12),
-                        
-                        // Timer text with overflow protection
+                        // ✨ NEW: Compact countdown timer widget
                         Expanded(
-                          child: Text(
-                            'Time: ${_formatTime(_timeTaken)}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF10B981),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
+                          child: CompactCountdownTimer(
+                            initialDuration: 300, // Default 5 minutes
+                            autoStart: false,
+                            onTimerStateChanged: _onTimerStateChanged,
+                            onTimerCompleted: _onTimerCompleted,
                           ),
                         ),
                         

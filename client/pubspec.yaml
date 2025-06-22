@@ -70,6 +70,9 @@ dependencies:
   # Supabase Authentication and Database
   supabase_flutter: ^2.5.6
   
+  # Countdown Timer for Practice Mode
+  circular_countdown_timer: ^0.2.4
+  
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   

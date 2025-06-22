@@ -52,59 +52,57 @@ void main() async {
   await _initializeUnifiedAuthentication();
 
   // Wrap the app with ProviderScope for Riverpod
-  runApp(
-    ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  runApp(ProviderScope(child: MyApp()));
 }
 
 /// 🔄 REFACTORED: Initialize unified authentication and storage system
 Future<void> _initializeUnifiedAuthentication() async {
-  await SimpleErrorHandler.safely(
-    () async {
-      debugPrint('🔐 Initializing unified authentication and storage system...');
-      
-      // 1. Perform complete storage migration
-      debugPrint('🔄 Starting comprehensive storage migration...');
-      final migrationResult = await StorageMigrationUtility.performFullMigration();
-      
-      if (migrationResult.success) {
-        debugPrint('✅ Storage migration completed successfully');
-        debugPrint('   - Migrated users: ${migrationResult.migratedUsers.length}');
-        debugPrint('   - Cleaned legacy keys: ${migrationResult.cleanedKeys.length}');
-        
-        // 2. Verify migration integrity
-        final verification = await StorageMigrationUtility.verifyMigration();
-        if (verification.success) {
-          debugPrint('✅ Migration verification passed');
-        } else {
-          debugPrint('⚠️ Migration verification found issues:');
-          for (final error in verification.errors) {
-            debugPrint('   - $error');
-          }
-        }
-        
-        // 3. Generate and log migration report (debug mode only)
-        if (kDebugMode) {
-          final report = StorageMigrationUtility.generateMigrationReport(
-            migrationResult, 
-            verification
-          );
-          debugPrint('📊 Migration Report:\n$report');
-        }
+  await SimpleErrorHandler.safely(() async {
+    debugPrint('🔐 Initializing unified authentication and storage system...');
+
+    // 1. Perform complete storage migration
+    debugPrint('🔄 Starting comprehensive storage migration...');
+    final migrationResult =
+        await StorageMigrationUtility.performFullMigration();
+
+    if (migrationResult.success) {
+      debugPrint('✅ Storage migration completed successfully');
+      debugPrint(
+        '   - Migrated users: ${migrationResult.migratedUsers.length}',
+      );
+      debugPrint(
+        '   - Cleaned legacy keys: ${migrationResult.cleanedKeys.length}',
+      );
+
+      // 2. Verify migration integrity
+      final verification = await StorageMigrationUtility.verifyMigration();
+      if (verification.success) {
+        debugPrint('✅ Migration verification passed');
       } else {
-        debugPrint('❌ Storage migration failed:');
-        for (final error in migrationResult.errors) {
+        debugPrint('⚠️ Migration verification found issues:');
+        for (final error in verification.errors) {
           debugPrint('   - $error');
         }
-        debugPrint('⚠️ Continuing with current storage state...');
       }
-      
-      debugPrint('✅ Unified authentication system ready');
-    },
-    operationName: 'unified_authentication_initialization',
-  );
+
+      // 3. Generate and log migration report (debug mode only)
+      if (kDebugMode) {
+        final report = StorageMigrationUtility.generateMigrationReport(
+          migrationResult,
+          verification,
+        );
+        debugPrint('📊 Migration Report:\n$report');
+      }
+    } else {
+      debugPrint('❌ Storage migration failed:');
+      for (final error in migrationResult.errors) {
+        debugPrint('   - $error');
+      }
+      debugPrint('⚠️ Continuing with current storage state...');
+    }
+
+    debugPrint('✅ Unified authentication system ready');
+  }, operationName: 'unified_authentication_initialization');
 }
 
 /// Only show logs relevant for testing authentication trigger logic
@@ -261,7 +259,9 @@ Future<void> _initializeSystemStabilization() async {
     coordinator.markServiceInitialized('SupabaseService');
 
     debugPrint('✅ Authentication services initialized (Riverpod-only)');
-    debugPrint('📋 Phase 2 Migration: Removed AuthenticationService and GuestUserManager Provider dependencies');
+    debugPrint(
+      '📋 Phase 2 Migration: Removed AuthenticationService and GuestUserManager Provider dependencies',
+    );
   }, operationName: 'authentication_services_initialization');
 
   // Initialize network infrastructure
@@ -463,11 +463,17 @@ class _MyAppState extends State<MyApp> {
           child: provider.MultiProvider(
             providers: [
               // Core Infrastructure Services (keeping for other app components)
-              provider.ChangeNotifierProvider.value(value: SupabaseService.instance),
+              provider.ChangeNotifierProvider.value(
+                value: SupabaseService.instance,
+              ),
 
               // Enhanced Network Services
-              provider.ChangeNotifierProvider(create: (_) => ConnectivityService()),
-              provider.ChangeNotifierProvider(create: (_) => SyncStatusTracker()),
+              provider.ChangeNotifierProvider(
+                create: (_) => ConnectivityService(),
+              ),
+              provider.ChangeNotifierProvider(
+                create: (_) => SyncStatusTracker(),
+              ),
 
               // Application Services (for backward compatibility with non-migrated screens)
               provider.ChangeNotifierProvider.value(value: flashcardService),
@@ -491,8 +497,12 @@ class _MyAppState extends State<MyApp> {
 
               // Services as Repositories for BLoCs
               provider.Provider<ApiService>.value(value: apiService),
-              provider.Provider<SpeechToTextService>.value(value: speechToTextService),
-              provider.Provider<RecentViewService>.value(value: recentViewService),
+              provider.Provider<SpeechToTextService>.value(
+                value: speechToTextService,
+              ),
+              provider.Provider<RecentViewService>.value(
+                value: recentViewService,
+              ),
               provider.Provider<JobDescriptionService>.value(
                 value: jobDescriptionService,
               ),
