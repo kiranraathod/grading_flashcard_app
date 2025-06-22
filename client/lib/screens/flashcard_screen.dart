@@ -5,7 +5,6 @@ import '../models/answer.dart';
 import '../models/flashcard_set.dart';
 import '../models/simple_auth_state.dart';
 import '../services/api_service.dart';
-import '../services/speech_to_text_service.dart';
 import '../services/network_service.dart';
 import '../services/unified_action_middleware.dart';
 import '../widgets/flashcard_widget.dart';
@@ -44,7 +43,6 @@ class _FlashcardScreenState extends ConsumerState<FlashcardScreen> {
   bool _isSubmitting = false;
   bool _showAnswer = false;
   late ApiService _apiService;
-  late SpeechToTextService _speechToTextService;
   
   @override
   void initState() {
@@ -52,7 +50,6 @@ class _FlashcardScreenState extends ConsumerState<FlashcardScreen> {
     _currentIndex = widget.initialCardIndex;
     // Initialize services directly since we're using Riverpod now
     _apiService = ApiService();
-    _speechToTextService = SpeechToTextService();
   }
 
   void _nextCard() {
@@ -240,7 +237,6 @@ class _FlashcardScreenState extends ConsumerState<FlashcardScreen> {
             ),
           ),
           AnswerInputWidget(
-            speechService: _speechToTextService,
             onSubmit: (value) {
               _handleUserAnswer(value);
               _submitAnswer();

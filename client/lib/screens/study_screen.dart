@@ -16,7 +16,6 @@ import '../models/flashcard_set.dart';
 import '../models/simple_auth_state.dart';
 import '../services/api_service.dart';
 import '../services/flashcard_service.dart';
-import '../services/speech_to_text_service.dart';
 import '../services/unified_action_middleware.dart';
 import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
@@ -80,13 +79,11 @@ class StudyView extends StatefulWidget {
 
 class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
   late PageController _pageController;
-  final SpeechToTextService _speechService = SpeechToTextService();
   
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
-    _speechService.initialize();
     
     // Add lifecycle observer to catch app pauses/resumes
     WidgetsBinding.instance.addObserver(this);
@@ -420,7 +417,6 @@ class _StudyViewState extends State<StudyView> with WidgetsBindingObserver {
                     ),
                   ),
                   AnswerInputWidget(
-                    speechService: _speechService,
                     onSubmit: (answer) async {
                       if (state.currentFlashcard != null) {
                         // 🔧 FIX: Capture context and messenger before async operations

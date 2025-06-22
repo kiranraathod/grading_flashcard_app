@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
-import '../services/speech_to_text_service.dart';
 import '../utils/colors.dart';
 import '../utils/theme_utils.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class AnswerInputWidget extends StatefulWidget {
-  final SpeechToTextService speechService;
   final Function(String) onSubmit;
   final bool isDisabled;
 
   const AnswerInputWidget({
     super.key,
-    required this.speechService,
     required this.onSubmit,
     this.isDisabled = false,
   });
@@ -22,53 +19,48 @@ class AnswerInputWidget extends StatefulWidget {
 
 class _AnswerInputWidgetState extends State<AnswerInputWidget> {
   final TextEditingController _controller = TextEditingController();
-  bool _isListening = false;
-  bool _isSpeechAvailable = false;
+  int _wordCount = 0;
+  static const int _maxWords = 200;
 
   @override
   void initState() {
     super.initState();
-    _checkSpeechAvailability();
+    _controller.addListener(_updateWordCount);
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_updateWordCount);
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _checkSpeechAvailability() async {
-    final isAvailable = await widget.speechService.initialize();
+  void _updateWordCount() {
+    final text = _controller.text.trim();
+    final words = text.isEmpty ? 0 : text.split(RegExp(r'\s+')).length;
     setState(() {
-      _isSpeechAvailable = isAvailable;
-    });
-  }
-
-  Future<void> _startListening() async {
-    setState(() {
-      _isListening = true;
-    });
-
-    final result = await widget.speechService.startListening();
-
-    setState(() {
-      _controller.text = result;
-      _isListening = false;
-    });
-  }
-
-  void _stopListening() {
-    widget.speechService.stopListening();
-    setState(() {
-      _isListening = false;
+      _wordCount = words;
     });
   }
 
   void _submitAnswer() {
-    if (_controller.text.trim().isNotEmpty) {
-      widget.onSubmit(_controller.text.trim());
-      _controller.clear();
+    if (_controller.text.trim().isEmpty) {
+      return;
     }
+    
+    if (_wordCount > _maxWords) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Answer exceeds $_maxWords word limit. Please shorten your response.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+    
+    widget.onSubmit(_controller.text.trim());
+    _controller.clear();
   }
 
   @override
@@ -102,45 +94,29 @@ class _AnswerInputWidgetState extends State<AnswerInputWidget> {
             ),
           ),
           
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  decoration: InputDecoration(
-                    hintText: AppLocalizations.of(context).typeYourAnswer,
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 3,
-                  minLines: 1,
-                  enabled: !widget.isDisabled,
-                ),
+          TextField(
+            controller: _controller,
+            decoration: InputDecoration(
+              hintText: AppLocalizations.of(context).typeYourAnswer,
+              border: OutlineInputBorder(),
+              helperText: '$_wordCount/$_maxWords words',
+              helperStyle: TextStyle(
+                color: _wordCount > _maxWords 
+                    ? context.errorColor 
+                    : context.onSurfaceVariantColor,
+                fontSize: 12,
               ),
-              const SizedBox(width: 8),
-              if (_isSpeechAvailable)
-                IconButton(
-                  icon: Icon(
-                    _isListening ? Icons.mic : Icons.mic_none,
-                    color: _isListening 
-                        ? context.errorColor 
-                        : (widget.isDisabled ? context.onSurfaceVariantColor : context.primaryColor),
-                  ),
-                  onPressed: widget.isDisabled 
-                      ? null 
-                      : (_isListening ? _stopListening : _startListening),
-                  tooltip:
-                      _isListening 
-                        ? AppLocalizations.of(context).stopListening 
-                        : AppLocalizations.of(context).startSpeechToText,
-                ),
-            ],
+            ),
+            maxLines: 3,
+            minLines: 1,
+            enabled: !widget.isDisabled,
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: widget.isDisabled ? null : _submitAnswer,
+            onPressed: (widget.isDisabled || _wordCount > _maxWords) ? null : _submitAnswer,
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              backgroundColor: AppColors.primary,
+              backgroundColor: _wordCount > _maxWords ? Colors.grey : AppColors.primary,
               foregroundColor: context.onPrimaryColor,
             ),
             icon: const Icon(Icons.send),

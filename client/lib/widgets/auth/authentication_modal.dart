@@ -40,14 +40,6 @@ class _AuthenticationModalState extends ConsumerState<AuthenticationModal>
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
   
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _emailFocus = FocusNode();
-  final _passwordFocus = FocusNode();
-  
-  bool _isSignUp = false;
-  bool _passwordVisible = false;
-  
   @override
   void initState() {
     super.initState();
@@ -72,11 +64,6 @@ class _AuthenticationModalState extends ConsumerState<AuthenticationModal>
     ).animate(_animationController);
     
     _animationController.forward();
-    
-    // Focus first input after animation
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _emailFocus.requestFocus();
-    });
   }
 
   @override
@@ -135,71 +122,16 @@ class _AuthenticationModalState extends ConsumerState<AuthenticationModal>
         ),
         const SizedBox(height: 16),
         Text(
-          _isSignUp ? 'Create Account' : 'Sign In',
+          'Sign In',
           style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _isSignUp 
-            ? 'Get unlimited flashcard grading actions'
-            : 'You\'ve reached your daily limit. Sign in for 5 more grading attempts and additional features.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          ),
-          textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
   Widget _buildAuthForm(BuildContext context, ColorScheme colorScheme) {
-    return Column(
-      children: [
-        // Email field
-        TextField(
-          controller: _emailController,
-          focusNode: _emailFocus,
-          keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          onSubmitted: (_) => _passwordFocus.requestFocus(),
-          decoration: InputDecoration(
-            labelText: 'Email',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            prefixIcon: const Icon(Icons.email_outlined),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        // Password field
-        TextField(
-          controller: _passwordController,
-          focusNode: _passwordFocus,
-          obscureText: !_passwordVisible,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _handleEmailAuth(),
-          decoration: InputDecoration(
-            labelText: 'Password',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            prefixIcon: const Icon(Icons.lock_outlined),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _passwordVisible ? Icons.visibility_off : Icons.visibility,
-              ),
-              onPressed: () {
-                setState(() {
-                  _passwordVisible = !_passwordVisible;
-                });
-              },
-              tooltip: _passwordVisible ? 'Hide password' : 'Show password',
-            ),
-          ),
-        ),
-      ],
-    );
+    // Form fields removed - simplified authentication modal
+    return const SizedBox.shrink();
   }
 
   Widget _buildActionButtons(BuildContext context, ColorScheme colorScheme, AuthState authState) {
@@ -207,42 +139,6 @@ class _AuthenticationModalState extends ConsumerState<AuthenticationModal>
     
     return Column(
       children: [
-        // Primary action button (Email sign in/up)
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: FilledButton(
-            onPressed: isLoading ? null : _handleEmailAuth,
-            child: isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(_isSignUp ? 'Create Account' : 'Sign In'),
-          ),
-        ),
-        
-        const SizedBox(height: 12),
-        
-        // Divider with "or"
-        Row(
-          children: [
-            const Expanded(child: Divider()),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'or',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const Expanded(child: Divider()),
-          ],
-        ),
-        
-        const SizedBox(height: 12),        
         // Google sign in button
         if (AuthConfig.enableSocialLogin)
           SizedBox(
@@ -254,6 +150,26 @@ class _AuthenticationModalState extends ConsumerState<AuthenticationModal>
               label: const Text('Continue with Google'),
             ),
           ),
+        
+        // Divider with "or"
+        if (AuthConfig.enableSocialLogin && AuthConfig.enableDemoMode) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Expanded(child: Divider()),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'or',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              const Expanded(child: Divider()),
+            ],
+          ),
+        ],
           
         // Demo sign in button (for testing when auth is broken)
         if (AuthConfig.enableDemoMode) ...[
@@ -277,58 +193,10 @@ class _AuthenticationModalState extends ConsumerState<AuthenticationModal>
   }
   
   Widget _buildToggleMode(BuildContext context) {
-    return TextButton(
-      onPressed: () {
-        setState(() {
-          _isSignUp = !_isSignUp;
-        });
-      },
-      child: Text(
-        _isSignUp
-          ? 'Already have an account? Sign in'
-          : 'Don\'t have an account? Sign up',
-      ),
-    );
+    // Toggle mode removed - simplified authentication modal
+    return const SizedBox.shrink();
   }
 
-  Future<void> _handleEmailAuth() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-    
-    if (email.isEmpty || password.isEmpty) {
-      _showSnackBar('Please fill in all fields');
-      return;
-    }
-    
-    debugPrint('🔍 Email auth attempt: ${_isSignUp ? "signup" : "signin"} for $email');
-    
-    // Use Riverpod notifier instead of Provider service
-    final authNotifier = ref.read(authNotifierProvider.notifier);
-    
-    try {
-      if (_isSignUp) {
-        await authNotifier.signUpWithEmail(email, password);
-      } else {
-        await authNotifier.signInWithEmail(email, password);
-      }
-      
-      final currentState = ref.read(authNotifierProvider);
-      
-      if (currentState is AuthStateAuthenticated && mounted) {
-        Navigator.of(context).pop();
-        _showSnackBar('Welcome to FlashMaster!');
-        debugPrint('✅ Email auth successful - modal closed');
-      } else if (currentState is AuthStateError && mounted) {
-        _showSnackBar(currentState.message);
-        debugPrint('❌ Email auth failed: ${currentState.message}');
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar('Authentication failed. Please try again.');
-        debugPrint('❌ Email auth exception: $e');
-      }
-    }
-  }  
   Future<void> _handleDemoSignIn() async {
     debugPrint('🧪 Demo sign-in attempt started');
     
@@ -399,10 +267,6 @@ class _AuthenticationModalState extends ConsumerState<AuthenticationModal>
   @override
   void dispose() {
     _animationController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _emailFocus.dispose();
-    _passwordFocus.dispose();
     super.dispose();
   }
 }
