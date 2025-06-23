@@ -1,23 +1,29 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' as foundation;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/unified_usage_storage.dart';
-import '../utils/config.dart';
 
-/// Utility for migrating from legacy storage systems to unified storage
+/// Custom debug print to avoid conflicts with Flutter's debugPrint
+void migrationDebugPrint(String message) {
+  if (foundation.kDebugMode) {
+    foundation.debugPrint(message);
+  }
+}
+
+/// Utility for unified storage verification and cleanup
 /// 
-/// This handles the transition from:
-/// - GuestUserManager storage
-/// - Old SimpleActionTracker storage  
-/// - WorkingSecureAuthStorage patterns
+/// This handles:
+/// - Current unified usage data verification
+/// - Legacy storage cleanup  
+/// - Data integrity checks
 /// 
-/// To the new UnifiedUsageStorage system.
+/// All users now use the UnifiedUsageStorage system.
 class StorageMigrationUtility {
   
   /// Perform complete migration for all users
   static Future<MigrationResult> performFullMigration() async {
     try {
-      debugPrint('🔄 Starting full storage migration...');
+      migrationDebugPrint('🔄 Starting unified storage verification...');
       
       final result = MigrationResult();
       final prefs = await SharedPreferences.getInstance();
@@ -26,210 +32,134 @@ class StorageMigrationUtility {
       final overview = await _getStorageOverview(prefs);
       result.initialState = overview;
       
-      debugPrint('📊 Initial storage state:');
-      debugPrint('  - Legacy guest keys: ${overview['legacyGuestKeys'].length}');
-      debugPrint('  - Legacy user keys: ${overview['legacyUserKeys'].length}');
-      debugPrint('  - Unified keys: ${overview['unifiedKeys'].length}');
+      migrationDebugPrint('📊 Storage state:');
+      migrationDebugPrint('  - Current unified users: ${overview['currentUnifiedUsers'].length}');
+      migrationDebugPrint('  - Legacy keys remaining: ${overview['legacyKeys'].length}');
       
-      // 2. Migrate guest data
-      await _migrateGuestData(prefs, result);
+      // 2. Report current unified users
+      await _reportCurrentUnifiedUsers(prefs, result);
       
-      // 3. Migrate user data
-      await _migrateUserData(prefs, result);
-      
-      // 4. Clean up legacy keys
+      // 3. Clean up any remaining legacy keys
       await _cleanupLegacyKeys(prefs, result);
       
-      // 5. Verify migration
+      // 4. Verify integrity
       final finalOverview = await _getStorageOverview(prefs);
       result.finalState = finalOverview;
       result.success = true;
       
-      debugPrint('✅ Migration completed successfully');
-      debugPrint('📊 Final state:');
-      debugPrint('  - Migrated users: ${result.migratedUsers.length}');
-      debugPrint('  - Cleaned keys: ${result.cleanedKeys.length}');
-      debugPrint('  - Errors: ${result.errors.length}');
+      migrationDebugPrint('✅ Storage verification completed');
+      migrationDebugPrint('📊 Final state:');
+      migrationDebugPrint('  - Active unified users: ${finalOverview['currentUnifiedUsers'].length}');
+      migrationDebugPrint('  - Cleaned legacy keys: ${result.cleanedKeys.length}');
       
       return result;
       
     } catch (e) {
-      debugPrint('❌ Migration failed: $e');
+      migrationDebugPrint('❌ Storage verification failed: $e');
       return MigrationResult()
         ..success = false
-        ..errors.add('Migration failed: $e');
+        ..errors.add('Storage verification failed: $e');
     }
   }
 
-  /// Migrate guest user data
-  static Future<void> _migrateGuestData(SharedPreferences prefs, MigrationResult result) async {
-    try {
-      // Check for legacy guest data
-      final guestCount = prefs.getInt('guest_grading_count');
-      final guestResetDate = prefs.getString('guest_limit_reset_date');
-      
-      if (guestCount != null && guestCount > 0) {
-        debugPrint('📦 Migrating guest data: count=$guestCount, resetDate=$guestResetDate');
-        
-        // Create guest user ID
-        final guestId = 'migrated_guest_${DateTime.now().millisecondsSinceEpoch}';
-        
-        // Create unified data
-        final guestData = UnifiedUsageData.empty(guestId).copyWith(
-          actionCounts: {'flashcard_grading': guestCount},
-          dailyLimits: {
-            'flashcard_grading': AuthConfig.guestMaxGradingActions,
-            'interview_practice': AuthConfig.guestMaxInterviewActions,
-            'content_generation': AuthConfig.guestMaxContentGeneration,
-            'ai_assistance': AuthConfig.guestMaxAiAssistance,
-          },
-        );
-        
-        // Store migrated data
-        await UnifiedUsageStorage.storeUsageData(guestId, guestData);
-        
-        result.migratedUsers.add({
-          'userId': guestId,
-          'type': 'guest',
-          'originalCount': guestCount,
-          'resetDate': guestResetDate,
-        });
-        
-        debugPrint('✅ Guest data migrated to: $guestId');
-      }
-    } catch (e) {
-      result.errors.add('Guest migration failed: $e');
-      debugPrint('❌ Guest migration failed: $e');
-    }
-  }
-
-  /// Migrate authenticated user data
-  static Future<void> _migrateUserData(SharedPreferences prefs, MigrationResult result) async {
+  /// 🎯 Report current unified users (already in new system)
+  static Future<void> _reportCurrentUnifiedUsers(SharedPreferences prefs, MigrationResult result) async {
     try {
       final allKeys = prefs.getKeys();
       
-      // Find all legacy user action keys
       for (final key in allKeys) {
-        if (key.startsWith('auth_user_actions_v2_')) {
-          final userId = key.substring('auth_user_actions_v2_'.length);
+        if (key.startsWith('unified_usage_v3_')) {
+          final userId = key.substring('unified_usage_v3_'.length);
           
           try {
-            final actionsJson = prefs.getString(key);
-            if (actionsJson != null) {
-              final actions = Map<String, dynamic>.from(
-                (jsonDecode(actionsJson) as Map<String, dynamic>)
+            final dataJson = prefs.getString(key);
+            if (dataJson != null) {
+              final data = Map<String, dynamic>.from(
+                (jsonDecode(dataJson) as Map<String, dynamic>)
               );
               
-              debugPrint('📦 Migrating user data: $userId');
-              debugPrint('   Actions: $actions');
-              
-              // Convert to int map
-              final actionCounts = <String, int>{};
-              for (final entry in actions.entries) {
-                if (entry.value is int) {
-                  actionCounts[entry.key] = entry.value;
-                } else if (entry.value is String) {
-                  actionCounts[entry.key] = int.tryParse(entry.value) ?? 0;
-                }
-              }
-              
-              // Create unified data
-              final userData = UnifiedUsageData.empty(userId).copyWith(
-                actionCounts: actionCounts,
-                dailyLimits: {
-                  'flashcard_grading': AuthConfig.authenticatedMaxGradingActions,
-                  'interview_practice': AuthConfig.authenticatedMaxInterviewActions,
-                  'content_generation': AuthConfig.authenticatedMaxContentGeneration,
-                  'ai_assistance': AuthConfig.authenticatedMaxAiAssistance,
-                },
-              );
-              
-              // Store migrated data
-              await UnifiedUsageStorage.storeUsageData(userId, userData);
+              final actionCounts = Map<String, int>.from(data['actionCounts'] ?? {});
               
               result.migratedUsers.add({
                 'userId': userId,
-                'type': 'authenticated',
-                'originalActions': actionCounts,
+                'type': userId.startsWith('guest_') ? 'current_guest' : 'current_authenticated',
+                'currentActions': actionCounts,
+                'source': 'unified_system',
               });
               
-              debugPrint('✅ User data migrated: $userId');
+              migrationDebugPrint('📋 Current unified user: $userId (${actionCounts.length} action types)');
             }
           } catch (e) {
-            result.errors.add('User migration failed for $userId: $e');
-            debugPrint('❌ User migration failed for $userId: $e');
+            result.errors.add('Failed to read current unified data for $userId: $e');
+            migrationDebugPrint('❌ Failed to read current unified data for $userId: $e');
           }
         }
       }
     } catch (e) {
-      result.errors.add('User data migration failed: $e');
-      debugPrint('❌ User data migration failed: $e');
+      result.errors.add('Failed to report current unified users: $e');
+      migrationDebugPrint('❌ Failed to report current unified users: $e');
     }
   }
 
   /// Clean up legacy storage keys
   static Future<void> _cleanupLegacyKeys(SharedPreferences prefs, MigrationResult result) async {
     try {
-      final keysToRemove = [
-        'guest_grading_count',
-        'guest_limit_reset_date',
-        'auth_session_v2',
-        'auth_guest_id_v2',
-        'auth_guest_data_v2',
-        'auth_migration_completed_v2',
-      ];
-      
-      // Remove specific legacy keys
-      for (final key in keysToRemove) {
-        if (prefs.containsKey(key)) {
-          await prefs.remove(key);
-          result.cleanedKeys.add(key);
-          debugPrint('🧹 Removed legacy key: $key');
-        }
-      }
-      
-      // Remove legacy user action keys
       final allKeys = prefs.getKeys().toList();
+      
+      // Remove any legacy keys that might still exist
       for (final key in allKeys) {
-        if (key.startsWith('auth_user_actions_v2_')) {
+        if (_isLegacyKey(key)) {
           await prefs.remove(key);
           result.cleanedKeys.add(key);
-          debugPrint('🧹 Removed legacy user key: $key');
+          migrationDebugPrint('🧹 Removed legacy key: $key');
         }
       }
       
-      debugPrint('✅ Legacy cleanup completed: ${result.cleanedKeys.length} keys removed');
+      migrationDebugPrint('✅ Legacy cleanup completed: ${result.cleanedKeys.length} keys removed');
     } catch (e) {
       result.errors.add('Cleanup failed: $e');
-      debugPrint('❌ Cleanup failed: $e');
+      migrationDebugPrint('❌ Cleanup failed: $e');
     }
+  }
+
+  /// Check if a key is legacy and should be removed
+  static bool _isLegacyKey(String key) {
+    return key.startsWith('guest_grading_count') ||
+           key.startsWith('guest_limit_reset_date') ||
+           key.startsWith('auth_session_v2') ||
+           key.startsWith('auth_guest_id_v2') ||
+           key.startsWith('auth_guest_data_v2') ||
+           key.startsWith('auth_migration_completed_v2') ||
+           key.startsWith('auth_user_actions_v2_') ||
+           key.startsWith('legacy_migration_completed_v3');
   }
 
   /// Get comprehensive storage overview
   static Future<Map<String, dynamic>> _getStorageOverview(SharedPreferences prefs) async {
     final allKeys = prefs.getKeys();
     
-    final legacyGuestKeys = <String>[];
-    final legacyUserKeys = <String>[];
     final unifiedKeys = <String>[];
+    final currentUnifiedUsers = <String>[];
+    final legacyKeys = <String>[];
     final otherKeys = <String>[];
     
     for (final key in allKeys) {
-      if (key.startsWith('guest_')) {
-        legacyGuestKeys.add(key);
-      } else if (key.startsWith('auth_user_actions_v2_')) {
-        legacyUserKeys.add(key);
-      } else if (key.startsWith('unified_usage_v3_')) {
+      if (key.startsWith('unified_usage_v3_')) {
         unifiedKeys.add(key);
-      } else if (key.startsWith('auth_')) {
+        // Extract user ID from unified key
+        final userId = key.substring('unified_usage_v3_'.length);
+        currentUnifiedUsers.add(userId);
+      } else if (_isLegacyKey(key)) {
+        legacyKeys.add(key);
+      } else {
         otherKeys.add(key);
       }
     }
     
     return {
-      'legacyGuestKeys': legacyGuestKeys,
-      'legacyUserKeys': legacyUserKeys,
       'unifiedKeys': unifiedKeys,
+      'currentUnifiedUsers': currentUnifiedUsers,
+      'legacyKeys': legacyKeys,
       'otherKeys': otherKeys,
       'totalKeys': allKeys.length,
     };
@@ -243,8 +173,7 @@ class StorageMigrationUtility {
       
       // Check for remaining legacy keys
       final overview = await _getStorageOverview(prefs);
-      verification.remainingLegacyKeys = overview['legacyGuestKeys'].length + 
-                                        overview['legacyUserKeys'].length;
+      verification.remainingLegacyKeys = overview['legacyKeys'].length;
       verification.unifiedUsersCount = overview['unifiedKeys'].length;
       
       // Verify unified data integrity
@@ -272,11 +201,11 @@ class StorageMigrationUtility {
       
       verification.success = verification.errors.isEmpty;
       
-      debugPrint('📋 Migration verification completed:');
-      debugPrint('  - Verified users: ${verification.verifiedUsers.length}');
-      debugPrint('  - Remaining legacy keys: ${verification.remainingLegacyKeys}');
-      debugPrint('  - Warnings: ${verification.warnings.length}');
-      debugPrint('  - Errors: ${verification.errors.length}');
+      migrationDebugPrint('📋 Migration verification completed:');
+      migrationDebugPrint('  - Verified users: ${verification.verifiedUsers.length}');
+      migrationDebugPrint('  - Remaining legacy keys: ${verification.remainingLegacyKeys}');
+      migrationDebugPrint('  - Warnings: ${verification.warnings.length}');
+      migrationDebugPrint('  - Errors: ${verification.errors.length}');
       
       return verification;
     } catch (e) {
@@ -290,29 +219,33 @@ class StorageMigrationUtility {
   static String generateMigrationReport(MigrationResult result, VerificationResult verification) {
     final buffer = StringBuffer();
     
-    buffer.writeln('📊 STORAGE MIGRATION REPORT');
+    buffer.writeln('📊 UNIFIED STORAGE VERIFICATION REPORT');
     buffer.writeln('=' * 40);
     buffer.writeln();
     
-    buffer.writeln('🔄 MIGRATION SUMMARY:');
+    buffer.writeln('🔄 VERIFICATION SUMMARY:');
     buffer.writeln('  ✅ Success: ${result.success}');
-    buffer.writeln('  👥 Migrated Users: ${result.migratedUsers.length}');
-    buffer.writeln('  🧹 Cleaned Keys: ${result.cleanedKeys.length}');
+    buffer.writeln('  👥 Active Users: ${result.migratedUsers.length}');
+    buffer.writeln('  🧹 Cleaned Legacy Keys: ${result.cleanedKeys.length}');
     buffer.writeln('  ❌ Errors: ${result.errors.length}');
     buffer.writeln();
     
     if (result.migratedUsers.isNotEmpty) {
-      buffer.writeln('👥 MIGRATED USERS:');
+      buffer.writeln('👥 ACTIVE USERS:');
       for (final user in result.migratedUsers) {
-        buffer.writeln('  - ${user['userId']} (${user['type']})');
+        final userId = user['userId'] as String;
+        final type = user['type'] as String;
+        final actionCounts = user['currentActions'] as Map<String, int>? ?? {};
+        final totalActions = actionCounts.values.fold(0, (sum, count) => sum + count);
+        buffer.writeln('  - $userId ($type) - $totalActions actions');
       }
       buffer.writeln();
     }
     
-    buffer.writeln('🔍 VERIFICATION SUMMARY:');
+    buffer.writeln('🔍 DATA INTEGRITY:');
     buffer.writeln('  ✅ Success: ${verification.success}');
     buffer.writeln('  👤 Verified Users: ${verification.verifiedUsers.length}');
-    buffer.writeln('  🏚️ Remaining Legacy Keys: ${verification.remainingLegacyKeys}');
+    buffer.writeln('  🏚️ Legacy Keys Found: ${verification.remainingLegacyKeys}');
     buffer.writeln('  ⚠️ Warnings: ${verification.warnings.length}');
     buffer.writeln('  ❌ Errors: ${verification.errors.length}');
     buffer.writeln();
@@ -333,7 +266,7 @@ class StorageMigrationUtility {
       buffer.writeln();
     }
     
-    buffer.writeln('🏁 Migration completed at: ${DateTime.now()}');
+    buffer.writeln('🏁 Verification completed at: ${DateTime.now()}');
     
     return buffer.toString();
   }

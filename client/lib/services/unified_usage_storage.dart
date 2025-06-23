@@ -4,17 +4,10 @@ import 'package:flutter/foundation.dart';
 
 /// Unified storage service for all usage tracking
 /// 
-/// This replaces the fragmented storage approach with a single, consistent system.
-/// Consolidates data from GuestUserManager, SimpleActionTracker, and WorkingSecureAuthStorage.
+/// This provides a single, consistent system for all user data.
 class UnifiedUsageStorage {
   // ✅ SINGLE STORAGE KEY PATTERN
   static const String _unifiedUsageKey = 'unified_usage_v3';
-  static const String _legacyMigrationKey = 'legacy_migration_completed_v3';
-  
-  // Legacy keys for migration (will be removed after migration)
-  static const String _legacyGuestCountKey = 'guest_grading_count';
-  static const String _legacyGuestResetKey = 'guest_limit_reset_date';
-  static const String _legacyUserActionsPrefix = 'auth_user_actions_v2';
 
   /// Store unified usage data for a user (authenticated or guest)
   static Future<void> storeUsageData(String userId, UnifiedUsageData data) async {
@@ -99,95 +92,55 @@ class UnifiedUsageStorage {
     }
   }
 
-  /// 🔄 MIGRATION: Move data from legacy storage to unified storage
-  static Future<void> migrateLegacyData(String userId) async {
+  /// 🎯 CRITICAL FIX: Migrate guest data to authenticated user
+  static Future<void> migrateGuestToAuthenticated(String guestId, String authenticatedUserId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      debugPrint('🔄 Migrating guest data: $guestId → $authenticatedUserId');
       
-      // Check if already migrated
-      final migrationKey = '${_legacyMigrationKey}_$userId';
-      if (prefs.getBool(migrationKey) == true) {
-        debugPrint('✅ Legacy data already migrated for: $userId');
+      // Get guest data
+      final guestData = await getUsageData(guestId);
+      if (guestData.actionCounts.isEmpty) {
+        debugPrint('📝 No guest data to migrate');
         return;
       }
-
-      debugPrint('🔄 Migrating legacy data for: $userId');
       
-      // Create new unified data structure
-      var unifiedData = UnifiedUsageData.empty(userId);
+      // Get or create authenticated user data
+      final authenticatedData = await getUsageData(authenticatedUserId);
       
-      // Migrate from GuestUserManager storage
-      final legacyGuestCount = prefs.getInt(_legacyGuestCountKey) ?? 0;
-      if (legacyGuestCount > 0) {
-        debugPrint('📦 Migrating guest count: $legacyGuestCount');
-        unifiedData = unifiedData.copyWith(
-          actionCounts: {'flashcard_grading': legacyGuestCount},
-        );
+      // Merge guest progress with authenticated user data
+      final mergedCounts = Map<String, int>.from(authenticatedData.actionCounts);
+      for (final entry in guestData.actionCounts.entries) {
+        mergedCounts[entry.key] = (mergedCounts[entry.key] ?? 0) + entry.value;
       }
-
-      // Migrate from SimpleActionTracker storage
-      final legacyUserActionsKey = '${_legacyUserActionsPrefix}_$userId';
-      final legacyActionsJson = prefs.getString(legacyUserActionsKey);
-      if (legacyActionsJson != null) {
-        try {
-          final legacyActions = jsonDecode(legacyActionsJson) as Map<String, dynamic>;
-          final convertedActions = Map<String, int>.from(legacyActions);
-          debugPrint('📦 Migrating user actions: $convertedActions');
-          
-          // Merge with any existing counts
-          final mergedCounts = Map<String, int>.from(unifiedData.actionCounts);
-          for (final entry in convertedActions.entries) {
-            mergedCounts[entry.key] = (mergedCounts[entry.key] ?? 0) + entry.value;
-          }
-          
-          unifiedData = unifiedData.copyWith(actionCounts: mergedCounts);
-        } catch (e) {
-          debugPrint('⚠️ Failed to parse legacy actions JSON: $e');
-        }
-      }
-
-      // Store the migrated data
-      await storeUsageData(userId, unifiedData);
       
-      // Mark migration as complete
-      await prefs.setBool(migrationKey, true);
+      // Create updated authenticated user data with preserved progress
+      final updatedData = authenticatedData.copyWith(
+        actionCounts: mergedCounts,
+        // Keep the earlier reset time to preserve progress timing
+        lastReset: guestData.lastReset.isBefore(authenticatedData.lastReset) 
+            ? guestData.lastReset 
+            : authenticatedData.lastReset,
+      );
       
-      // Clean up legacy keys
-      await _cleanupLegacyKeys(prefs);
+      // Store updated authenticated user data
+      await storeUsageData(authenticatedUserId, updatedData);
       
-      debugPrint('✅ Legacy data migration completed for: $userId');
-      debugPrint('📊 Migrated data: ${unifiedData.toDebugString()}');
+      // Clear guest data
+      await clearUsageData(guestId);
+      
+      debugPrint('✅ Guest data migration successful');
+      debugPrint('📊 Migrated counts: ${guestData.actionCounts}');
+      debugPrint('📊 Final counts: ${updatedData.actionCounts}');
       
     } catch (e) {
-      debugPrint('❌ Legacy data migration failed: $e');
+      debugPrint('❌ Failed to migrate guest data: $e');
     }
   }
 
-  /// Clean up old storage keys after migration
-  static Future<void> _cleanupLegacyKeys(SharedPreferences prefs) async {
-    try {
-      final keysToRemove = [
-        _legacyGuestCountKey,
-        _legacyGuestResetKey,
-      ];
-      
-      // Remove guest manager keys
-      for (final key in keysToRemove) {
-        await prefs.remove(key);
-      }
-      
-      // Remove old user action keys
-      final allKeys = prefs.getKeys();
-      for (final key in allKeys) {
-        if (key.startsWith(_legacyUserActionsPrefix)) {
-          await prefs.remove(key);
-        }
-      }
-      
-      debugPrint('🧹 Legacy storage keys cleaned up');
-    } catch (e) {
-      debugPrint('⚠️ Failed to cleanup legacy keys: $e');
-    }
+  /// 🔄 LEGACY: No-op method for compatibility (legacy migration removed)
+  static Future<void> migrateLegacyData(String userId) async {
+    // Legacy migration is no longer needed - all users are now in unified system
+    debugPrint('📝 Legacy migration skipped for: $userId (unified system only)');
   }
 
   /// Debug method: Get storage overview

@@ -2,15 +2,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../models/simple_auth_state.dart';
-import '../services/working_secure_auth_storage.dart';
 import '../services/supabase_service.dart';
+import '../services/unified_usage_storage.dart';
 import '../utils/config.dart';
+import 'unified_action_tracking_provider.dart';
 
 /// Simple authentication notifier
 class SimpleAuthNotifier extends StateNotifier<AuthState> {
   late final SupabaseClient _supabase;
+  final Ref ref;
   
-  SimpleAuthNotifier() : super(const AuthStateInitial()) {
+  SimpleAuthNotifier(this.ref) : super(const AuthStateInitial()) {
     _supabase = SupabaseService.instance.client;
     _initializeAuth();
   }
@@ -34,15 +36,7 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
         return;
       }
 
-      // Check for guest user data
-      final guestData = await WorkingSecureAuthStorage.getGuestData();
-      if (guestData != null) {
-        debugPrint('Found guest user: ${guestData.id}');
-        state = AuthStateGuest(guestData.id);
-        return;
-      }
-
-      debugPrint('No existing authentication found');
+      debugPrint('No existing authentication found - starting as unauthenticated');
       state = const AuthStateUnauthenticated();
       
       // Listen to Supabase auth changes
@@ -84,18 +78,27 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _migrateGuestDataIfNeeded(String userId) async {
     try {
-      final guestData = await WorkingSecureAuthStorage.getGuestData();
-      if (guestData != null) {
-        debugPrint('🔄 Migrating guest data to authenticated user');
+      debugPrint('🔄 Auth provider checking for guest data migration');
+      
+      // 🎯 Get current guest ID from UnifiedActionTracker
+      final currentTrackedUserId = ref.read(currentTrackedUserIdProvider);
+      
+      if (currentTrackedUserId != null && 
+          currentTrackedUserId.startsWith('guest_') && 
+          currentTrackedUserId != userId) {
         
-        final guestActions = await WorkingSecureAuthStorage.getUserActions(guestData.id);
-        if (guestActions.isNotEmpty) {
-          await WorkingSecureAuthStorage.storeUserActions(userId, guestActions);
-        }
+        debugPrint('🔄 Found current guest session: $currentTrackedUserId');
+        debugPrint('🔄 Migrating to authenticated user: $userId');
         
-        await WorkingSecureAuthStorage.clearGuestData();
-        debugPrint('✅ Guest data migration completed');
+        // Use UnifiedUsageStorage migration
+        await UnifiedUsageStorage.migrateGuestToAuthenticated(currentTrackedUserId, userId);
+        
+        debugPrint('✅ Guest data migration completed via UnifiedUsageStorage');
+      } else {
+        debugPrint('📝 No current guest session found for migration');
+        debugPrint('   Current tracked ID: $currentTrackedUserId');
       }
+      
     } catch (e) {
       debugPrint('❌ Guest data migration failed: $e');
     }
@@ -106,11 +109,8 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
       final response = await _supabase.auth.signInAnonymously();
       if (response.user != null) {
         final guestId = response.user!.id;
-        await WorkingSecureAuthStorage.storeGuestData(guestId, {
-          'created_at': DateTime.now().toIso8601String(),
-          'type': 'anonymous',
-        });
         
+        // Note: Guest data will be handled by UnifiedActionTracker
         state = AuthStateGuest(guestId);
         debugPrint('✅ Anonymous sign-in successful: $guestId');
       }
@@ -205,7 +205,6 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
   Future<void> signOut() async {
     try {
       await _supabase.auth.signOut();
-      await WorkingSecureAuthStorage.clearSession();
       state = const AuthStateUnauthenticated();
       debugPrint('✅ Sign out successful');
     } catch (e) {
@@ -251,7 +250,7 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
 
 // Provider instances
 final authNotifierProvider = StateNotifierProvider<SimpleAuthNotifier, AuthState>((ref) {
-  return SimpleAuthNotifier();
+  return SimpleAuthNotifier(ref);
 });
 
 final isAuthenticatedProvider = Provider<bool>((ref) {

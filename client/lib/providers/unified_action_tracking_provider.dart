@@ -11,6 +11,7 @@ import '../utils/config.dart';
 /// Eliminates conflicts between GuestUserManager and legacy storage patterns.
 class UnifiedActionTracker extends StateNotifier<UserActionState> {
   final Ref ref;
+  String? _currentUserId; // Track current user ID for migration
   
   UnifiedActionTracker(this.ref) : super(UserActionState(
     actionCounts: const {},
@@ -20,6 +21,9 @@ class UnifiedActionTracker extends StateNotifier<UserActionState> {
     _initializeTracking();
     _listenToAuthChanges();
   }
+
+  /// Get current user ID (guest or authenticated)
+  String? get currentUserId => _currentUserId;
 
   /// Listen to authentication state changes and react accordingly
   void _listenToAuthChanges() {
@@ -51,6 +55,7 @@ class UnifiedActionTracker extends StateNotifier<UserActionState> {
       
       final authState = ref.read(authNotifierProvider);
       final userId = _getUserId(authState) ?? _generateGuestId();
+      _currentUserId = userId; // Track current user ID
       
       // Always migrate legacy data first
       await UnifiedUsageStorage.migrateLegacyData(userId);
@@ -90,47 +95,61 @@ class UnifiedActionTracker extends StateNotifier<UserActionState> {
   /// Handle user authentication with data migration
   Future<void> _handleUserAuthenticated(AuthStateAuthenticated authState) async {
     try {
-      final userId = _getUserId(authState);
-      if (userId == null) return;
+      final newUserId = _getUserId(authState);
+      if (newUserId == null) return;
 
-      debugPrint('🔄 Handling user authentication: $userId');
+      debugPrint('🔄 Handling user authentication: $newUserId');
+      debugPrint('🔄 Previous user ID: $_currentUserId');
       
-      // Migrate any legacy data
-      await UnifiedUsageStorage.migrateLegacyData(userId);
+      // 🎯 CRITICAL FIX: Migrate current guest data to authenticated user
+      if (_currentUserId != null && _currentUserId != newUserId && _currentUserId!.startsWith('guest_')) {
+        debugPrint('🔄 Migrating current guest data: $_currentUserId → $newUserId');
+        
+        // Transfer unified storage data
+        await UnifiedUsageStorage.migrateGuestToAuthenticated(_currentUserId!, newUserId);
+        
+        // Store the current state data to preserve in-memory progress
+        final currentData = UnifiedUsageData.empty(newUserId).copyWith(
+          actionCounts: state.actionCounts,
+          dailyLimits: _calculateDailyLimits(true), // Update to authenticated limits
+          lastReset: state.lastReset,
+        );
+        await UnifiedUsageStorage.storeUsageData(newUserId, currentData);
+        
+        debugPrint('✅ Guest data migration completed: ${state.actionCounts}');
+      } else {
+        // Migrate any legacy data for the authenticated user
+        await UnifiedUsageStorage.migrateLegacyData(newUserId);
+      }
       
-      // Load authenticated user data
-      await _loadUserData(userId);
+      // Update current user ID
+      _currentUserId = newUserId;
       
-      // Update limits to authenticated levels
+      // Load authenticated user data (includes migrated guest data)
+      await _loadUserData(newUserId);
+      
+      // Apply authenticated limits but preserve action counts
       final authenticatedLimits = _calculateDailyLimits(true);
+      final preservedCounts = Map<String, int>.from(state.actionCounts);
       
-      // Option 1: Reset counts to give fresh authenticated quota (recommended)
-      final resetCounts = <String, int>{};
-      
-      // Option 2: Keep existing counts (uncomment if preferred)
-      // final resetCounts = Map<String, int>.from(state.actionCounts);
-      
-      // Create updated usage data
-      final currentData = await UnifiedUsageStorage.getUsageData(userId);
-      final updatedData = currentData.copyWith(
-        actionCounts: resetCounts,
-        dailyLimits: authenticatedLimits,
-        hasReachedLimit: false,
-      );
-      
-      // Store and update state
-      await UnifiedUsageStorage.storeUsageData(userId, updatedData);
-      
+      // Update state with authenticated limits but keep progress
       state = state.copyWith(
-        actionCounts: resetCounts,
+        actionCounts: preservedCounts,
         dailyLimits: authenticatedLimits,
-        lastReset: DateTime.now(),
-        hasReachedLimit: false,
+        hasReachedLimit: false, // Reset limit flag for authenticated user
       );
+      
+      // Save updated state
+      final finalData = UnifiedUsageData.empty(newUserId).copyWith(
+        actionCounts: preservedCounts,
+        dailyLimits: authenticatedLimits,
+        lastReset: state.lastReset,
+      );
+      await UnifiedUsageStorage.storeUsageData(newUserId, finalData);
       
       debugPrint('🎉 Authenticated user limits applied:');
+      debugPrint('   📊 Preserved counts: $preservedCounts');
       debugPrint('   📊 New limits: $authenticatedLimits');
-      debugPrint('   📊 Reset counts: $resetCounts');
       
     } catch (e) {
       debugPrint('❌ Failed to handle user authentication: $e');
@@ -144,6 +163,7 @@ class UnifiedActionTracker extends StateNotifier<UserActionState> {
       
       // Generate new guest ID
       final guestId = _generateGuestId();
+      _currentUserId = guestId; // Update current user ID
       final guestLimits = _calculateDailyLimits(false);
       
       // Create fresh guest data
@@ -173,6 +193,7 @@ class UnifiedActionTracker extends StateNotifier<UserActionState> {
     try {
       final authState = ref.read(authNotifierProvider);
       final userId = _getUserId(authState) ?? _generateGuestId();
+      _currentUserId = userId; // Update current user ID
       
       await _loadUserData(userId);
       await _checkDailyReset();
@@ -615,4 +636,10 @@ final totalUsageProvider = Provider<int>((ref) {
 final totalLimitProvider = Provider<int>((ref) {
   final tracker = ref.watch(unifiedActionTrackerProvider.notifier);
   return tracker.getTotalLimit();
+});
+
+/// Provider to access current user ID for migration purposes
+final currentTrackedUserIdProvider = Provider<String?>((ref) {
+  final tracker = ref.watch(unifiedActionTrackerProvider.notifier);
+  return tracker.currentUserId;
 });
