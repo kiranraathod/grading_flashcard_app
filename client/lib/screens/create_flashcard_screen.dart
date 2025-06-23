@@ -6,9 +6,7 @@ import '../services/flashcard_service.dart';
 import '../services/id_service.dart';
 import '../widgets/flashcard_term_widget.dart';
 import '../screens/import_modal_screen.dart';
-import '../widgets/multi_action_fab.dart';
 import '../utils/theme_utils.dart';
-import 'create_interview_question_screen.dart';
 
 class CreateFlashcardScreen extends StatefulWidget {
   final FlashcardSet? editSet;
@@ -246,28 +244,12 @@ class _CreateFlashcardScreenState extends State<CreateFlashcardScreen> {
           ),
         ),
       ),
-      floatingActionButton: MultiActionFab(
+      floatingActionButton: FloatingActionButton.extended(
         backgroundColor: context.primaryColor,
-        tooltip: 'Create new content',
-        options: [
-          MultiActionFabOption(
-            label: 'Add Term',
-            icon: Icons.add_card,
-            onTap: _addTerm,
-          ),
-          MultiActionFabOption(
-            label: 'Create Interview Question',
-            icon: Icons.question_answer,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const CreateInterviewQuestionScreen(),
-                ),
-              );
-            },
-          ),
-        ],
+        onPressed: _addTerm,
+        icon: const Icon(Icons.add_card, color: Colors.white),
+        label: const Text('Add Term', style: TextStyle(color: Colors.white)),
+        tooltip: 'Add new flashcard term',
       ),
     );
   }
