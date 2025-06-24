@@ -1,11 +1,11 @@
 // lib/services/simple_error_handler.dart
-// Simplified 2-method replacement for ReliableOperationService
+// Simplified error handler with just 2 core methods
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 /// Simplified error handler with just 2 core methods
-/// Replaces the 7-method ReliableOperationService with cleaner patterns
+/// Provides clean patterns for error handling and operation retry
 class SimpleErrorHandler {
   static final SimpleErrorHandler _instance = SimpleErrorHandler._internal();
   factory SimpleErrorHandler() => _instance;

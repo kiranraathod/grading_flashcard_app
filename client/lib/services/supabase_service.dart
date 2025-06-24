@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/config.dart';
 import 'simple_error_handler.dart';
-import 'reliable_operation_service.dart';
 
 /// Core Supabase service providing database and authentication capabilities
 /// 
@@ -11,8 +10,6 @@ import 'reliable_operation_service.dart';
 class SupabaseService extends ChangeNotifier {
   static SupabaseService? _instance;
   static SupabaseService get instance => _instance ??= SupabaseService._();
-  
-  final ReliableOperationService _reliableOps = ReliableOperationService();
   
   SupabaseClient? _client;
   bool _isInitialized = false;
@@ -73,14 +70,14 @@ class SupabaseService extends ChangeNotifier {
   Future<bool> testConnection() async {
     if (!isInitialized) return false;
     
-    return await _reliableOps.withFallback(
-      primary: () async {
+    return await SimpleErrorHandler.safe<bool>(
+      () async {
         // Simple query to test connection
         await client.from('categories').select('count').limit(1);
         debugPrint('Supabase connection test successful');
         return true;
       },
-      fallback: () async {
+      fallbackOperation: () async {
         debugPrint('Supabase connection test failed');
         return false;
       },

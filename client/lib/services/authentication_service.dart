@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/config.dart';
 import 'supabase_service.dart';
 import 'simple_error_handler.dart';
-import 'reliable_operation_service.dart';
 
 /// Authentication state enum
 enum AuthState {
@@ -23,7 +22,6 @@ class AuthenticationService extends ChangeNotifier {
   static AuthenticationService? _instance;
   static AuthenticationService get instance => _instance ??= AuthenticationService._();
   
-  final ReliableOperationService _reliableOps = ReliableOperationService();
   final SupabaseService _supabaseService = SupabaseService.instance;
   
   AuthState _authState = AuthState.initial;
@@ -126,8 +124,8 @@ class AuthenticationService extends ChangeNotifier {
       return false;
     }
     
-    return await _reliableOps.withFallback(
-      primary: () async {
+    return await SimpleErrorHandler.safe<bool>(
+      () async {
         _authState = AuthState.loading;
         _errorMessage = null;
         notifyListeners();
@@ -158,7 +156,7 @@ class AuthenticationService extends ChangeNotifier {
           return false;
         }
       },
-      fallback: () async {
+      fallbackOperation: () async {
         _authState = AuthState.error;
         _errorMessage = 'Email login is currently unavailable. Please try Google sign-in.';
         debugPrint('Email sign-in failed for: $email');
@@ -173,8 +171,8 @@ class AuthenticationService extends ChangeNotifier {
   Future<bool> signUpWithEmail(String email, String password) async {
     if (!isEnabled) return false;
     
-    return await _reliableOps.withFallback(
-      primary: () async {
+    return await SimpleErrorHandler.safe<bool>(
+      () async {
         _authState = AuthState.loading;
         _errorMessage = null;
         notifyListeners();
@@ -210,7 +208,7 @@ class AuthenticationService extends ChangeNotifier {
           return false;
         }
       },
-      fallback: () async {
+      fallbackOperation: () async {
         _authState = AuthState.error;
         _errorMessage = 'Email registration is currently unavailable. Please try Google sign-in.';
         notifyListeners();
@@ -260,8 +258,8 @@ class AuthenticationService extends ChangeNotifier {
   Future<bool> signInWithGoogle() async {
     if (!isEnabled) return false;
     
-    return await _reliableOps.withFallback(
-      primary: () async {
+    return await SimpleErrorHandler.safe<bool>(
+      () async {
         _authState = AuthState.loading;
         _errorMessage = null;
         notifyListeners();
@@ -286,7 +284,7 @@ class AuthenticationService extends ChangeNotifier {
           return false;
         }
       },
-      fallback: () async {
+      fallbackOperation: () async {
         _authState = AuthState.error;
         _errorMessage = 'Google sign-in is currently unavailable';
         notifyListeners();
@@ -299,13 +297,13 @@ class AuthenticationService extends ChangeNotifier {
   Future<bool> signOut() async {
     if (!isEnabled) return false;
     
-    return await _reliableOps.withFallback(
-      primary: () async {
+    return await SimpleErrorHandler.safe<bool>(
+      () async {
         await _supabaseService.client.auth.signOut();
         debugPrint('User signed out successfully');
         return true;
       },
-      fallback: () async {
+      fallbackOperation: () async {
         // Force local sign out even if server call fails
         _currentUser = null;
         _authState = AuthState.unauthenticated;
@@ -322,13 +320,13 @@ class AuthenticationService extends ChangeNotifier {
   Future<bool> resetPassword(String email) async {
     if (!isEnabled) return false;
     
-    return await _reliableOps.withFallback(
-      primary: () async {
+    return await SimpleErrorHandler.safe<bool>(
+      () async {
         await _supabaseService.client.auth.resetPasswordForEmail(email);
         debugPrint('Password reset email sent to: $email');
         return true;
       },
-      fallback: () async {
+      fallbackOperation: () async {
         _errorMessage = 'Failed to send password reset email';
         debugPrint('Password reset failed for: $email');
         return false;
