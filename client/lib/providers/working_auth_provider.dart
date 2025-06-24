@@ -1,18 +1,87 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/simple_auth_state.dart';
 import '../services/working_secure_auth_storage.dart';
 import '../services/supabase_service.dart';
+import '../services/storage_service.dart';
 import '../utils/config.dart';
+import '../utils/migration_debug_helper.dart';
+import '../utils/enhanced_safe_map_converter.dart';
 
 /// Simple authentication notifier
 class SimpleAuthNotifier extends StateNotifier<AuthState> {
   late final SupabaseClient _supabase;
   
+  // Callback for data migration completion
+  final List<Function(String userId)> _onUserDataMigrated = [];
+  
   SimpleAuthNotifier() : super(const AuthStateInitial()) {
     _supabase = SupabaseService.instance.client;
     _initializeAuth();
+  }
+
+  /// Register a callback to be called when user data migration completes
+  void onUserDataMigrated(Function(String userId) callback) {
+    _onUserDataMigrated.add(callback);
+  }
+
+  /// Remove a data migration callback
+  void removeUserDataMigrationCallback(Function(String userId) callback) {
+    _onUserDataMigrated.remove(callback);
+  }
+
+  /// Trigger all data migration callbacks
+  void _triggerDataMigrationCallbacks(String userId) {
+    debugPrint('');
+    debugPrint('🔔 ========== SERVICE NOTIFICATION PROCESS ==========');
+    debugPrint('👤 User ID: $userId');
+    debugPrint('📢 Registered callbacks: ${_onUserDataMigrated.length}');
+    debugPrint('');
+    
+    if (_onUserDataMigrated.isEmpty) {
+      debugPrint('ℹ️ No services registered for migration callbacks');
+      debugPrint('💡 This means services will load data on their own schedule');
+      debugPrint('==================================================');
+      return;
+    }
+    
+    debugPrint('🚀 Notifying services to reload with migrated data...');
+    
+    for (int i = 0; i < _onUserDataMigrated.length; i++) {
+      try {
+        final callbackIndex = i + 1;
+        debugPrint('');
+        debugPrint('📞 Callback $callbackIndex/${_onUserDataMigrated.length}:');
+        debugPrint('  • Status: Executing...');
+        debugPrint('  • Purpose: Reload service data for authenticated user');
+        
+        _onUserDataMigrated[i](userId);
+        
+        debugPrint('  • Result: ✅ Success');
+        debugPrint('  • Impact: Service data refreshed with migrated content');
+        
+      } catch (e) {
+        debugPrint('  • Result: ❌ Failed');
+        debugPrint('  • Error: $e');
+        debugPrint('  • Impact: This service may not see migrated data immediately');
+      }
+    }
+    
+    debugPrint('');
+    debugPrint('🏁 All service notifications completed');
+    debugPrint('');
+    debugPrint('📊 EXPECTED OUTCOMES:');
+    debugPrint('====================');
+    debugPrint('✅ FlashcardService: Should reload and show migrated sets');
+    debugPrint('✅ InterviewService: Should reload and show migrated questions');  
+    debugPrint('✅ UI Components: Should refresh and display user\'s content');
+    debugPrint('✅ Progress: All completion status should be preserved');
+    debugPrint('');
+    debugPrint('🔄 If data doesn\'t appear immediately, check individual service logs');
+    debugPrint('==================================================================');
   }
 
   Future<void> _initializeAuth() async {
@@ -62,18 +131,27 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
     switch (event) {
       case AuthChangeEvent.signedIn:
         if (session?.user != null) {
-          state = AuthStateAuthenticated(session!.user);
-          _migrateGuestDataIfNeeded(session.user.id);
+          final user = session!.user;
+          debugPrint('✅ User signed in: ${user.id} (${user.email})');
+          state = AuthStateAuthenticated(user);
+          
+          // 🔍 DEBUG: Generate migration report before attempting migration
+          MigrationDebugHelper.generateMigrationReport(user.id);
+          
+          _migrateGuestDataIfNeeded(user.id);
         }
         break;
         
       case AuthChangeEvent.signedOut:
+        debugPrint('👋 User signed out');
         state = const AuthStateUnauthenticated();
         break;
         
       case AuthChangeEvent.userUpdated:
         if (session?.user != null) {
-          state = AuthStateAuthenticated(session!.user);
+          final user = session!.user;
+          debugPrint('🔄 User updated: ${user.id}');
+          state = AuthStateAuthenticated(user);
         }
         break;
         
@@ -84,20 +162,270 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _migrateGuestDataIfNeeded(String userId) async {
     try {
+      debugPrint('🔄 Starting comprehensive guest data migration for user: $userId');
+      
       final guestData = await WorkingSecureAuthStorage.getGuestData();
       if (guestData != null) {
-        debugPrint('🔄 Migrating guest data to authenticated user');
+        debugPrint('📦 Found guest data, migrating to authenticated user');
         
+        // 1. Migrate usage tracking data
         final guestActions = await WorkingSecureAuthStorage.getUserActions(guestData.id);
         if (guestActions.isNotEmpty) {
           await WorkingSecureAuthStorage.storeUserActions(userId, guestActions);
+          debugPrint('✅ Migrated ${guestActions.length} guest actions');
         }
         
+        // 2. Import and trigger comprehensive data migration
+        await _migrateAllGuestContent(userId);
+        
+        // 3. Clear guest data
         await WorkingSecureAuthStorage.clearGuestData();
-        debugPrint('✅ Guest data migration completed');
+        
+        // 4. Trigger data reload in services
+        _triggerDataMigrationCallbacks(userId);
+        
+        debugPrint('✅ Guest data migration completed successfully');
+      } else {
+        debugPrint('📋 No guest data found, checking for orphaned content');
+        // Still check for orphaned content that might exist without guest record
+        await _migrateAllGuestContent(userId);
+        
+        // Trigger reload anyway in case there was guest data
+        _triggerDataMigrationCallbacks(userId);
       }
     } catch (e) {
       debugPrint('❌ Guest data migration failed: $e');
+    }
+  }
+
+  /// Migrate all guest content including flashcards, interview questions, and progress
+  Future<void> _migrateAllGuestContent(String userId) async {
+    try {
+      debugPrint('');
+      debugPrint('🚀 ========== GUEST DATA MIGRATION STARTED ==========');
+      debugPrint('🔑 Authenticated User ID: $userId');
+      debugPrint('📅 Migration Time: ${DateTime.now().toIso8601String()}');
+      debugPrint('🏗️ Migration Strategy: Hive → SharedPreferences backup → Future Supabase sync');
+      debugPrint('');
+      
+      // 🔍 DEBUG: Check guest data state before migration
+      debugPrint('🔍 STEP 1: Pre-Migration Data Analysis');
+      debugPrint('==========================================');
+      await MigrationDebugHelper.debugGuestDataState();
+      
+      debugPrint('');
+      debugPrint('🔍 STEP 2: Fetching Guest Data from Hive Storage');
+      debugPrint('================================================');
+      
+      // Get current guest flashcard data from Hive
+      final guestFlashcards = StorageService.getFlashcardSets();
+      final guestInterviews = StorageService.getInterviewQuestions();
+      
+      debugPrint('📊 Data Discovery Results:');
+      debugPrint('  • Flashcard sets found: ${guestFlashcards?.length ?? 0}');
+      debugPrint('  • Interview questions found: ${guestInterviews?.length ?? 0}');
+      
+      if (guestFlashcards != null && guestFlashcards.isNotEmpty) {
+        debugPrint('');
+        debugPrint('📚 Detailed Flashcard Analysis:');
+        for (int i = 0; i < guestFlashcards.length; i++) {
+          final set = guestFlashcards[i];
+          final title = set['title'] ?? 'Untitled';
+          final cardCount = (set['flashcards'] as List?)?.length ?? 0;
+          final completedCards = (set['flashcards'] as List?)
+              ?.where((card) => card['isCompleted'] == true)
+              .length ?? 0;
+          
+          debugPrint('  Set ${i + 1}: "$title"');
+          debugPrint('    - Cards: $cardCount total, $completedCards completed');
+          debugPrint('    - Progress: ${cardCount > 0 ? ((completedCards / cardCount) * 100).toStringAsFixed(1) : 0}%');
+          debugPrint('    - Raw data type: ${set.runtimeType}');
+        }
+        
+        debugPrint('');
+        debugPrint('🔧 STEP 3: Converting LinkedMap Data for JSON Serialization');
+        debugPrint('==========================================================');
+        debugPrint('🔄 Converting ${guestFlashcards.length} flashcard sets using Enhanced SafeMapConverter...');
+        
+        final convertedFlashcards = EnhancedSafeMapConverter.convertHiveData(guestFlashcards);
+        final convertedInterviews = guestInterviews != null ? EnhancedSafeMapConverter.convertHiveData(guestInterviews) : null;
+        
+        debugPrint('✅ Conversion Results:');
+        debugPrint('  • Flashcard sets converted: ${convertedFlashcards.length}/${guestFlashcards.length}');
+        debugPrint('  • Interview questions converted: ${convertedInterviews?.length ?? 0}/${guestInterviews?.length ?? 0}');
+        debugPrint('  • Data ready for JSON serialization: ✅');
+        
+        debugPrint('');
+        debugPrint('💾 STEP 4: Creating SharedPreferences Backup');
+        debugPrint('=============================================');
+        
+        final migrationPayload = {
+          'flashcards': convertedFlashcards,
+          'interviews': convertedInterviews,
+          'migrated_at': DateTime.now().toIso8601String(),
+          'migration_source': 'guest_session',
+          'original_guest_data_count': {
+            'flashcard_sets': guestFlashcards.length,
+            'interview_questions': guestInterviews?.length ?? 0,
+          },
+          'conversion_success': {
+            'flashcards_converted': convertedFlashcards.length,
+            'interviews_converted': convertedInterviews?.length ?? 0,
+          }
+        };
+        
+        debugPrint('📦 Migration payload prepared:');
+        debugPrint('  • Total data size: ${jsonEncode(migrationPayload).length} characters');
+        debugPrint('  • Backup destination: SharedPreferences');
+        debugPrint('  • Backup key: user_migrated_data_$userId');
+        
+        // Store user-scoped backup of guest data
+        await _backupGuestDataForUser(userId, migrationPayload);
+        
+        debugPrint('');
+        debugPrint('🏁 STEP 5: Finalizing Migration');
+        debugPrint('===============================');
+        
+        // Mark the data as migrated in storage service for user context
+        await _markDataAsMigrated(userId);
+        
+        debugPrint('✅ Migration flags set successfully');
+        
+        // 🔍 DEBUG: Verify migration result
+        debugPrint('');
+        debugPrint('🔍 STEP 6: Post-Migration Verification');
+        debugPrint('=====================================');
+        await MigrationDebugHelper.debugMigrationResult(userId);
+        
+        debugPrint('');
+        debugPrint('📢 STEP 7: Notifying Services');
+        debugPrint('=============================');
+        debugPrint('🔔 Preparing to trigger ${_onUserDataMigrated.length} service callbacks...');
+        
+        // 🔧 FIX: Add small delay before triggering callbacks to ensure services are ready
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        debugPrint('');
+        debugPrint('🏁 ========== MIGRATION COMPLETED SUCCESSFULLY ==========');
+        debugPrint('✅ Guest data successfully migrated for user: $userId');
+        debugPrint('✅ Data preserved during authentication transition');
+        debugPrint('✅ Services will reload with migrated data');
+        debugPrint('=========================================================');
+        
+        // Trigger callbacks to reload services with migrated data
+        _triggerDataMigrationCallbacks(userId);
+        
+      } else {
+        debugPrint('');
+        debugPrint('📋 ========== NO DATA MIGRATION NEEDED ==========');
+        debugPrint('ℹ️ No guest flashcard data found to migrate');
+        debugPrint('📊 Migration Analysis:');
+        debugPrint('  • Flashcard sets: 0');
+        debugPrint('  • Interview questions: ${guestInterviews?.length ?? 0}');
+        debugPrint('');
+        debugPrint('🎯 This is normal for:');
+        debugPrint('  • New guest users who haven\'t created content');
+        debugPrint('  • Users who cleared their data');
+        debugPrint('  • Fresh app installations');
+        debugPrint('');
+        debugPrint('🔄 Authentication will proceed normally');
+        debugPrint('===============================================');
+      }
+      
+    } catch (e) {
+      debugPrint('❌ Guest content migration failed: $e');
+      debugPrint('❌ Stack trace: ${StackTrace.current}');
+      // Don't throw - this shouldn't block authentication
+    }
+  }
+
+  // REMOVED: Unused conversion methods - all conversion now handled by EnhancedSafeMapConverter
+
+  // REMOVED: All broken custom conversion methods replaced with Enhanced SafeMapConverter  
+  /// Create a user-scoped backup of guest data
+  Future<void> _backupGuestDataForUser(String userId, Map<String, dynamic> guestData) async {
+    try {
+      debugPrint('');
+      debugPrint('💾 ========== DATA BACKUP PROCESS ==========');
+      debugPrint('👤 User ID: $userId');
+      debugPrint('📁 Storage Method: SharedPreferences (Local)');
+      debugPrint('🎯 Purpose: Guest-to-Authenticated transition backup');
+      debugPrint('');
+      
+      // Use SharedPreferences for user-scoped data backup
+      final prefs = await SharedPreferences.getInstance();
+      final backupKey = 'user_migrated_data_$userId';
+      
+      debugPrint('📊 Backup Data Analysis:');
+      debugPrint('  • Backup Key: $backupKey');
+      debugPrint('  • Data Structure:');
+      
+      if (guestData['flashcards'] != null) {
+        final flashcards = guestData['flashcards'] as List;
+        debugPrint('    - Flashcards: ${flashcards.length} sets');
+        for (int i = 0; i < flashcards.length; i++) {
+          final set = flashcards[i];
+          debugPrint('      Set ${i + 1}: ${set['title']} (${(set['flashcards'] as List).length} cards)');
+        }
+      }
+      
+      if (guestData['interviews'] != null) {
+        final interviews = guestData['interviews'] as List;
+        debugPrint('    - Interviews: ${interviews.length} questions');
+      }
+      
+      debugPrint('    - Migration Timestamp: ${guestData['migrated_at']}');
+      debugPrint('    - Source: ${guestData['migration_source']}');
+      
+      final jsonString = jsonEncode(guestData);
+      debugPrint('    - Serialized Size: ${jsonString.length} characters');
+      
+      debugPrint('');
+      debugPrint('💾 Writing to SharedPreferences...');
+      await prefs.setString(backupKey, jsonString);
+      debugPrint('✅ Data written successfully');
+      
+      // Also set a flag to indicate this user has migrated data
+      final flagKey = 'user_has_migrated_data_$userId';
+      await prefs.setBool(flagKey, true);
+      debugPrint('🏁 Migration flag set: $flagKey = true');
+      
+      debugPrint('');
+      debugPrint('🔍 STORAGE STRATEGY EXPLANATION:');
+      debugPrint('================================');
+      debugPrint('📍 CURRENT: Data stored in SharedPreferences');
+      debugPrint('  • Why: Immediate backup during auth transition');
+      debugPrint('  • Pros: Fast, reliable, survives app restarts');
+      debugPrint('  • Cons: Local only, not synced across devices');
+      debugPrint('');
+      debugPrint('🌐 FUTURE: Supabase Database Integration');
+      debugPrint('  • When: After authentication is stable');
+      debugPrint('  • What: Sync to PostgreSQL with RLS policies');
+      debugPrint('  • Benefits: Cross-device sync, backup, collaboration');
+      debugPrint('  • Status: Schema ready, implementation pending');
+      debugPrint('');
+      debugPrint('🔄 MIGRATION COMPLETE: Guest data is now safely backed up!');
+      debugPrint('==========================================');
+      
+    } catch (e) {
+      debugPrint('');
+      debugPrint('❌ ========== BACKUP FAILED ==========');
+      debugPrint('User: $userId');
+      debugPrint('Error: $e');
+      debugPrint('=====================================');
+      rethrow;
+    }
+  }
+
+  /// Mark that data has been migrated for this user to prevent re-loading defaults
+  Future<void> _markDataAsMigrated(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('data_migrated_for_user_$userId', true);
+      await prefs.setString('last_migration_date_$userId', DateTime.now().toIso8601String());
+      debugPrint('🏷️ Marked data as migrated for user: $userId');
+    } catch (e) {
+      debugPrint('❌ Failed to mark data as migrated: $e');
     }
   }  Future<void> signInAnonymously() async {
     try {

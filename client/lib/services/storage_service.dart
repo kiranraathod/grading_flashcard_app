@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/enhanced_safe_map_converter.dart';
 
 /// Simple storage service using industry-standard Hive database
 /// 
@@ -16,24 +18,152 @@ class StorageService {
   
   /// Save flashcard sets data (atomic operation with built-in race protection)
   static Future<void> saveFlashcardSets(List<Map<String, dynamic>> sets) async {
-    debugPrint('StorageService: Saving ${sets.length} flashcard sets to Hive');
-    if (sets.isNotEmpty && sets[0]['flashcards'] != null && sets[0]['flashcards'].isNotEmpty) {
-      debugPrint('StorageService: First set first flashcard answer: ${sets[0]['flashcards'][0]['answer']}');
+    debugPrint('');
+    debugPrint('💾 ========== HIVE DATA SAVE OPERATION ==========');
+    debugPrint('🗃️ Storage: Hive database');
+    debugPrint('📁 Box: flashmaster_data');
+    debugPrint('🔑 Key: flashcard_sets');
+    debugPrint('📊 Data: ${sets.length} flashcard sets');
+    debugPrint('');
+    
+    debugPrint('📋 Save Operation Details:');
+    for (int i = 0; i < sets.length; i++) {
+      final set = sets[i];
+      final title = set['title'] ?? 'Untitled';
+      final cardCount = (set['flashcards'] as List?)?.length ?? 0;
+      debugPrint('  Set ${i + 1}: "$title" ($cardCount cards)');
     }
+    
+    if (sets.isNotEmpty && sets[0]['flashcards'] != null && sets[0]['flashcards'].isNotEmpty) {
+      final firstCard = sets[0]['flashcards'][0];
+      debugPrint('');
+      debugPrint('🔍 Sample Data Verification:');
+      debugPrint('  • First set: ${sets[0]['title']}');
+      debugPrint('  • First card question: ${firstCard['question']}');
+      debugPrint('  • First card answer: ${firstCard['answer']}');
+      debugPrint('  • First card completed: ${firstCard['isCompleted']}');
+    }
+    
+    debugPrint('');
+    debugPrint('💾 Writing to Hive database...');
     await _appBox.put('flashcard_sets', sets);
+    debugPrint('✅ Data saved successfully to Hive');
+    
+    debugPrint('');
+    debugPrint('🔄 SAVE OPERATION SUMMARY:');
+    debugPrint('=========================');
+    debugPrint('✅ Operation: Atomic write with race condition protection');
+    debugPrint('✅ Persistence: Data will survive app restarts');
+    debugPrint('✅ Availability: Immediately available for reads');
+    debugPrint('ℹ️ Cloud Sync: Not yet implemented (Hive → Supabase sync planned)');
+    debugPrint('========================================================');
   }
   
-  /// Get flashcard sets data
-  static List<Map<String, dynamic>>? getFlashcardSets() {
-    final data = _appBox.get('flashcard_sets');
-    final result = data?.cast<Map<String, dynamic>>();
+  /// Get flashcard sets data with user context support
+  static List<Map<String, dynamic>>? getFlashcardSets({String? userId}) {
+    debugPrint('');
+    debugPrint('📖 ========== HIVE DATA RETRIEVAL ==========');
+    debugPrint('🗃️ Storage: Hive database');
+    debugPrint('📁 Box: flashmaster_data');
+    debugPrint('🔑 Key: flashcard_sets');
+    debugPrint('👤 Context: ${userId ?? "Global/Guest"}');
+    debugPrint('');
     
-    debugPrint('StorageService: Loading ${result?.length ?? 0} flashcard sets from Hive');
-    if (result != null && result.isNotEmpty && result[0]['flashcards'] != null && result[0]['flashcards'].isNotEmpty) {
-      debugPrint('StorageService: First set first flashcard answer: ${result[0]['flashcards'][0]['answer']}');
+    // For now, just return the global data
+    // The user-specific migrated data will be handled by getUserMigratedData() async method
+    final data = _appBox.get('flashcard_sets');
+    
+    debugPrint('🔍 Raw Data Analysis:');
+    debugPrint('  • Data exists: ${data != null}');
+    debugPrint('  • Data type: ${data?.runtimeType ?? 'null'}');
+    
+    if (data != null) {
+      if (data is List) {
+        debugPrint('  • List length: ${data.length}');
+        debugPrint('  • Item types: ${data.isNotEmpty ? data.map((e) => e.runtimeType).toSet() : 'N/A'}');
+      }
     }
     
+    // 🔧 FIX: Use safe conversion instead of dangerous cast
+    List<Map<String, dynamic>>? result;
+    if (data != null) {
+      if (data is List<Map<String, dynamic>>) {
+        debugPrint('  • ✅ Data is already in correct format');
+        result = data;
+      } else if (data is List) {
+        debugPrint('  • 🔧 Converting LinkedMap data using Enhanced SafeMapConverter');
+        // Convert potentially problematic LinkedMap objects safely using Enhanced SafeMapConverter
+        result = EnhancedSafeMapConverter.safeConvertList(data);
+        debugPrint('  • ✅ Conversion completed: ${result.length} items');
+      }
+    }
+    
+    debugPrint('');
+    debugPrint('📊 Final Result:');
+    debugPrint('  • Sets returned: ${result?.length ?? 0}');
+    
+    if (result != null && result.isNotEmpty) {
+      debugPrint('  • Set details:');
+      for (int i = 0; i < result.length; i++) {
+        final set = result[i];
+        final title = set['title'] ?? 'Untitled';
+        final cardCount = (set['flashcards'] as List?)?.length ?? 0;
+        final completedCount = (set['flashcards'] as List?)
+            ?.where((card) => card['isCompleted'] == true)
+            .length ?? 0;
+        
+        debugPrint('    ${i + 1}. "$title": $completedCount/$cardCount completed');
+      }
+    }
+    
+    debugPrint('');
+    debugPrint('💾 STORAGE ARCHITECTURE NOTES:');
+    debugPrint('==============================');
+    debugPrint('🎯 CURRENT: Hive local storage (no Supabase sync yet)');
+    debugPrint('  • Read/Write: Direct to device storage');
+    debugPrint('  • Persistence: Survives app restarts');
+    debugPrint('  • Scope: Device-specific, not cloud synced');
+    debugPrint('');
+    debugPrint('🌐 PLANNED: Supabase database integration');
+    debugPrint('  • When: After migration system is stable');
+    debugPrint('  • What: Two-way sync between Hive and PostgreSQL');
+    debugPrint('  • Benefits: Cross-device sync, backup, collaboration');
+    debugPrint('========================================');
+
     return result;
+  }
+
+  /// Check if user has migrated data (synchronous check)
+  static Future<bool> hasUserMigratedData(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool('user_has_migrated_data_$userId') ?? false;
+    } catch (e) {
+      debugPrint('❌ Failed to check migration status: $e');
+      return false;
+    }
+  }
+
+  /// Get user-specific migrated data (async version)
+  static Future<Map<String, dynamic>?> getUserMigratedData(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final backupKey = 'user_migrated_data_$userId';
+      final dataString = prefs.getString(backupKey);
+      if (dataString != null) {
+        // 🔧 FIXED: Use Enhanced SafeMapConverter for safe JSON decoding
+        final data = EnhancedSafeMapConverter.jsonCycleConvert(dataString);
+        if (data != null) {
+          debugPrint('📚 Retrieved migrated data for user $userId: ${data['flashcards']?.length ?? 0} flashcard sets');
+          return data;
+        } else {
+          debugPrint('❌ Failed to safely decode migrated data for user $userId');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to get migrated data for user $userId: $e');
+    }
+    return null;
   }
   
   /// Save interview questions data (atomic operation with built-in race protection)

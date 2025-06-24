@@ -30,6 +30,7 @@ import 'services/initialization_coordinator.dart';
 import 'services/simple_error_handler.dart';
 import 'services/cache_manager.dart';
 import 'services/supabase_service.dart';
+import 'providers/working_auth_provider.dart';
 // 🆕 NEW UNIFIED IMPORTS
 import 'utils/storage_migration_utility.dart';
 
@@ -408,6 +409,50 @@ class _MyAppState extends State<MyApp> {
       'recentView': recentViewService,
       'jobDescription': jobDescriptionService,
     };
+
+    // 🔗 CRITICAL FIX: Connect auth provider to FlashcardService for data migration
+    debugPrint('🔗 Setting up auth-flashcard service connection...');
+    _setupAuthServiceConnection(flashcardService);
+  }
+
+  /// Set up connection between authentication and data services
+  void _setupAuthServiceConnection(FlashcardService flashcardService) {
+    // Store the flashcard service reference for direct connection after app initialization
+    _services['_flashcardService'] = flashcardService;
+    debugPrint('🔗 FlashcardService stored for auth connection setup');
+  }
+
+  /// Establish auth-service connection (called after widget tree is ready)
+  void _establishAuthConnection(WidgetRef ref) {
+    try {
+      final flashcardService = _services['_flashcardService'] as FlashcardService?;
+      final interviewService = _services['interview'] as InterviewService?;
+      
+      if (flashcardService != null) {
+        final authNotifier = ref.read(authNotifierProvider.notifier);
+        
+        // Register callback for when user data migration completes
+        authNotifier.onUserDataMigrated((String userId) {
+          debugPrint('🔄 Auth callback: Reloading FlashcardService for user $userId');
+          flashcardService.reloadForUser(userId);
+          
+          // Also reload InterviewService if available
+          if (interviewService != null) {
+            debugPrint('🔄 Auth callback: Reloading InterviewService for user $userId');
+            interviewService.reloadForUser(userId);
+          }
+        });
+        
+        debugPrint('✅ Auth-FlashcardService connection established successfully');
+        if (interviewService != null) {
+          debugPrint('✅ Auth-InterviewService connection established successfully');
+        }
+      } else {
+        debugPrint('❌ FlashcardService not found for auth connection');
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to establish auth connection: $e');
+    }
   }
 
   Widget _buildMainApp() {
@@ -508,47 +553,56 @@ class _MyAppState extends State<MyApp> {
               ),
             ],
             child: ErrorHandler(
-              child: provider.Consumer<ThemeProvider>(
-                builder:
-                    (
-                      context,
-                      themeProvider,
-                      _,
-                    ) => TweenAnimationBuilder<double>(
-                      duration: const Duration(milliseconds: 200),
-                      tween: Tween<double>(
-                        begin: themeProvider.isDarkMode ? 1.0 : 0.0,
-                        end: themeProvider.isDarkMode ? 1.0 : 0.0,
-                      ),
-                      builder:
-                          (context, value, child) => MaterialApp(
-                            title: 'FlashMaster',
-                            theme: lightTheme,
-                            darkTheme: darkTheme,
-                            themeMode: themeProvider.themeMode,
-                            themeAnimationDuration:
-                                Duration
-                                    .zero, // Disable theme animation to prevent lag
-                            home: const HomeScreen(),
-                            routes: {
-                              '/job-description-generator':
-                                  (context) =>
-                                      const JobDescriptionQuestionGeneratorScreen(),
-                              '/data-validation':
-                                  (context) => const DataValidationScreen(),
-                            },
-                            debugShowCheckedModeBanner: false,
-                            // Localization config
-                            locale: const Locale('en'),
-                            localizationsDelegates: const [
-                              AppLocalizations.delegate,
-                              GlobalMaterialLocalizations.delegate,
-                              GlobalWidgetsLocalizations.delegate,
-                              GlobalCupertinoLocalizations.delegate,
-                            ],
-                            supportedLocales: const [Locale('en')],
+              child: Consumer(
+                builder: (context, WidgetRef ref, _) {
+                  // 🔗 CRITICAL: Set up auth-service connection on first widget build
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _establishAuthConnection(ref);
+                  });
+                  
+                  return provider.Consumer<ThemeProvider>(
+                    builder:
+                        (
+                          context,
+                          themeProvider,
+                          _,
+                        ) => TweenAnimationBuilder<double>(
+                          duration: const Duration(milliseconds: 200),
+                          tween: Tween<double>(
+                            begin: themeProvider.isDarkMode ? 1.0 : 0.0,
+                            end: themeProvider.isDarkMode ? 1.0 : 0.0,
                           ),
-                    ),
+                          builder:
+                              (context, value, child) => MaterialApp(
+                                title: 'FlashMaster',
+                                theme: lightTheme,
+                                darkTheme: darkTheme,
+                                themeMode: themeProvider.themeMode,
+                                themeAnimationDuration:
+                                    Duration
+                                        .zero, // Disable theme animation to prevent lag
+                                home: const HomeScreen(),
+                                routes: {
+                                  '/job-description-generator':
+                                      (context) =>
+                                          const JobDescriptionQuestionGeneratorScreen(),
+                                  '/data-validation':
+                                      (context) => const DataValidationScreen(),
+                                },
+                                debugShowCheckedModeBanner: false,
+                                // Localization config
+                                locale: const Locale('en'),
+                                localizationsDelegates: const [
+                                  AppLocalizations.delegate,
+                                  GlobalMaterialLocalizations.delegate,
+                                  GlobalWidgetsLocalizations.delegate,
+                                  GlobalCupertinoLocalizations.delegate,
+                                ],
+                                supportedLocales: const [Locale('en')],
+                              ),
+                        ),
+                  );
+                },
               ),
             ),
           ),

@@ -32,6 +32,9 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     on<PreviousFlashcardRequested>(_onPreviousFlashcardRequested);
     on<DeckCompleted>(_onDeckCompleted);
     on<StudyResumedAfterAuth>(_onStudyResumedAfterAuth);
+    on<EditFlashcardSetRequested>(_onEditFlashcardSetRequested);
+    on<UpdateFlashcardSet>(_onUpdateFlashcardSet);
+    on<FlashcardMarkedForReview>(_onFlashcardMarkedForReview);
   }
 
   void _onStudyStarted(StudyStarted event, Emitter<StudyState> emit) {
@@ -359,5 +362,91 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     ));
     
     debugPrint('✅ Study session resumed - user can continue');
+  }
+
+  /// Handle edit flashcard set request
+  void _onEditFlashcardSetRequested(
+    EditFlashcardSetRequested event,
+    Emitter<StudyState> emit,
+  ) {
+    debugPrint('✏️ StudyBloc: Edit flashcard set requested');
+    
+    // Emit a state that indicates edit mode should be triggered
+    // The UI will handle the navigation to edit screen
+    emit(state.copyWith(
+      status: StudyStatus.editRequested,
+      gradedAnswer: null,
+    ));
+    
+    debugPrint('✅ Edit request processed - UI should handle navigation');
+  }
+
+  /// Handle flashcard set update
+  void _onUpdateFlashcardSet(
+    UpdateFlashcardSet event,
+    Emitter<StudyState> emit,
+  ) {
+    debugPrint('🔄 StudyBloc: Updating flashcard set');
+    
+    // Update the current flashcard set and refresh the state
+    emit(state.copyWith(
+      flashcardSet: event.flashcardSet,
+      status: StudyStatus.loaded,
+      gradedAnswer: null, // Clear any graded answer
+      currentIndex: 0, // Reset to first card after update
+    ));
+    
+    debugPrint('✅ Flashcard set updated - ${event.flashcardSet.flashcards.length} cards');
+  }
+
+  /// Handle marking flashcard for review
+  void _onFlashcardMarkedForReview(
+    FlashcardMarkedForReview event,
+    Emitter<StudyState> emit,
+  ) {
+    debugPrint('🔖 StudyBloc: ${event.isMarked ? "Marking" : "Unmarking"} card ${event.flashcard.id} for review');
+    
+    if (state.flashcardSet == null) {
+      debugPrint('❌ No flashcard set available for review marking');
+      return;
+    }
+
+    // Update the specific flashcard's review status
+    final updatedFlashcards = List<Flashcard>.from(state.flashcardSet!.flashcards);
+    final cardIndex = updatedFlashcards.indexWhere((card) => card.id == event.flashcard.id);
+    
+    if (cardIndex >= 0) {
+      final updatedCard = Flashcard(
+        id: updatedFlashcards[cardIndex].id,
+        question: updatedFlashcards[cardIndex].question,
+        answer: updatedFlashcards[cardIndex].answer,
+        isCompleted: updatedFlashcards[cardIndex].isCompleted,
+        isMarkedForReview: event.isMarked,
+      );
+      
+      updatedFlashcards[cardIndex] = updatedCard;
+      
+      // Create updated flashcard set
+      final updatedSet = state.flashcardSet!.copyWith(
+        flashcards: updatedFlashcards,
+        lastUpdated: DateTime.now(),
+      );
+      
+      emit(state.copyWith(
+        flashcardSet: updatedSet,
+        isMarkedForReview: event.isMarked,
+      ));
+      
+      // Save the updated set to storage
+      _flashcardService.updateSet(updatedSet).then((_) {
+        debugPrint('✅ Review status saved to storage');
+      }).catchError((error) {
+        debugPrint('❌ Failed to save review status: $error');
+      });
+      
+      debugPrint('✅ Card ${event.flashcard.id} ${event.isMarked ? "marked" : "unmarked"} for review');
+    } else {
+      debugPrint('❌ Card not found in set for review marking');
+    }
   }
 }

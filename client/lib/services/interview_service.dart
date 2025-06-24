@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/interview_question.dart';
 import '../models/question_set.dart';
 import 'default_data_service.dart';
 import 'storage_service.dart';
 import 'reliable_operation_service.dart';
+import '../utils/enhanced_safe_map_converter.dart';
 
 class InterviewService extends ChangeNotifier {
   List<InterviewQuestion> _questions = [];
@@ -15,10 +17,20 @@ class InterviewService extends ChangeNotifier {
 
   // Map to store user answers (questionId -> answer text)
   final Map<String, String> _userAnswers = {};
+  String? _currentUserId;
 
   // Constructor - automatically initialize
   InterviewService() {
     _initializeAsync();
+  }
+
+  /// Reload data for a specific user (called after authentication)
+  Future<void> reloadForUser(String? userId) async {
+    debugPrint('🔄 InterviewService: Reloading data for user: $userId');
+    debugPrint('🔄 InterviewService: Current questions count before reload: ${_questions.length}');
+    _currentUserId = userId;
+    await loadQuestionsFromStorage();
+    debugPrint('🔄 InterviewService: Current questions count after reload: ${_questions.length}');
   }
 
   // Async initialization
@@ -319,6 +331,16 @@ class InterviewService extends ChangeNotifier {
   Future<void> loadQuestionsFromStorage() async {
     await _reliableOps.withFallback(
       primary: () async {
+        // Check for user-specific migrated data first
+        if (_currentUserId != null) {
+          final migratedData = await StorageService.getUserMigratedData(_currentUserId!);
+          if (migratedData != null && migratedData['interviews'] != null) {
+            debugPrint('🔄 Loading migrated interview data for user: $_currentUserId');
+            await _loadMigratedData(migratedData['interviews']);
+            return;
+          }
+        }
+        
         debugPrint('Loading questions from storage...');
         final questionsData = StorageService.getInterviewQuestions();
 
@@ -342,6 +364,53 @@ class InterviewService extends ChangeNotifier {
       operationName: 'load_questions_from_storage',
     );
   }
+
+  /// Load migrated data from guest session
+  Future<void> _loadMigratedData(List<dynamic> migratedInterviews) async {
+    try {
+      debugPrint('🔄 InterviewService: Loading migrated data...');
+      
+      _questions = migratedInterviews
+          .map((data) => _safeConvertAndCreateQuestion(data))
+          .where((question) => question != null)
+          .cast<InterviewQuestion>()
+          .toList();
+      
+      debugPrint('✅ Loaded ${_questions.length} migrated interview questions');
+      
+      // Save to current storage for persistence
+      await _saveQuestionsToStorage();
+      notifyListeners();
+      
+    } catch (e) {
+      debugPrint('❌ Failed to load migrated interview data: $e');
+      // Fall back to loading from storage or defaults
+      await _loadDefaultQuestions();
+    }
+  }
+
+  /// FIXED: Safely convert data and create InterviewQuestion using Enhanced SafeMapConverter
+  InterviewQuestion? _safeConvertAndCreateQuestion(dynamic data) {
+    try {
+      if (data == null) return null;
+      
+      // Use Enhanced SafeMapConverter to handle LinkedMap conversion
+      final convertedData = EnhancedSafeMapConverter.safeConvert(data);
+      
+      if (convertedData == null) {
+        debugPrint('❌ Failed to convert interview question data');
+        return null;
+      }
+      
+      return InterviewQuestion.fromJson(convertedData);
+    } catch (e) {
+      debugPrint('❌ Error converting interview question data: $e');
+      return null;
+    }
+  }
+
+  // REMOVED: Custom conversion methods replaced with Enhanced SafeMapConverter
+  // All LinkedMap conversion is now handled by EnhancedSafeMapConverter.safeConvert()
 
   /// Add a new question with reliable storage
   Future<void> addQuestion(InterviewQuestion question) async {

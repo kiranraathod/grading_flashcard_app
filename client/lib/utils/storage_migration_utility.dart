@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/unified_usage_storage.dart';
+import '../services/storage_service.dart';
 import '../utils/config.dart';
 
 /// Utility for migrating from legacy storage systems to unified storage
@@ -254,9 +255,22 @@ class StorageMigrationUtility {
           final data = await UnifiedUsageStorage.getUsageData(userId);
           verification.verifiedUsers.add(userId);
           
-          // Check data integrity
+          // Check data integrity with more context
           if (data.actionCounts.isEmpty && data.dailyLimits.isEmpty) {
-            verification.warnings.add('User $userId has empty data');
+            // Check if this is a guest user with potential flashcard data
+            if (userId.startsWith('guest_')) {
+              // Check if flashcard data exists for guest users
+              final flashcards = StorageService.getFlashcardSets();
+              final hasFlashcardData = flashcards != null && flashcards.isNotEmpty;
+              
+              if (hasFlashcardData) {
+                verification.warnings.add('Guest $userId has empty usage tracking but flashcard data exists (${flashcards.length} sets)');
+              } else {
+                verification.warnings.add('Guest $userId has empty usage tracking and no flashcard data');
+              }
+            } else {
+              verification.warnings.add('User $userId has empty data');
+            }
           }
         } catch (e) {
           // Extract userId safely for error reporting
@@ -336,6 +350,58 @@ class StorageMigrationUtility {
     buffer.writeln('🏁 Migration completed at: ${DateTime.now()}');
     
     return buffer.toString();
+  }
+  
+  /// Debug helper: Analyze guest user data comprehensively
+  static Future<void> debugGuestUserData(String guestUserId) async {
+    try {
+      debugPrint('🔍 GUEST USER DATA ANALYSIS');
+      debugPrint('==============================');
+      debugPrint('Guest ID: $guestUserId');
+      
+      // Check usage tracking data
+      try {
+        final usageData = await UnifiedUsageStorage.getUsageData(guestUserId);
+        debugPrint('📊 Usage Tracking Data:');
+        debugPrint('  - Action counts: ${usageData.actionCounts.isNotEmpty ? usageData.actionCounts : "EMPTY"}');
+        debugPrint('  - Daily limits: ${usageData.dailyLimits.isNotEmpty ? usageData.dailyLimits : "EMPTY"}');
+      } catch (e) {
+        debugPrint('❌ No usage tracking data found: $e');
+      }
+      
+      // Check flashcard data
+      final flashcards = StorageService.getFlashcardSets();
+      debugPrint('📚 Flashcard Data:');
+      if (flashcards != null && flashcards.isNotEmpty) {
+        debugPrint('  - Found ${flashcards.length} flashcard sets');
+        for (int i = 0; i < flashcards.length; i++) {
+          final set = flashcards[i];
+          debugPrint('    Set ${i + 1}: ${set['title'] ?? "Untitled"} (${set['flashcards']?.length ?? 0} cards)');
+        }
+      } else {
+        debugPrint('  - No flashcard data found');
+      }
+      
+      // Check SharedPreferences for any guest-related keys
+      final prefs = await SharedPreferences.getInstance();
+      final allKeys = prefs.getKeys();
+      final guestKeys = allKeys.where((key) => key.contains(guestUserId) || key.contains('guest')).toList();
+      
+      debugPrint('🔑 Related Storage Keys:');
+      if (guestKeys.isNotEmpty) {
+        for (final key in guestKeys) {
+          debugPrint('  - $key');
+        }
+      } else {
+        debugPrint('  - No guest-related keys found');
+      }
+      
+      debugPrint('🏁 Analysis complete');
+      debugPrint('==============================');
+      
+    } catch (e) {
+      debugPrint('❌ Guest data analysis failed: $e');
+    }
   }
 }
 

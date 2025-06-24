@@ -10,18 +10,50 @@ class FlashcardService extends ChangeNotifier {
   final List<FlashcardSet> _sets = [];
   final DefaultDataService _defaultDataService = DefaultDataService();
   final ReliableOperationService _reliableOps = ReliableOperationService();
+  String? _currentUserId;
   
   List<FlashcardSet> get sets => List.unmodifiable(_sets);
+  String? get currentUserId => _currentUserId;
   
   FlashcardService() {
     _loadSets();
   }
 
-  /// Load sets with reliable operation patterns
+  /// Reload data for a specific user (called after authentication)
+  Future<void> reloadForUser(String? userId) async {
+    debugPrint('🔄 FlashcardService: Reloading data for user: $userId');
+    debugPrint('🔄 FlashcardService: Current sets count before reload: ${_sets.length}');
+    _currentUserId = userId;
+    await _loadSets();
+    debugPrint('🔄 FlashcardService: Current sets count after reload: ${_sets.length}');
+    
+    // Debug progress status after reload
+    for (int i = 0; i < _sets.length; i++) {
+      final set = _sets[i];
+      final completedCount = set.flashcards.where((card) => card.isCompleted).length;
+      final progressPercent = set.flashcards.isNotEmpty 
+          ? (completedCount / set.flashcards.length * 100).round() 
+          : 0;
+      debugPrint('🔄 Set ${i + 1}: "${set.title}" - Progress: $completedCount/${set.flashcards.length} ($progressPercent%)');
+    }
+  }
+
+  /// Load sets with reliable operation patterns and user context
   Future<void> _loadSets() async {
     await _reliableOps.withFallback(
       primary: () async {
-        final setsData = StorageService.getFlashcardSets();
+        // Check for user-specific migrated data first
+        if (_currentUserId != null) {
+          final migratedData = await StorageService.getUserMigratedData(_currentUserId!);
+          if (migratedData != null && migratedData['flashcards'] != null) {
+            debugPrint('📚 Loading migrated flashcard data for user: $_currentUserId');
+            await _loadMigratedData(migratedData['flashcards']);
+            return;
+          }
+        }
+        
+        // Fall back to regular storage loading
+        final setsData = StorageService.getFlashcardSets(userId: _currentUserId);
 
         if (setsData != null && setsData.isNotEmpty) {
           _sets.clear();
@@ -42,6 +74,44 @@ class FlashcardService extends ChangeNotifier {
       },
       operationName: 'load_flashcard_sets',
     );
+  }
+
+  /// Load migrated data from guest session
+  Future<void> _loadMigratedData(List<dynamic> migratedFlashcards) async {
+    try {
+      debugPrint('🔄 FlashcardService: Loading migrated data...');
+      debugPrint('  - Migrated data type: ${migratedFlashcards.runtimeType}');
+      debugPrint('  - Migrated data count: ${migratedFlashcards.length}');
+      
+      _sets.clear();
+      for (final data in migratedFlashcards) {
+        if (data is Map<String, dynamic>) {
+          final flashcardSet = FlashcardSet.fromJson(data);
+          _sets.add(flashcardSet);
+          debugPrint('  - Loaded set: "${flashcardSet.title}" with ${flashcardSet.flashcards.length} cards');
+          
+          // Debug progress of migrated flashcards
+          final completedCount = flashcardSet.flashcards.where((card) => card.isCompleted).length;
+          final progressPercent = flashcardSet.flashcards.isNotEmpty 
+              ? (completedCount / flashcardSet.flashcards.length * 100).round() 
+              : 0;
+          debugPrint('  - Progress: $completedCount/${flashcardSet.flashcards.length} ($progressPercent%)');
+        } else {
+          debugPrint('❌ Invalid migrated data type: ${data.runtimeType}');
+        }
+      }
+      debugPrint('✅ Loaded ${_sets.length} migrated flashcard sets for user $_currentUserId');
+      
+      // Save the migrated data to regular storage for persistence
+      await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
+      
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ Failed to load migrated data: $e');
+      debugPrint('❌ Stack trace: ${StackTrace.current}');
+      // Fall back to default data
+      await _loadDefaultData();
+    }
   }
 
   /// Load default data with cascading fallback strategy

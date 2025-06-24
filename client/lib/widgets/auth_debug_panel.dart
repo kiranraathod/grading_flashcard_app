@@ -8,6 +8,8 @@ import '../providers/unified_action_tracking_provider.dart';
 import '../models/simple_auth_state.dart';
 import '../services/supabase_service.dart';
 import '../services/unified_usage_limit_enforcer.dart';
+import '../services/storage_service.dart';
+import '../services/unified_usage_storage.dart';
 import '../utils/config.dart';
 
 /// Authentication Debug Panel migrated to Riverpod
@@ -301,6 +303,84 @@ class _AuthDebugPanelState extends ConsumerState<AuthDebugPanel> {
                     ],
                   ),
                 ),
+
+                // Guest Data Analysis Section (for debugging "empty data" warnings)
+                if (!isAuthenticated && guestId != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.analytics,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.onErrorContainer,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Guest Data Analysis',
+                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onErrorContainer,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        FutureBuilder<Map<String, dynamic>>(
+                          future: _analyzeGuestData(guestId),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Text('Analyzing guest data...');
+                            }
+                            
+                            if (snapshot.hasError) {
+                              return Text('Error: ${snapshot.error}');
+                            }
+                            
+                            final analysis = snapshot.data!;
+                            final hasFlashcards = analysis['hasFlashcards'] as bool;
+                            final flashcardCount = analysis['flashcardCount'] as int;
+                            final hasUsageData = analysis['hasUsageData'] as bool;
+                            final warningLevel = analysis['warningLevel'] as String;
+                            final explanation = analysis['explanation'] as String;
+                            
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildGuestDataRow(context, 'Flashcard Data', 
+                                  hasFlashcards ? '$flashcardCount sets' : 'None', hasFlashcards),
+                                _buildGuestDataRow(context, 'Usage Tracking', 
+                                  hasUsageData ? 'Present' : 'Empty', hasUsageData),
+                                _buildGuestDataRow(context, 'Warning Level', warningLevel, 
+                                  warningLevel != 'Critical'),
+                                const SizedBox(height: 8),
+                                Text(
+                                  explanation,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onErrorContainer,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -416,6 +496,96 @@ class _AuthDebugPanelState extends ConsumerState<AuthDebugPanel> {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w500,
                 color: Theme.of(context).colorScheme.primary,
+              ),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Helper method to analyze guest data for debugging "empty data" warnings
+  Future<Map<String, dynamic>> _analyzeGuestData(String guestId) async {
+    try {
+      // Check flashcard data
+      final flashcards = StorageService.getFlashcardSets();
+      final hasFlashcards = flashcards != null && flashcards.isNotEmpty;
+      final flashcardCount = flashcards?.length ?? 0;
+      
+      // Check usage tracking data
+      bool hasUsageData = false;
+      try {
+        final data = await UnifiedUsageStorage.getUsageData(guestId);
+        hasUsageData = data.actionCounts.isNotEmpty || data.dailyLimits.isNotEmpty;
+      } catch (e) {
+        hasUsageData = false;
+      }
+      
+      // Determine warning level and explanation
+      String warningLevel;
+      String explanation;
+      
+      if (hasFlashcards && !hasUsageData) {
+        warningLevel = 'Informational';
+        explanation = 'Your flashcard data exists and is safe. The "empty data" warning only refers to missing usage tracking, not your actual cards.';
+      } else if (hasFlashcards && hasUsageData) {
+        warningLevel = 'None';
+        explanation = 'All data is present. No warnings expected during migration.';
+      } else if (!hasFlashcards && !hasUsageData) {
+        warningLevel = 'Critical';
+        explanation = 'No data found. This guest user appears to be genuinely empty.';
+      } else {
+        warningLevel = 'Unusual';
+        explanation = 'Usage data exists but no flashcards found. This is unexpected.';
+      }
+      
+      return {
+        'hasFlashcards': hasFlashcards,
+        'flashcardCount': flashcardCount,
+        'hasUsageData': hasUsageData,
+        'warningLevel': warningLevel,
+        'explanation': explanation,
+      };
+    } catch (e) {
+      return {
+        'hasFlashcards': false,
+        'flashcardCount': 0,
+        'hasUsageData': false,
+        'warningLevel': 'Error',
+        'explanation': 'Failed to analyze guest data: $e',
+      };
+    }
+  }
+
+  /// Helper method to build guest data analysis rows
+  Widget _buildGuestDataRow(BuildContext context, String label, String value, bool isPositive) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(
+            isPositive ? Icons.check_circle : Icons.warning,
+            size: 14,
+            color: isPositive ? Colors.green : Colors.orange,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 2,
+            child: Text(
+              label, 
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: isPositive ? Colors.green : Colors.orange,
               ),
               textAlign: TextAlign.end,
             ),

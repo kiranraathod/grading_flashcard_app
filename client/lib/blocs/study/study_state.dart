@@ -3,7 +3,7 @@ import '../../models/answer.dart';
 import '../../models/flashcard.dart';
 import '../../models/flashcard_set.dart';
 
-enum StudyStatus { initial, loading, loaded, answering, grading, authenticationRequired, completed, error }
+enum StudyStatus { initial, loading, loaded, answering, grading, authenticationRequired, editRequested, completed, error }
 
 class StudyState extends Equatable {
   final StudyStatus status;
