@@ -186,4 +186,52 @@ class StorageService {
   static Future<void> clear() async {
     await _appBox.clear();
   }
+
+  /// UUID Mapping storage for Flashcards
+  static const String _uuidMappingsKey = 'uuid_mappings';
+  static const String _interviewUuidMappingsKey = 'interview_uuid_mappings';
+
+  /// Save UUID mappings for flashcard sets and cards
+  static Future<void> saveUuidMappings(Map<String, String> mappings) async {
+    try {
+      await _appBox.put(_uuidMappingsKey, mappings);
+    } catch (e) {
+      debugPrint('Error saving UUID mappings: $e');
+    }
+  }
+
+  /// Get UUID mappings for flashcard sets and cards
+  static Future<Map<String, String>?> getUuidMappings() async {
+    try {
+      final data = _appBox.get(_uuidMappingsKey);
+      if (data != null) {
+        return Map<String, String>.from(data);
+      }
+    } catch (e) {
+      debugPrint('Error loading UUID mappings: $e');
+    }
+    return null;
+  }
+
+  /// Save UUID mappings for interview questions
+  static Future<void> saveInterviewUuidMappings(Map<String, String> mappings) async {
+    try {
+      await _appBox.put(_interviewUuidMappingsKey, mappings);
+    } catch (e) {
+      debugPrint('Error saving interview UUID mappings: $e');
+    }
+  }
+
+  /// Get UUID mappings for interview questions
+  static Future<Map<String, String>?> getInterviewUuidMappings() async {
+    try {
+      final data = _appBox.get(_interviewUuidMappingsKey);
+      if (data != null) {
+        return Map<String, String>.from(data);
+      }
+    } catch (e) {
+      debugPrint('Error loading interview UUID mappings: $e');
+    }
+    return null;
+  }
 }

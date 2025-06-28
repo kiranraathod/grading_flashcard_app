@@ -64,13 +64,22 @@ class AuthenticationService extends ChangeNotifier {
       () async {
         debugPrint('Initializing AuthenticationService...');
         
+        // Check if Supabase client is available
+        if (_supabaseService.client == null) {
+          debugPrint('⚠️ Supabase client not available, authentication disabled');
+          _authState = AuthState.unauthenticated;
+          _isInitialized = true;
+          notifyListeners();
+          return;
+        }
+        
         // Listen to auth state changes
-        _supabaseService.client.auth.onAuthStateChange.listen((data) {
+        _supabaseService.client!.auth.onAuthStateChange.listen((data) {
           _handleAuthStateChange(data.event, data.session);
         });
         
         // Check current session
-        final session = _supabaseService.client.auth.currentSession;
+        final session = _supabaseService.client!.auth.currentSession;
         if (session != null) {
           _currentUser = session.user;
           _authState = AuthState.authenticated;
@@ -130,8 +139,13 @@ class AuthenticationService extends ChangeNotifier {
         _errorMessage = null;
         notifyListeners();
         
+        if (_supabaseService.client == null) {
+          debugPrint('⚠️ Supabase client not available');
+          return false;
+        }
+        
         try {
-          await _supabaseService.client.auth.signInWithPassword(
+          await _supabaseService.client!.auth.signInWithPassword(
             email: email,
             password: password,
           );
@@ -177,8 +191,13 @@ class AuthenticationService extends ChangeNotifier {
         _errorMessage = null;
         notifyListeners();
         
+        if (_supabaseService.client == null) {
+          debugPrint('⚠️ Supabase client not available');
+          return false;
+        }
+        
         try {
-          final response = await _supabaseService.client.auth.signUp(
+          final response = await _supabaseService.client!.auth.signUp(
             email: email,
             password: password,
           );
@@ -264,11 +283,16 @@ class AuthenticationService extends ChangeNotifier {
         _errorMessage = null;
         notifyListeners();
         
+        if (_supabaseService.client == null) {
+          debugPrint('⚠️ Supabase client not available');
+          return false;
+        }
+        
         try {
           debugPrint('🔍 Starting Google OAuth sign-in...');
           
           // For web applications, use the current URL as redirect
-          await _supabaseService.client.auth.signInWithOAuth(
+          await _supabaseService.client!.auth.signInWithOAuth(
             OAuthProvider.google,
             redirectTo: kIsWeb ? null : 'your-app://auth-callback',
           );
@@ -299,7 +323,12 @@ class AuthenticationService extends ChangeNotifier {
     
     return await SimpleErrorHandler.safe<bool>(
       () async {
-        await _supabaseService.client.auth.signOut();
+        if (_supabaseService.client == null) {
+          debugPrint('⚠️ Supabase client not available');
+          return false;
+        }
+        
+        await _supabaseService.client!.auth.signOut();
         debugPrint('User signed out successfully');
         return true;
       },
@@ -322,7 +351,12 @@ class AuthenticationService extends ChangeNotifier {
     
     return await SimpleErrorHandler.safe<bool>(
       () async {
-        await _supabaseService.client.auth.resetPasswordForEmail(email);
+        if (_supabaseService.client == null) {
+          debugPrint('⚠️ Supabase client not available');
+          return false;
+        }
+        
+        await _supabaseService.client!.auth.resetPasswordForEmail(email);
         debugPrint('Password reset email sent to: $email');
         return true;
       },

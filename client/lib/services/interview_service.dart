@@ -6,14 +6,19 @@ import '../models/question_set.dart';
 import 'default_data_service.dart';
 import 'storage_service.dart';
 import 'reliable_operation_service.dart';
+import 'supabase_service.dart';
 import '../utils/enhanced_safe_map_converter.dart';
+import 'package:uuid/uuid.dart';  // ✅ ADD UUID IMPORT
 
 class InterviewService extends ChangeNotifier {
+  static const _uuid = Uuid();  // ✅ ADD UUID INSTANCE
   List<InterviewQuestion> _questions = [];
   final List<QuestionSet> _questionSets = [];
   final DefaultDataService _defaultDataService = DefaultDataService();
   final ReliableOperationService _reliableOps = ReliableOperationService();
+  final SupabaseService _supabaseService = SupabaseService.instance;
   bool _isInitialized = false;
+  bool _isSyncing = false;
 
   // Map to store user answers (questionId -> answer text)
   final Map<String, String> _userAnswers = {};
@@ -22,6 +27,32 @@ class InterviewService extends ChangeNotifier {
   // Constructor - automatically initialize
   InterviewService() {
     _initializeAsync();
+    
+    // Listen to Supabase sync status
+    _supabaseService.addListener(_onSyncStatusChanged);
+  }
+  
+  void _onSyncStatusChanged() {
+    if (_supabaseService.syncStatus == SyncStatus.synced) {
+      _loadQuestionsFromCloud();
+    }
+    notifyListeners();
+  }
+
+  /// Ensure ID is valid UUID format
+  String _ensureValidUuid(String id) {
+    try {
+      return Uuid.parse(id).toString();
+    } catch (e) {
+      return _uuid.v4();
+    }
+  }
+
+  /// Store UUID mapping for interviews
+  Future<void> _storeUuidMapping(String localId, String cloudUuid) async {
+    final mappings = await StorageService.getInterviewUuidMappings() ?? <String, String>{};
+    mappings[localId] = cloudUuid;
+    await StorageService.saveInterviewUuidMappings(mappings);
   }
 
   /// Reload data for a specific user (called after authentication)
@@ -31,6 +62,116 @@ class InterviewService extends ChangeNotifier {
     _currentUserId = userId;
     await loadQuestionsFromStorage();
     debugPrint('🔄 InterviewService: Current questions count after reload: ${_questions.length}');
+    
+    // Initialize sync if user is authenticated
+    if (_supabaseService.isAuthenticated && _supabaseService.isOnline) {
+      await _syncWithCloud();
+    }
+  }
+
+  /// Load questions from cloud (called by sync status listener)
+  Future<void> _loadQuestionsFromCloud() async {
+    if (!_supabaseService.isAuthenticated) return;
+
+    try {
+      final response = await _supabaseService.client!
+          .from('interview_questions')
+          .select('*')
+          .eq('user_id', _supabaseService.currentUserId!)
+          .eq('is_deleted', false)
+          .order('updated_at', ascending: false);
+
+      final cloudQuestions = response.map<InterviewQuestion>((json) {
+        return InterviewQuestion.fromJson(json);
+      }).toList();
+
+      _questions.clear();
+      _questions.addAll(cloudQuestions);
+
+      // Save to local storage
+      await _saveQuestionsToStorage();
+
+      notifyListeners();
+      debugPrint('📱 Loaded ${_questions.length} interview questions from cloud');
+
+    } catch (e) {
+      debugPrint('❌ Error loading questions from cloud: $e');
+    }
+  }
+
+  /// Sync with cloud (upload local changes and download updates)
+  Future<void> _syncWithCloud() async {
+    if (_isSyncing || !_supabaseService.isAuthenticated) return;
+
+    _isSyncing = true;
+    notifyListeners();
+
+    try {
+      // Upload local changes to cloud
+      for (final question in _questions) {
+        if (_needsSync(question)) {
+          await _uploadQuestionToCloud(question);
+        }
+      }
+
+      // Download latest from cloud
+      await _loadQuestionsFromCloud();
+
+    } catch (e) {
+      debugPrint('❌ Interview sync error: $e');
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
+    }
+  }
+
+  /// Check if question needs syncing
+  bool _needsSync(InterviewQuestion question) {
+    // Implement logic to determine if question needs syncing
+    // This could be based on a local "dirty" flag or timestamp comparison
+    return true; // Simplified for now
+  }
+
+  /// Upload question to cloud
+  Future<void> _uploadQuestionToCloud(InterviewQuestion question) async {
+    try {
+      String questionUuid = _ensureValidUuid(question.id);
+      
+      // Upload to interview_questions table (NO is_completed here)
+      await _supabaseService.client!
+          .from('interview_questions')
+          .upsert({
+            'id': questionUuid,
+            'user_id': _supabaseService.currentUserId!,
+            'question_text': question.text,
+            'category': question.category,
+            'subtopic': question.subtopic,
+            'difficulty': question.difficulty,
+            'suggested_answer': question.answer,
+            'is_favorite': question.isStarred, // Map isStarred to is_favorite
+            'is_draft': question.isDraft,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+
+      // Handle completion status in separate user_progress table
+      if (question.isCompleted) {
+        await _supabaseService.client!
+            .from('user_progress')
+            .upsert({
+              'user_id': _supabaseService.currentUserId!,
+              'interview_question_id': questionUuid, // Use the new column
+              'is_completed': question.isCompleted,
+              'updated_at': DateTime.now().toIso8601String(),
+            });
+      }
+
+      // Store UUID mapping
+      await _storeUuidMapping(question.id, questionUuid);
+      
+    } catch (e) {
+      debugPrint('❌ Error uploading question to cloud: $e');
+      rethrow;
+    }
   }
 
   // Async initialization
@@ -412,7 +553,7 @@ class InterviewService extends ChangeNotifier {
   // REMOVED: Custom conversion methods replaced with Enhanced SafeMapConverter
   // All LinkedMap conversion is now handled by EnhancedSafeMapConverter.safeConvert()
 
-  /// Add a new question with reliable storage
+  /// Add a new question with reliable storage and cloud sync
   Future<void> addQuestion(InterviewQuestion question) async {
     await _reliableOps.safely(
       operation: () async {
@@ -420,12 +561,17 @@ class InterviewService extends ChangeNotifier {
         await _saveQuestionsToStorage();
         notifyListeners();
         debugPrint('Added question: ${question.text}');
+        
+        // Sync to cloud if authenticated and online
+        if (_supabaseService.isOnline && _supabaseService.isAuthenticated) {
+          _syncWithCloud();
+        }
       },
       operationName: 'add_question',
     );
   }
 
-  /// Update an existing question with reliable storage
+  /// Update an existing question with reliable storage and cloud sync
   Future<void> updateQuestion(InterviewQuestion updatedQuestion) async {
     await _reliableOps.safely(
       operation: () async {
@@ -435,13 +581,18 @@ class InterviewService extends ChangeNotifier {
           await _saveQuestionsToStorage();
           notifyListeners();
           debugPrint('Updated question: ${updatedQuestion.id}');
+          
+          // Sync to cloud if authenticated and online
+          if (_supabaseService.isOnline && _supabaseService.isAuthenticated) {
+            _syncWithCloud();
+          }
         }
       },
       operationName: 'update_question',
     );
   }
 
-  /// Delete a question with reliable storage
+  /// Delete a question with reliable storage and cloud sync
   Future<void> deleteQuestion(String questionId) async {
     await _reliableOps.safely(
       operation: () async {
@@ -449,6 +600,20 @@ class InterviewService extends ChangeNotifier {
         await _saveQuestionsToStorage();
         notifyListeners();
         debugPrint('Deleted question: $questionId');
+        
+        // Soft delete from cloud using is_deleted column
+        if (_supabaseService.isAuthenticated) {
+          try {
+            String questionUuid = _ensureValidUuid(questionId);
+            await _supabaseService.client!
+                .from('interview_questions')
+                .update({'is_deleted': true, 'updated_at': DateTime.now().toIso8601String()})
+                .eq('id', questionUuid);
+            debugPrint('✅ Soft deleted interview question from cloud: $questionId');
+          } catch (e) {
+            debugPrint('❌ Error marking question as deleted in cloud: $e');
+          }
+        }
       },
       operationName: 'delete_question',
     );
@@ -832,5 +997,11 @@ class InterviewService extends ChangeNotifier {
       },
       operationName: 'delete_question_set',
     );
+  }
+
+  @override
+  void dispose() {
+    _supabaseService.removeListener(_onSyncStatusChanged);
+    super.dispose();
   }
 }

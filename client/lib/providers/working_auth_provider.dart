@@ -13,7 +13,7 @@ import '../utils/enhanced_safe_map_converter.dart';
 
 /// Simple authentication notifier
 class SimpleAuthNotifier extends StateNotifier<AuthState> {
-  late final SupabaseClient _supabase;
+  SupabaseClient? _supabase;
   
   // Callback for data migration completion
   final List<Function(String userId)> _onUserDataMigrated = [];
@@ -95,7 +95,7 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
       state = const AuthStateLoading();
       
       // Check for existing Supabase session
-      final session = _supabase.auth.currentSession;
+      final session = _supabase?.auth.currentSession;
       if (session != null) {
         debugPrint('Found existing session for: ${session.user.email}');
         state = AuthStateAuthenticated(session.user);
@@ -115,7 +115,7 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
       state = const AuthStateUnauthenticated();
       
       // Listen to Supabase auth changes
-      _supabase.auth.onAuthStateChange.listen((data) {
+      _supabase?.auth.onAuthStateChange.listen((data) {
         _handleAuthStateChange(data.event, data.session);
       });
       
@@ -431,7 +431,11 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
     try {
       state = const AuthStateLoading();
       
-      final response = await _supabase.auth.signInAnonymously();
+      if (_supabase == null) {
+        throw Exception('Supabase client not initialized');
+      }
+      
+      final response = await _supabase!.auth.signInAnonymously();
       if (response.user != null) {
         final guestId = response.user!.id;
         await WorkingSecureAuthStorage.storeGuestData(guestId, {
@@ -452,7 +456,11 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
     try {
       state = const AuthStateLoading();
       
-      await _supabase.auth.signInWithPassword(
+      if (_supabase == null) {
+        throw Exception('Supabase client not initialized');
+      }
+      
+      await _supabase!.auth.signInWithPassword(
         email: email,
         password: password,
       );
@@ -468,7 +476,11 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
     try {
       state = const AuthStateLoading();
       
-      final response = await _supabase.auth.signUp(
+      if (_supabase == null) {
+        throw Exception('Supabase client not initialized');
+      }
+      
+      final response = await _supabase!.auth.signUp(
         email: email,
         password: password,
       );
@@ -489,7 +501,11 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
     try {
       state = const AuthStateLoading();
       
-      await _supabase.auth.signInWithOAuth(
+      if (_supabase == null) {
+        throw Exception('Supabase client not initialized');
+      }
+      
+      await _supabase!.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: kIsWeb ? null : 'your-app://auth-callback',
       );
@@ -532,7 +548,9 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> signOut() async {
     try {
-      await _supabase.auth.signOut();
+      if (_supabase != null) {
+        await _supabase!.auth.signOut();
+      }
       await WorkingSecureAuthStorage.clearSession();
       state = const AuthStateUnauthenticated();
       debugPrint('✅ Sign out successful');
@@ -544,7 +562,11 @@ class SimpleAuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> resetPassword(String email) async {
     try {
-      await _supabase.auth.resetPasswordForEmail(email);
+      if (_supabase == null) {
+        throw Exception('Supabase client not initialized');
+      }
+      
+      await _supabase!.auth.resetPasswordForEmail(email);
       debugPrint('✅ Password reset email sent: $email');
     } catch (e) {
       debugPrint('❌ Password reset failed: $e');

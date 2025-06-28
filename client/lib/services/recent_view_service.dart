@@ -7,6 +7,7 @@ import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
 import '../models/interview_question.dart';
 import 'reliable_operation_service.dart';
+import 'supabase_service.dart';
 
 class RecentViewService {
   static const String _storageKey = 'recently_viewed_items';
@@ -19,9 +20,18 @@ class RecentViewService {
     return _instance;
   }
   
-  RecentViewService._internal();
+  RecentViewService._internal() {
+    // Listen to Supabase sync status for recent activity sync
+    _supabaseService.addListener(_onSyncStatusChanged);
+  }
   
   final ReliableOperationService _reliableOps = ReliableOperationService();
+  final SupabaseService _supabaseService = SupabaseService.instance;
+
+  void _onSyncStatusChanged() {
+    // Recent view sync is less critical, so we only sync when explicitly triggered
+    // The activity data will sync periodically through the unified action tracker
+  }
 
   /// Record a view of a flashcard with reliable operation
   Future<void> recordFlashcardView({
@@ -293,5 +303,43 @@ class RecentViewService {
       'maxItemsToStore': _maxItemsToStore,
       'implementedMethods': 8,
     };
+  }
+
+  /// Sync recent activity to cloud (for analytics and cross-device tracking)
+  Future<void> syncRecentActivity() async {
+    if (!_supabaseService.isAuthenticated) return;
+
+    await _reliableOps.safely(
+      operation: () async {
+        final recentItems = await getRecentlyViewedItems();
+        
+        for (final item in recentItems) {
+          try {
+            await _supabaseService.client!
+                .from('user_activity')
+                .upsert({
+                  'user_id': _supabaseService.currentUserId!,
+                  'activity_type': item.type.toString(),
+                  'content_id': item.itemId,
+                  'content_title': item.question,
+                  'category': item.parentId,
+                  'viewed_at': item.viewedAt.toIso8601String(),
+                  'updated_at': DateTime.now().toIso8601String(),
+                });
+          } catch (e) {
+            debugPrint('❌ Error syncing activity item: $e');
+            // Continue with other items even if one fails
+          }
+        }
+        
+        debugPrint('📱 Synced ${recentItems.length} recent activity items to cloud');
+      },
+      operationName: 'sync_recent_activity',
+    );
+  }
+
+  /// Clean up resources
+  void dispose() {
+    _supabaseService.removeListener(_onSyncStatusChanged);
   }
 }

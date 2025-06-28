@@ -4,18 +4,50 @@ import '../models/flashcard_set.dart';
 import 'default_data_service.dart';
 import 'storage_service.dart';
 import 'simple_error_handler.dart';
+import 'supabase_service.dart';
 import 'dart:async';
+import 'package:uuid/uuid.dart';  // ✅ ADD UUID IMPORT
 
 class FlashcardService extends ChangeNotifier {
+  static const _uuid = Uuid();  // ✅ ADD UUID INSTANCE
   final List<FlashcardSet> _sets = [];
   final DefaultDataService _defaultDataService = DefaultDataService();
+  final SupabaseService _supabaseService = SupabaseService.instance;
   String? _currentUserId;
+  bool _isSyncing = false;
   
   List<FlashcardSet> get sets => List.unmodifiable(_sets);
   String? get currentUserId => _currentUserId;
+  bool get isSyncing => _isSyncing;
   
   FlashcardService() {
     _loadSets();
+    
+    // Listen to Supabase sync status
+    _supabaseService.addListener(_onSyncStatusChanged);
+  }
+  
+  void _onSyncStatusChanged() {
+    if (_supabaseService.syncStatus == SyncStatus.synced) {
+      _loadSetsFromCloud();
+    }
+    notifyListeners();
+  }
+
+  /// Ensure ID is valid UUID format, generate new one if needed
+  String _ensureValidUuid(String id) {
+    try {
+      return Uuid.parse(id).toString();
+    } catch (e) {
+      return _uuid.v4();
+    }
+  }
+
+  /// Store mapping between local string ID and cloud UUID
+  Future<void> _storeUuidMapping(String localId, String cloudUuid) async {
+    final mappings = await StorageService.getUuidMappings() ?? <String, String>{};
+    mappings[localId] = cloudUuid;
+    await StorageService.saveUuidMappings(mappings);
   }
 
   /// Reload data for a specific user (called after authentication)
@@ -34,6 +66,11 @@ class FlashcardService extends ChangeNotifier {
           ? (completedCount / set.flashcards.length * 100).round() 
           : 0;
       debugPrint('🔄 Set ${i + 1}: "${set.title}" - Progress: $completedCount/${set.flashcards.length} ($progressPercent%)');
+    }
+    
+    // Initialize sync if user is authenticated
+    if (_supabaseService.isAuthenticated && _supabaseService.isOnline) {
+      await _syncWithCloud();
     }
   }
 
@@ -66,6 +103,11 @@ class FlashcardService extends ChangeNotifier {
         }
         
         notifyListeners();
+        
+        // Try to sync with cloud if authenticated and online
+        if (_supabaseService.isAuthenticated && _supabaseService.isOnline) {
+          _syncWithCloud();
+        }
       },
       fallbackOperation: () async {
         debugPrint('Error loading flashcard sets, falling back to default data');
@@ -205,28 +247,26 @@ class FlashcardService extends ChangeNotifier {
     );
   }
 
-  /// Add set with reliable storage
+  /// Add set with reliable storage and sync
   Future<void> addSet(FlashcardSet set) async {
     await SimpleErrorHandler.safe<void>(
       () async {
         _sets.add(set);
-        await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
-        notifyListeners();
+        await _saveAndSync();
         debugPrint('Added flashcard set: ${set.title}');
       },
       operationName: 'add_flashcard_set',
     );
   }
 
-  /// Update set with reliable storage
+  /// Update set with reliable storage and sync
   Future<void> updateSet(FlashcardSet updatedSet) async {
     await SimpleErrorHandler.safe<void>(
       () async {
         final index = _sets.indexWhere((set) => set.id == updatedSet.id);
         if (index >= 0) {
           _sets[index] = updatedSet;
-          await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
-          notifyListeners();
+          await _saveAndSync();
           debugPrint('Updated flashcard set: ${updatedSet.title}');
         }
       },
@@ -234,13 +274,27 @@ class FlashcardService extends ChangeNotifier {
     );
   }
 
-  /// Delete set with reliable storage
+  /// Delete set with reliable storage and sync
   Future<void> deleteSet(FlashcardSet set) async {
     await SimpleErrorHandler.safe<void>(
       () async {
         _sets.removeWhere((s) => s.id == set.id);
-        await StorageService.saveFlashcardSets(_sets.map((s) => s.toJson()).toList());
-        notifyListeners();
+        await _saveAndSync();
+        
+        // Soft delete from cloud using is_deleted column
+        if (_supabaseService.isAuthenticated) {
+          try {
+            String setUuid = _ensureValidUuid(set.id);
+            await _supabaseService.client!
+                .from('flashcard_sets')
+                .update({'is_deleted': true, 'updated_at': DateTime.now().toIso8601String()})
+                .eq('id', setUuid);
+            debugPrint('✅ Soft deleted flashcard set from cloud: ${set.title}');
+          } catch (e) {
+            debugPrint('❌ Error soft deleting set from cloud: $e');
+          }
+        }
+        
         debugPrint('Deleted flashcard set: ${set.title}');
       },
       operationName: 'delete_flashcard_set',
@@ -293,6 +347,156 @@ class FlashcardService extends ChangeNotifier {
   }
 
   // ==============================================
+  // SYNC FUNCTIONALITY
+  // ==============================================
+  
+  Future<void> _loadSetsFromCloud() async {
+    if (!_supabaseService.isAuthenticated) return;
+    
+    try {
+      final response = await _supabaseService.client!
+          .from('flashcard_sets')
+          .select('*, flashcards(*)')
+          .eq('user_id', _supabaseService.currentUserId!)
+          .eq('is_deleted', false)
+          .order('updated_at', ascending: false);
+      
+      final cloudSets = response.map<FlashcardSet>((json) {
+        // Convert Supabase response to FlashcardSet
+        final flashcards = (json['flashcards'] as List? ?? [])
+            .map<Flashcard>((cardJson) => Flashcard.fromJson(cardJson))
+            .toList();
+            
+        return FlashcardSet(
+          id: json['id'],
+          title: json['title'],
+          description: json['description'] ?? '',
+          flashcards: flashcards,
+          lastUpdated: DateTime.parse(json['updated_at']),
+        );
+      }).toList();
+      
+      _sets.clear();
+      _sets.addAll(cloudSets);
+      
+      // Save to local storage
+      await StorageService.saveFlashcardSets(
+        _sets.map((set) => set.toJson()).toList()
+      );
+      
+      notifyListeners();
+      
+    } catch (e) {
+      debugPrint('❌ Error loading sets from cloud: $e');
+    }
+  }
+  
+  Future<void> _syncWithCloud() async {
+    if (_isSyncing || !_supabaseService.isAuthenticated) return;
+    
+    _isSyncing = true;
+    notifyListeners();
+    
+    try {
+      // Upload local changes to cloud
+      for (final set in _sets) {
+        if (_needsSync(set)) {
+          await _uploadSetToCloud(set);
+        }
+      }
+      
+      // Download latest from cloud
+      await _loadSetsFromCloud();
+      
+    } catch (e) {
+      debugPrint('❌ Sync error: $e');
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
+    }
+  }
+  
+  bool _needsSync(FlashcardSet set) {
+    // Implement logic to determine if set needs syncing
+    // This could be based on a local "dirty" flag or timestamp comparison
+    return true; // Simplified for now
+  }
+  
+  Future<void> _uploadSetToCloud(FlashcardSet set) async {
+    try {
+      // Generate UUID for set if it doesn't exist or isn't valid UUID
+      String setUuid = _ensureValidUuid(set.id);
+      
+      // Upsert flashcard set with proper UUID
+      await _supabaseService.client!
+          .from('flashcard_sets')
+          .upsert({
+            'id': setUuid,
+            'user_id': _supabaseService.currentUserId!,
+            'title': set.title,
+            'description': set.description,
+            'is_draft': set.isDraft,
+            'rating': set.rating,
+            'rating_count': set.ratingCount,
+            'flashcard_count': set.flashcards.length,
+            'updated_at': DateTime.now().toIso8601String(),
+          });
+      
+      // Upload flashcards with proper schema mapping
+      for (int index = 0; index < set.flashcards.length; index++) {
+        final flashcard = set.flashcards[index];
+        String cardUuid = _ensureValidUuid(flashcard.id);
+        
+        // Insert/update flashcard (NO is_completed here)
+        await _supabaseService.client!
+            .from('flashcards')
+            .upsert({
+              'id': cardUuid,
+              'set_id': setUuid,
+              'question': flashcard.question,
+              'answer': flashcard.answer,
+              'order_index': index,
+              'difficulty': 'medium',
+              'updated_at': DateTime.now().toIso8601String(),
+            });
+        
+        // Handle completion status in separate user_progress table
+        if (flashcard.isCompleted || flashcard.isMarkedForReview) {
+          await _supabaseService.client!
+              .from('user_progress')
+              .upsert({
+                'user_id': _supabaseService.currentUserId!,
+                'flashcard_id': cardUuid,
+                'is_completed': flashcard.isCompleted,
+                'is_marked_for_review': flashcard.isMarkedForReview,
+                'updated_at': DateTime.now().toIso8601String(),
+              });
+        }
+      }
+      
+      // Store UUID mapping for future reference
+      await _storeUuidMapping(set.id, setUuid);
+      
+    } catch (e) {
+      debugPrint('❌ Error uploading set to cloud: $e');
+      rethrow;
+    }
+  }
+  
+  Future<void> _saveAndSync() async {
+    // Save locally first (optimistic update)
+    await StorageService.saveFlashcardSets(
+      _sets.map((set) => set.toJson()).toList()
+    );
+    notifyListeners();
+    
+    // Then sync to cloud
+    if (_supabaseService.isOnline && _supabaseService.isAuthenticated) {
+      _syncWithCloud();
+    }
+  }
+
+  // ==============================================
   // COMPATIBILITY ALIASES (Backward Compatibility)
   // ==============================================
   
@@ -320,4 +524,17 @@ class FlashcardService extends ChangeNotifier {
   
   /// Compatibility alias: searchDecks → searchSets
   List<FlashcardSet> searchDecks(String query) => searchSets(query);
+
+  /// Force refresh from cloud
+  Future<void> refreshFromCloud() async {
+    if (_supabaseService.isAuthenticated) {
+      await _loadSetsFromCloud();
+    }
+  }
+  
+  @override
+  void dispose() {
+    _supabaseService.removeListener(_onSyncStatusChanged);
+    super.dispose();
+  }
 }
