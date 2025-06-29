@@ -3,8 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/flashcard_set.dart';
 import '../models/flashcard.dart';
-import '../services/enhanced_supabase_service.dart';
-import '../services/supabase_realtime_manager.dart';
+import '../services/supabase_service.dart';
 import '../services/authentication_service.dart';
 
 /// Dedicated real-time flashcard service for cross-device synchronization
@@ -20,10 +19,7 @@ class RealtimeFlashcardService extends ChangeNotifier {
   static RealtimeFlashcardService get instance =>
       _instance ??= RealtimeFlashcardService._();
 
-  final EnhancedSupabaseService _supabaseService =
-      EnhancedSupabaseService.instance;
-  final SupabaseRealtimeManager _realtimeManager =
-      SupabaseRealtimeManager.instance;
+  final SupabaseService _supabaseService = SupabaseService.instance;
   final AuthenticationService _authService = AuthenticationService.instance;
 
   // Stream controllers for real-time updates
@@ -35,8 +31,8 @@ class RealtimeFlashcardService extends ChangeNotifier {
       StreamController<RealtimeEvent>.broadcast();
 
   // Subscription management
-  RealtimeSubscription? _flashcardSetsSubscription;
-  RealtimeSubscription? _flashcardsSubscription;
+  RealtimeChannel? _flashcardSetsSubscription;
+  RealtimeChannel? _flashcardsSubscription;
   bool _isInitialized = false;
 
   // Optimistic update tracking
@@ -56,7 +52,7 @@ class RealtimeFlashcardService extends ChangeNotifier {
   Stream<RealtimeEvent> get realtimeEvents => _realtimeEventsController.stream;
 
   /// Check if real-time service is active
-  bool get isActive => _isInitialized && _realtimeManager.isConnected;
+  bool get isActive => _isInitialized && _supabaseService.client != null;
 
   /// Initialize real-time flashcard synchronization
   Future<void> initialize() async {
@@ -94,10 +90,6 @@ class RealtimeFlashcardService extends ChangeNotifier {
   Future<void> _ensureDependenciesReady() async {
     if (!_supabaseService.isInitialized) {
       await _supabaseService.initialize();
-    }
-
-    if (!_realtimeManager.isConnected) {
-      await _realtimeManager.initialize();
     }
   }
 
@@ -143,81 +135,82 @@ class RealtimeFlashcardService extends ChangeNotifier {
 
   /// Set up flashcard sets subscription
   Future<void> _setupFlashcardSetsSubscription(String userId) async {
-    final channel = _supabaseService.createRealtimeSubscription(
-      channelName: 'flashcard_sets_realtime',
-      table: 'flashcard_sets',
-      userIdColumn: 'user_id',
-      userId: userId,
-      onInsert: _handleFlashcardSetInsert,
-      onUpdate: _handleFlashcardSetUpdate,
-      onDelete: _handleFlashcardSetDelete,
-      onSubscribed: () {
-        debugPrint('📡 Flashcard sets real-time subscription active');
-        _emitRealtimeEvent(
-          RealtimeEventType.subscribed,
-          'Flashcard sets subscription active',
-        );
-      },
-      onError: (error) {
-        debugPrint('❌ Flashcard sets subscription error: $error');
-        _emitRealtimeEvent(
-          RealtimeEventType.error,
-          'Flashcard sets error: $error',
-        );
-      },
-    );
+    if (_supabaseService.client == null) return;
 
-    _flashcardSetsSubscription = RealtimeSubscription(
-      id: 'flashcard_sets_realtime',
-      channel: channel,
-      onResubscribed: () {
-        debugPrint('🔄 Flashcard sets subscription restored');
-        _emitRealtimeEvent(
-          RealtimeEventType.reconnected,
-          'Flashcard sets subscription restored',
-        );
-      },
-    );
+    _flashcardSetsSubscription = _supabaseService.client!
+        .channel('flashcard_sets_realtime')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'flashcard_sets',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            switch (payload.eventType) {
+              case PostgresChangeEvent.insert:
+                _handleFlashcardSetInsert(payload);
+                break;
+              case PostgresChangeEvent.update:
+                _handleFlashcardSetUpdate(payload);
+                break;
+              case PostgresChangeEvent.delete:
+                _handleFlashcardSetDelete(payload);
+                break;
+              default:
+                break;
+            }
+          },
+        )
+        .subscribe();
 
-    _realtimeManager.registerSubscription(_flashcardSetsSubscription!);
+    debugPrint('📡 Flashcard sets real-time subscription active');
+    _emitRealtimeEvent(
+      RealtimeEventType.subscribed,
+      'Flashcard sets subscription active',
+    );
   }
 
   /// Set up individual flashcards subscription
   Future<void> _setupFlashcardsSubscription(String userId) async {
-    final channel = _supabaseService.createRealtimeSubscription(
-      channelName: 'flashcards_realtime',
-      table: 'flashcards',
-      userIdColumn: 'user_id',
-      userId: userId,
-      onInsert: _handleFlashcardInsert,
-      onUpdate: _handleFlashcardUpdate,
-      onDelete: _handleFlashcardDelete,
-      onSubscribed: () {
-        debugPrint('📡 Individual flashcards real-time subscription active');
-        _emitRealtimeEvent(
-          RealtimeEventType.subscribed,
-          'Flashcards subscription active',
-        );
-      },
-      onError: (error) {
-        debugPrint('❌ Flashcards subscription error: $error');
-        _emitRealtimeEvent(RealtimeEventType.error, 'Flashcards error: $error');
-      },
-    );
+    if (_supabaseService.client == null) return;
 
-    _flashcardsSubscription = RealtimeSubscription(
-      id: 'flashcards_realtime',
-      channel: channel,
-      onResubscribed: () {
-        debugPrint('🔄 Flashcards subscription restored');
-        _emitRealtimeEvent(
-          RealtimeEventType.reconnected,
-          'Flashcards subscription restored',
-        );
-      },
-    );
+    _flashcardsSubscription = _supabaseService.client!
+        .channel('flashcards_realtime')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'flashcards',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            switch (payload.eventType) {
+              case PostgresChangeEvent.insert:
+                _handleFlashcardInsert(payload);
+                break;
+              case PostgresChangeEvent.update:
+                _handleFlashcardUpdate(payload);
+                break;
+              case PostgresChangeEvent.delete:
+                _handleFlashcardDelete(payload);
+                break;
+              default:
+                break;
+            }
+          },
+        )
+        .subscribe();
 
-    _realtimeManager.registerSubscription(_flashcardsSubscription!);
+    debugPrint('📡 Individual flashcards real-time subscription active');
+    _emitRealtimeEvent(
+      RealtimeEventType.subscribed,
+      'Flashcards subscription active',
+    );
   }
 
   /// Handle flashcard set insert events
@@ -334,15 +327,11 @@ class RealtimeFlashcardService extends ChangeNotifier {
 
   /// Clean up all subscriptions
   Future<void> _cleanupSubscriptions() async {
-    if (_flashcardSetsSubscription != null) {
-      _realtimeManager.unregisterSubscription(_flashcardSetsSubscription!.id);
-      _flashcardSetsSubscription = null;
-    }
+    await _flashcardSetsSubscription?.unsubscribe();
+    _flashcardSetsSubscription = null;
 
-    if (_flashcardsSubscription != null) {
-      _realtimeManager.unregisterSubscription(_flashcardsSubscription!.id);
-      _flashcardsSubscription = null;
-    }
+    await _flashcardsSubscription?.unsubscribe();
+    _flashcardsSubscription = null;
 
     debugPrint('🧹 Real-time subscriptions cleaned up');
   }
@@ -350,8 +339,7 @@ class RealtimeFlashcardService extends ChangeNotifier {
   /// Force reconnection of real-time subscriptions
   Future<void> forceReconnect() async {
     debugPrint('🔄 Forcing real-time reconnection...');
-    await _realtimeManager.forceReconnect();
-
+    
     final user = _authService.currentUser;
     if (user != null) {
       await _setupRealtimeSubscriptions(user.id);
@@ -366,7 +354,7 @@ class RealtimeFlashcardService extends ChangeNotifier {
       'pendingOptimisticUpdates': _pendingOptimisticUpdates.length,
       'flashcardSetsSubscriptionActive': _flashcardSetsSubscription != null,
       'flashcardsSubscriptionActive': _flashcardsSubscription != null,
-      'realtimeManagerStatus': _realtimeManager.getConnectionInfo(),
+      'supabaseConnected': _supabaseService.client != null,
     };
   }
 

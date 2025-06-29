@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
 import 'default_data_service.dart';
@@ -8,8 +10,17 @@ import 'supabase_service.dart';
 import 'dart:async';
 import 'package:uuid/uuid.dart';  // ✅ ADD UUID IMPORT
 
+/// FlashcardService with enhanced duplicate prevention
+/// 
+/// Recent improvements:
+/// - 🛡️ Database-level unique constraints prevent duplicate flashcard sets
+/// - 🔄 Migration flag prevents repeated loading of migration data
+/// - ⚠️ Graceful error handling for constraint violations (PostgrestException 23505)
+/// - ✅ Uses upsert operations for all database writes to handle conflicts
+/// - 🧹 Migration completion tracking to prevent data multiplication
 class FlashcardService extends ChangeNotifier {
   static const _uuid = Uuid();  // ✅ ADD UUID INSTANCE
+  static const String _migrationCompleteKey = 'migration_complete_v2';  // ✅ ADD MIGRATION FLAG
   final List<FlashcardSet> _sets = [];
   final DefaultDataService _defaultDataService = DefaultDataService();
   final SupabaseService _supabaseService = SupabaseService.instance;
@@ -34,11 +45,76 @@ class FlashcardService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Normalize title for consistent duplicate detection
+  /// Removes leading/trailing whitespace and converts to lowercase
+  String _normalizeTitle(String title) {
+    return title.trim().toLowerCase();
+  }
+
+  /// Check if a title already exists locally (with normalization)
+  bool _isDuplicateTitle(String title) {
+    final normalizedTitle = _normalizeTitle(title);
+    return _sets.any((set) => _normalizeTitle(set.title) == normalizedTitle);
+  }
+
+  /// Validate flashcard set before adding/uploading
+  String? _validateFlashcardSet(FlashcardSet set) {
+    // Check for empty title
+    final trimmedTitle = set.title.trim();
+    if (trimmedTitle.isEmpty) {
+      return 'Title cannot be empty';
+    }
+    
+    // Check for local duplicates
+    if (_isDuplicateTitle(set.title)) {
+      return 'A flashcard set with this title already exists';
+    }
+    
+    // Check for empty flashcards
+    if (set.flashcards.isEmpty) {
+      return 'Flashcard set must contain at least one card';
+    }
+    
+    return null; // No validation errors
+  }
+
   /// Ensure ID is valid UUID format, generate new one if needed
-  String _ensureValidUuid(String id) {
+  /// Handles byte array conversion and JSON serialization issues
+  String _ensureValidUuid(String? id) {
+    if (id == null || id.isEmpty) {
+      return _uuid.v4();
+    }
+    
+    // Handle byte array format from JSON serialization
+    if (id.startsWith('[') && id.endsWith(']')) {
+      try {
+        // Convert byte array string to proper UUID
+        final byteString = id.replaceAll('[', '').replaceAll(']', '').replaceAll(' ', '');
+        final bytes = byteString.split(',').map((e) => int.parse(e.trim())).toList();
+        
+        if (bytes.length == 16) {
+          // Convert bytes to UUID string format
+          final uuid = '${bytes.sublist(0, 4).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+                     '${bytes.sublist(4, 6).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+                     '${bytes.sublist(6, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+                     '${bytes.sublist(8, 10).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+                     '${bytes.sublist(10, 16).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}';
+          return uuid;
+        }
+      } catch (e) {
+        debugPrint('⚠️ Failed to convert byte array UUID: $e');
+        return _uuid.v4();
+      }
+    }
+    
+    // Handle existing UUID strings
     try {
-      return Uuid.parse(id).toString();
+      // Validate existing UUID format
+      final parsed = Uuid.parse(id);
+      return Uuid.unparse(parsed);
     } catch (e) {
+      // Generate new UUID if current one is invalid
+      debugPrint('🔄 Converting legacy ID "$id" to UUID format');
       return _uuid.v4();
     }
   }
@@ -80,11 +156,23 @@ class FlashcardService extends ChangeNotifier {
       () async {
         // Check for user-specific migrated data first
         if (_currentUserId != null) {
-          final migratedData = await StorageService.getUserMigratedData(_currentUserId!);
-          if (migratedData != null && migratedData['flashcards'] != null) {
-            debugPrint('📚 Loading migrated flashcard data for user: $_currentUserId');
-            await _loadMigratedData(migratedData['flashcards']);
-            return;
+          // Check if migration already completed
+          final prefs = await SharedPreferences.getInstance();
+          final migrationComplete = prefs.getBool(_migrationCompleteKey) ?? false;
+          
+          if (!migrationComplete) {
+            final migratedData = await StorageService.getUserMigratedData(_currentUserId!);
+            if (migratedData != null && migratedData['flashcards'] != null) {
+              debugPrint('📚 Loading migrated flashcard data for user: $_currentUserId');
+              await _loadMigratedData(migratedData['flashcards']);
+              
+              // Mark migration as complete to prevent future loads
+              await prefs.setBool(_migrationCompleteKey, true);
+              debugPrint('✅ Migration marked as complete');
+              return;
+            }
+          } else {
+            debugPrint('✅ Migration already completed, skipping migrated data load');
           }
         }
         
@@ -251,9 +339,49 @@ class FlashcardService extends ChangeNotifier {
   Future<void> addSet(FlashcardSet set) async {
     await SimpleErrorHandler.safe<void>(
       () async {
-        _sets.add(set);
+        // Validate the flashcard set
+        final validationError = _validateFlashcardSet(set);
+        if (validationError != null) {
+          throw Exception(validationError);
+        }
+        
+        // Normalize the title to prevent near-duplicates
+        final normalizedTitle = set.title.trim();
+        
+        // Ensure the set has a valid UUID
+        final validSetId = set.id.isEmpty ? _uuid.v4() : _ensureValidUuid(set.id);
+        
+        // Ensure all flashcards have valid UUIDs
+        final updatedFlashcards = set.flashcards.map((flashcard) {
+          final validFlashcardId = flashcard.id.isEmpty ? _uuid.v4() : _ensureValidUuid(flashcard.id);
+          return Flashcard(
+            id: validFlashcardId,
+            question: flashcard.question,
+            answer: flashcard.answer,
+            isMarkedForReview: flashcard.isMarkedForReview,
+            isCompleted: flashcard.isCompleted,
+          );
+        }).toList();
+        
+        // Create a new FlashcardSet with normalized data
+        final normalizedSet = set.copyWith(
+          title: normalizedTitle,
+          flashcards: updatedFlashcards,
+        );
+        final finalSet = FlashcardSet(
+          id: validSetId,
+          title: normalizedSet.title,
+          description: normalizedSet.description,
+          isDraft: normalizedSet.isDraft,
+          rating: normalizedSet.rating,
+          ratingCount: normalizedSet.ratingCount,
+          flashcards: normalizedSet.flashcards,
+          lastUpdated: normalizedSet.lastUpdated,
+        );
+        
+        _sets.add(finalSet);
         await _saveAndSync();
-        debugPrint('Added flashcard set: ${set.title}');
+        debugPrint('✅ Added flashcard set: "${set.title}" with ${set.flashcards.length} cards');
       },
       operationName: 'add_flashcard_set',
     );
@@ -427,13 +555,16 @@ class FlashcardService extends ChangeNotifier {
       // Generate UUID for set if it doesn't exist or isn't valid UUID
       String setUuid = _ensureValidUuid(set.id);
       
-      // Upsert flashcard set with proper UUID
+      // Normalize title before upload to match database constraints
+      final normalizedTitle = set.title.trim();
+      
+      // Upsert flashcard set with proper UUID and normalized title
       await _supabaseService.client!
           .from('flashcard_sets')
           .upsert({
             'id': setUuid,
             'user_id': _supabaseService.currentUserId!,
-            'title': set.title,
+            'title': normalizedTitle,
             'description': set.description,
             'is_draft': set.isDraft,
             'rating': set.rating,
@@ -477,8 +608,20 @@ class FlashcardService extends ChangeNotifier {
       // Store UUID mapping for future reference
       await _storeUuidMapping(set.id, setUuid);
       
+      debugPrint('✅ Successfully uploaded set "$normalizedTitle" to cloud');
+      
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        // Duplicate key violation - handle gracefully
+        debugPrint('⚠️ Set "${set.title}" already exists in cloud, skipping upload');
+        // Don't rethrow - this is expected behavior with our constraints
+        return;
+      }
+      // For other PostgrestExceptions, log and rethrow
+      debugPrint('❌ Supabase error uploading set "${set.title}": ${e.message}');
+      rethrow;
     } catch (e) {
-      debugPrint('❌ Error uploading set to cloud: $e');
+      debugPrint('❌ Error uploading set "${set.title}" to cloud: $e');
       rethrow;
     }
   }
@@ -530,6 +673,14 @@ class FlashcardService extends ChangeNotifier {
     if (_supabaseService.isAuthenticated) {
       await _loadSetsFromCloud();
     }
+  }
+  
+  /// Reset migration completion flag (for testing/debugging)
+  /// Call this if you need to re-run migration data loading
+  Future<void> resetMigrationFlag() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_migrationCompleteKey);
+    debugPrint('🔄 Migration flag reset - migration data will be loaded on next app start');
   }
   
   @override

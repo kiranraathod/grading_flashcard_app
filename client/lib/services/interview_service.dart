@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/interview_question.dart';
 import '../models/question_set.dart';
 import 'default_data_service.dart';
@@ -40,10 +41,43 @@ class InterviewService extends ChangeNotifier {
   }
 
   /// Ensure ID is valid UUID format
-  String _ensureValidUuid(String id) {
+  /// Ensure ID is valid UUID format, generate new one if needed
+  /// Handles byte array conversion and JSON serialization issues
+  String _ensureValidUuid(String? id) {
+    if (id == null || id.isEmpty) {
+      return _uuid.v4();
+    }
+    
+    // Handle byte array format from JSON serialization
+    if (id.startsWith('[') && id.endsWith(']')) {
+      try {
+        // Convert byte array string to proper UUID
+        final byteString = id.replaceAll('[', '').replaceAll(']', '').replaceAll(' ', '');
+        final bytes = byteString.split(',').map((e) => int.parse(e.trim())).toList();
+        
+        if (bytes.length == 16) {
+          // Convert bytes to UUID string format
+          final uuid = '${bytes.sublist(0, 4).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+                     '${bytes.sublist(4, 6).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+                     '${bytes.sublist(6, 8).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+                     '${bytes.sublist(8, 10).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}-'
+                     '${bytes.sublist(10, 16).map((b) => b.toRadixString(16).padLeft(2, '0')).join()}';
+          return uuid;
+        }
+      } catch (e) {
+        debugPrint('⚠️ Failed to convert byte array UUID: $e');
+        return _uuid.v4();
+      }
+    }
+    
+    // Handle existing UUID strings
     try {
-      return Uuid.parse(id).toString();
+      // Validate existing UUID format
+      final parsed = Uuid.parse(id);
+      return Uuid.unparse(parsed);
     } catch (e) {
+      // Generate new UUID if current one is invalid
+      debugPrint('⚠️ Invalid UUID format "$id", generating new one');
       return _uuid.v4();
     }
   }
@@ -168,6 +202,18 @@ class InterviewService extends ChangeNotifier {
       // Store UUID mapping
       await _storeUuidMapping(question.id, questionUuid);
       
+      debugPrint('✅ Successfully uploaded question to cloud');
+      
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') {
+        // Duplicate key violation - handle gracefully
+        debugPrint('⚠️ Question already exists in cloud, skipping upload');
+        // Don't rethrow - this is expected behavior with our constraints
+        return;
+      }
+      // For other PostgrestExceptions, log and rethrow
+      debugPrint('❌ Supabase error uploading question: ${e.message}');
+      rethrow;
     } catch (e) {
       debugPrint('❌ Error uploading question to cloud: $e');
       rethrow;
