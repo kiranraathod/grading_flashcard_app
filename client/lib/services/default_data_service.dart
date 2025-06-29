@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../models/flashcard_set.dart';
 import '../models/flashcard.dart';
 import '../models/interview_question.dart';
-import 'http_client_service.dart';
-import 'cache_manager.dart';
+import 'enhanced_http_client_service.dart';
+import 'enhanced_cache_manager.dart';
 import 'simple_error_handler.dart';
 
 class DefaultDataService extends ChangeNotifier {
@@ -12,8 +11,8 @@ class DefaultDataService extends ChangeNotifier {
   factory DefaultDataService() => _instance;
   DefaultDataService._internal();
 
-  final HttpClientService _httpClient = HttpClientService();
-  final CacheManager _cache = CacheManager();
+  final EnhancedHttpClientService _httpClient = EnhancedHttpClientService();
+  final EnhancedCacheManager _cache = EnhancedCacheManager();
 
   Future<List<FlashcardSet>> loadDefaultFlashcardSets({String? userId}) async {
     return await SimpleErrorHandler.safe<List<FlashcardSet>>(
@@ -23,11 +22,11 @@ class DefaultDataService extends ChangeNotifier {
           return _parseFlashcardSets(cachedData['flashcard_sets']);
         }
 
-        final queryParams = userId != null ? {'user_id': userId} : null;
-        final response = await _httpClient.get('/api/default-data/flashcard-sets', queryParams: queryParams);
+        final queryParameters = userId != null ? {'user_id': userId} : null;
+        final response = await _httpClient.get('/api/default-data/flashcard-sets', queryParameters: queryParameters);
 
         if (response.statusCode == 200) {
-          final data = json.decode(response.body);
+          final data = response.data;
           await _cache.cacheData('default_flashcard_sets', {'flashcard_sets': data});
           return _parseFlashcardSets(data);
         }
@@ -54,10 +53,10 @@ class DefaultDataService extends ChangeNotifier {
         if (difficulty != null) queryParams['difficulty'] = difficulty;
 
         final response = await _httpClient.get('/api/default-data/interview-questions',
-            queryParams: queryParams.isNotEmpty ? queryParams : null);
+            queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
         if (response.statusCode == 200) {
-          final data = json.decode(response.body);
+          final data = response.data;
           await _cache.cacheData(cacheKey, {'data': data});
           return _parseInterviewQuestions(data);
         }
@@ -78,7 +77,7 @@ class DefaultDataService extends ChangeNotifier {
 
         final response = await _httpClient.get('/api/default-data/categories');
         if (response.statusCode == 200) {
-          final data = json.decode(response.body);
+          final data = response.data;
           await _cache.cacheData('categories', {'data': data});
           return List<Map<String, dynamic>>.from(data);
         }
@@ -97,11 +96,11 @@ class DefaultDataService extends ChangeNotifier {
           return Map<String, int>.from(cachedData['counts']);
         }
 
-        final queryParams = userId != null ? {'user_id': userId} : null;
-        final response = await _httpClient.get('/api/default-data/category-counts', queryParams: queryParams);
+        final queryParameters = userId != null ? {'user_id': userId} : null;
+        final response = await _httpClient.get('/api/default-data/category-counts', queryParameters: queryParameters);
 
         if (response.statusCode == 200) {
-          final data = json.decode(response.body);
+          final data = response.data;
           final counts = Map<String, int>.from(data['counts']);
           await _cache.cacheData('category_counts', {'counts': counts});
           return counts;
@@ -149,8 +148,8 @@ class DefaultDataService extends ChangeNotifier {
   }
 
   Future<void> clearCache() async {
-    await _cache.clearCache('default_flashcard_sets');
-    await _cache.clearCache('category_counts');
-    await _cache.clearCache('categories');
+    await _cache.clearCache(key: 'default_flashcard_sets');
+    await _cache.clearCache(key: 'category_counts');
+    await _cache.clearCache(key: 'categories');
   }
 }

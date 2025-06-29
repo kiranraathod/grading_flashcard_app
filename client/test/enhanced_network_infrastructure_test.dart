@@ -6,8 +6,6 @@ import 'package:flutter_flashcard_app/services/enhanced_http_client_service.dart
 import 'package:flutter_flashcard_app/services/enhanced_cache_manager.dart';
 import 'package:flutter_flashcard_app/services/network_error_recovery_service.dart';
 import 'package:flutter_flashcard_app/services/sync_status_tracker.dart';
-import 'package:flutter_flashcard_app/services/http_client_service.dart';
-import 'package:flutter_flashcard_app/services/cache_manager.dart';
 import 'package:flutter_flashcard_app/utils/config.dart';
 import 'package:flutter_flashcard_app/models/app_error.dart';
 
@@ -238,13 +236,13 @@ void main() {
       });
     });
 
-    group('Backward Compatibility', () {
-      late HttpClientService httpClient;
-      late CacheManager cacheManager;
+    group('Enhanced Services Direct Usage', () {
+      late EnhancedHttpClientService httpClient;
+      late EnhancedCacheManager cacheManager;
 
       setUp(() {
-        httpClient = HttpClientService();
-        cacheManager = CacheManager();
+        httpClient = EnhancedHttpClientService();
+        cacheManager = EnhancedCacheManager();
       });
 
       test('HttpClientService should maintain backward compatibility', () async {

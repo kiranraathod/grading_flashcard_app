@@ -77,7 +77,7 @@ class InterviewService extends ChangeNotifier {
       return Uuid.unparse(parsed);
     } catch (e) {
       // Generate new UUID if current one is invalid
-      debugPrint('⚠️ Invalid UUID format "$id", generating new one');
+      debugPrint('🔄 Converting legacy ID "$id" to UUID format');
       return _uuid.v4();
     }
   }

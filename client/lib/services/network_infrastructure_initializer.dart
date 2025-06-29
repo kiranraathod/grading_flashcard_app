@@ -4,8 +4,6 @@ import 'connectivity_service.dart';
 import 'enhanced_http_client_service.dart';
 import 'enhanced_cache_manager.dart';
 import 'sync_status_tracker.dart';
-import 'http_client_service.dart';
-import 'cache_manager.dart';
 import 'simple_error_handler.dart';
 
 class NetworkInfrastructureInitializer {
@@ -22,8 +20,6 @@ class NetworkInfrastructureInitializer {
   final EnhancedHttpClientService _enhancedHttp = EnhancedHttpClientService();
   final EnhancedCacheManager _enhancedCache = EnhancedCacheManager();
   final SyncStatusTracker _syncTracker = SyncStatusTracker();
-  final HttpClientService _httpClient = HttpClientService();
-  final CacheManager _cacheManager = CacheManager();
 
   bool get isInitialized => _isInitialized;
   bool get isInitializing => _initializationInProgress;
@@ -78,12 +74,12 @@ class NetworkInfrastructureInitializer {
         // Step 7: Initialize backward-compatible services
         await _initializeWithErrorHandling(
           'HttpClientService',
-          () => _httpClient.initialize(),
+          () => _enhancedHttp.initialize(),
         );
 
         await _initializeWithErrorHandling(
           'CacheManager',
-          () => _cacheManager.initialize(),
+          () => _enhancedCache.initialize(),
         );
 
         _isInitialized = _initializationErrors.isEmpty;
@@ -143,8 +139,8 @@ class NetworkInfrastructureInitializer {
       'initialized': _isInitialized,
       'connectivity': _connectivity.isOnline ? 'Connected' : 'Disconnected',
       'networkQuality': _connectivity.currentQuality?.status.name ?? 'Unknown',
-      'httpClientStats': _httpClient.getPerformanceStats(),
-      'cacheStats': _cacheManager.getStatistics(),
+      'httpClientStats': _enhancedHttp.getPerformanceStats(),
+      'cacheStats': _enhancedCache.getStatistics(),
       'syncStatus': _syncTracker.getStatistics(),
       'initializationErrors': _initializationErrors.length,
     };
@@ -163,22 +159,15 @@ class NetworkInfrastructureInitializer {
 
     // HTTP client check
     results['httpClient'] = await SimpleErrorHandler.safe<bool>(
-      () => _httpClient.checkConnectivity(),
-      fallback: false,
-      operationName: 'http_client_health_check',
-    );
-
-    // Enhanced HTTP client check
-    results['enhancedHttpClient'] = await SimpleErrorHandler.safe<bool>(
       () => _enhancedHttp.healthCheck(),
       fallback: false,
-      operationName: 'enhanced_http_client_health_check',
+      operationName: 'http_client_health_check',
     );
 
     // Cache availability check
     results['cache'] = await SimpleErrorHandler.safe<bool>(
       () async {
-        await _cacheManager.getCachedData('health_check_test');
+        await _enhancedCache.getCachedData('health_check_test');
         return true;
       },
       fallback: false,
@@ -207,7 +196,7 @@ class NetworkInfrastructureInitializer {
     _initializationErrors.clear();
 
     // Reset circuit breakers and retry counters
-    _httpClient.resetCircuitBreaker();
+    _enhancedHttp.resetCircuitBreaker();
     
     AppConfig.logNetwork('Network infrastructure reset completed', level: NetworkLogLevel.basic);
   }
@@ -219,7 +208,6 @@ class NetworkInfrastructureInitializer {
     _connectivity.dispose();
     _enhancedHttp.dispose();
     _syncTracker.dispose();
-    _httpClient.dispose();
 
     _isInitialized = false;
   }

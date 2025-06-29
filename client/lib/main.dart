@@ -26,7 +26,7 @@ import 'services/sync_status_tracker.dart';
 import 'blocs/recent_view/recent_view_bloc.dart';
 import 'blocs/search/search_bloc.dart';
 import 'widgets/error_handler.dart';
-import 'services/cache_manager.dart';
+import 'services/enhanced_cache_manager.dart';
 import 'services/supabase_service.dart';
 import 'providers/working_auth_provider.dart';
 // 🆕 NEW UNIFIED IMPORTS
@@ -113,7 +113,7 @@ Future<void> _initializeServices() async {
   }
 
   try {
-    final cacheManager = CacheManager();
+    final cacheManager = EnhancedCacheManager();
     await cacheManager.initialize();
     debugPrint('✅ Cache manager initialized');
   } catch (e) {
