@@ -1,32 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart' as provider;
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dynamic_color/dynamic_color.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-import 'screens/home_screen.dart';
-import 'screens/job_description_question_generator_screen.dart';
-import 'screens/data_validation_screen.dart';
-import 'utils/theme_provider.dart';
-import 'utils/app_themes.dart';
-import 'services/flashcard_service.dart';
-import 'services/user_service.dart';
-import 'services/network_service.dart';
-import 'services/api_service.dart';
-import 'services/speech_to_text_service.dart';
-import 'services/interview_service.dart';
-import 'services/recent_view_service.dart';
-import 'services/job_description_service.dart';
-import 'services/connectivity_service.dart';
-import 'services/sync_status_tracker.dart';
-import 'blocs/recent_view/recent_view_bloc.dart';
-import 'blocs/search/search_bloc.dart';
 import 'widgets/error_handler.dart';
-import 'services/supabase_service.dart';
-import 'providers/working_auth_provider.dart';
 // 🆕 NEW UNIFIED IMPORTS
 import 'utils/app_initializer.dart';
+import 'utils/provider_manager.dart';
+import 'utils/app_widget_manager.dart';
+import 'utils/auth_connection_manager.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -51,22 +30,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   Map<String, dynamic> _services = {};
-
-  // Theme change analytics
-  static void _logThemeChange(ThemeMode oldMode, ThemeMode newMode) {
-    // Implement your analytics here
-    debugPrint('Theme changed from $oldMode to $newMode');
-
-    // Example with Firebase Analytics:
-    // FirebaseAnalytics.instance.logEvent(
-    //   name: 'theme_changed',
-    //   parameters: {
-    //     'from_mode': oldMode.toString(),
-    //     'to_mode': newMode.toString(),
-    //     'timestamp': DateTime.now().toIso8601String(),
-    //   },
-    // );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,205 +72,30 @@ class _MyAppState extends State<MyApp> {
     // Use AppInitializer to create all services
     _services = await AppInitializer.createApplicationServices();
 
-    // 🔗 CRITICAL FIX: Connect auth provider to FlashcardService for data migration
-    debugPrint('🔗 Setting up auth-flashcard service connection...');
-    final flashcardService = _services['flashcard'] as FlashcardService;
-    _setupAuthServiceConnection(flashcardService);
-  }
-
-  /// Set up connection between authentication and data services
-  void _setupAuthServiceConnection(FlashcardService flashcardService) {
-    // Store the flashcard service reference for direct connection after app initialization
-    _services['_flashcardService'] = flashcardService;
-    debugPrint('🔗 FlashcardService stored for auth connection setup');
-  }
-
-  /// Establish auth-service connection (called after widget tree is ready)
-  void _establishAuthConnection(WidgetRef ref) {
-    try {
-      final flashcardService = _services['_flashcardService'] as FlashcardService?;
-      final interviewService = _services['interview'] as InterviewService?;
-      
-      if (flashcardService != null) {
-        final authNotifier = ref.read(authNotifierProvider.notifier);
-        
-        // Register callback for when user data migration completes
-        authNotifier.onUserDataMigrated((String userId) {
-          debugPrint('🔄 Auth callback: Reloading FlashcardService for user $userId');
-          flashcardService.reloadForUser(userId);
-          
-          // Also reload InterviewService if available
-          if (interviewService != null) {
-            debugPrint('🔄 Auth callback: Reloading InterviewService for user $userId');
-            interviewService.reloadForUser(userId);
-          }
-        });
-        
-        debugPrint('✅ Auth-FlashcardService connection established successfully');
-        if (interviewService != null) {
-          debugPrint('✅ Auth-InterviewService connection established successfully');
-        }
-      } else {
-        debugPrint('❌ FlashcardService not found for auth connection');
-      }
-    } catch (e) {
-      debugPrint('❌ Failed to establish auth connection: $e');
-    }
+    // 🔗 Set up auth-service connection using AuthConnectionManager
+    AuthConnectionManager.setupAuthServiceConnection(_services);
   }
 
   Widget _buildMainApp() {
-    // Get services from stored map
-    final apiService = _services['api'] as ApiService;
-    final speechToTextService =
-        _services['speechToText'] as SpeechToTextService;
-    final flashcardService = _services['flashcard'] as FlashcardService;
-    final userService = _services['user'] as UserService;
-    final networkService = _services['network'] as NetworkService;
-    final interviewService = _services['interview'] as InterviewService;
-    final recentViewService = _services['recentView'] as RecentViewService;
-    final jobDescriptionService =
-        _services['jobDescription'] as JobDescriptionService;
-
-    // Create global instances of BLoCs to be shared across all screens
-    final recentViewBloc = RecentViewBloc(recentViewService: recentViewService);
-    final searchBloc = SearchBloc(
-      flashcardService: flashcardService,
-      interviewService: interviewService,
-    );
-
-    // Debug Print
     debugPrint('⭐⭐⭐ INITIALIZING APPLICATION ⭐⭐⭐');
-    debugPrint('Created RecentViewService and BLoCs');
-
-    return DynamicColorBuilder(
-      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        // Use dynamic color on supported platforms
-        ThemeData lightTheme;
-        ThemeData darkTheme;
-
-        if (lightDynamic != null && darkDynamic != null) {
-          // Apply dynamic color scheme to theme
-          lightTheme = AppThemes.lightTheme.copyWith(
-            colorScheme: lightDynamic.harmonized(),
-          );
-          darkTheme = AppThemes.darkTheme.copyWith(
-            colorScheme: darkDynamic.harmonized(),
-          );
-        } else {
-          // Use default themes if dynamic color is not available
-          lightTheme = AppThemes.lightTheme;
-          darkTheme = AppThemes.darkTheme;
-        }
-
-        return MultiBlocProvider(
-          providers: [
-            // Global BLoC providers
-            BlocProvider<RecentViewBloc>.value(value: recentViewBloc),
-            BlocProvider<SearchBloc>.value(value: searchBloc),
-          ],
-          child: provider.MultiProvider(
-            providers: [
-              // Core Infrastructure Services (keeping for other app components)
-              provider.ChangeNotifierProvider.value(
-                value: SupabaseService.instance,
-              ),
-
-              // Enhanced Network Services
-              provider.ChangeNotifierProvider(
-                create: (_) => ConnectivityService(),
-              ),
-              provider.ChangeNotifierProvider(
-                create: (_) => SyncStatusTracker(),
-              ),
-
-              // Application Services (for backward compatibility with non-migrated screens)
-              provider.ChangeNotifierProvider.value(value: flashcardService),
-              provider.ChangeNotifierProvider.value(value: userService),
-              provider.ChangeNotifierProvider.value(value: networkService),
-              provider.ChangeNotifierProvider.value(value: interviewService),
-
-              // Theme provider with callback support
-              provider.ChangeNotifierProvider(
-                create: (_) {
-                  final themeProvider = ThemeProvider();
-
-                  // Add theme change callback for analytics
-                  themeProvider.addThemeChangeCallback((oldMode, newMode) {
-                    _logThemeChange(oldMode, newMode);
-                  });
-
-                  return themeProvider;
-                },
-              ),
-
-              // Services as Repositories for BLoCs
-              provider.Provider<ApiService>.value(value: apiService),
-              provider.Provider<SpeechToTextService>.value(
-                value: speechToTextService,
-              ),
-              provider.Provider<RecentViewService>.value(
-                value: recentViewService,
-              ),
-              provider.Provider<JobDescriptionService>.value(
-                value: jobDescriptionService,
-              ),
-            ],
-            child: ErrorHandler(
-              child: Consumer(
-                builder: (context, WidgetRef ref, _) {
-                  // 🔗 CRITICAL: Set up auth-service connection on first widget build
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _establishAuthConnection(ref);
-                  });
-                  
-                  return provider.Consumer<ThemeProvider>(
-                    builder:
-                        (
-                          context,
-                          themeProvider,
-                          _,
-                        ) => TweenAnimationBuilder<double>(
-                          duration: const Duration(milliseconds: 200),
-                          tween: Tween<double>(
-                            begin: themeProvider.isDarkMode ? 1.0 : 0.0,
-                            end: themeProvider.isDarkMode ? 1.0 : 0.0,
-                          ),
-                          builder:
-                              (context, value, child) => MaterialApp(
-                                title: 'FlashMaster',
-                                theme: lightTheme,
-                                darkTheme: darkTheme,
-                                themeMode: themeProvider.themeMode,
-                                themeAnimationDuration:
-                                    Duration
-                                        .zero, // Disable theme animation to prevent lag
-                                home: const HomeScreen(),
-                                routes: {
-                                  '/job-description-generator':
-                                      (context) =>
-                                          const JobDescriptionQuestionGeneratorScreen(),
-                                  '/data-validation':
-                                      (context) => const DataValidationScreen(),
-                                },
-                                debugShowCheckedModeBanner: false,
-                                // Localization config
-                                locale: const Locale('en'),
-                                localizationsDelegates: const [
-                                  AppLocalizations.delegate,
-                                  GlobalMaterialLocalizations.delegate,
-                                  GlobalWidgetsLocalizations.delegate,
-                                  GlobalCupertinoLocalizations.delegate,
-                                ],
-                                supportedLocales: const [Locale('en')],
-                              ),
-                        ),
-                  );
-                },
-              ),
-            ),
-          ),
-        );
-      },
+    
+    return ProviderManager.createProviderTree(
+      services: _services,
+      onThemeChanged: AuthConnectionManager.logThemeChange,
+      child: ErrorHandler(
+        child: Consumer(
+          builder: (context, WidgetRef ref, _) {
+            // 🔗 Set up auth-service connection on first widget build
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              AuthConnectionManager.establishAuthConnection(ref, _services);
+            });
+            
+            return AppWidgetManager.createMainApp(
+              child: Container(), // AppWidgetManager handles the full app
+            );
+          },
+        ),
+      ),
     );
   }
 }
