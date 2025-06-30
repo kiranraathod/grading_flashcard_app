@@ -55,7 +55,7 @@ class StorageService {
     debugPrint('✅ Operation: Atomic write with race condition protection');
     debugPrint('✅ Persistence: Data will survive app restarts');
     debugPrint('✅ Availability: Immediately available for reads');
-    debugPrint('ℹ️ Cloud Sync: Not yet implemented (Hive → Supabase sync planned)');
+    debugPrint('ℹ️ Cloud Sync: Upload enabled, full bidirectional sync planned');
     debugPrint('========================================================');
   }
   

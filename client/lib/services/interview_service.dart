@@ -6,7 +6,7 @@ import '../models/interview_question.dart';
 import '../models/question_set.dart';
 import 'default_data_service.dart';
 import 'storage_service.dart';
-import 'reliable_operation_service.dart';
+import 'simple_error_handler.dart';
 import 'supabase_service.dart';
 import '../utils/enhanced_safe_map_converter.dart';
 import 'package:uuid/uuid.dart';  // ✅ ADD UUID IMPORT
@@ -16,7 +16,6 @@ class InterviewService extends ChangeNotifier {
   List<InterviewQuestion> _questions = [];
   final List<QuestionSet> _questionSets = [];
   final DefaultDataService _defaultDataService = DefaultDataService();
-  final ReliableOperationService _reliableOps = ReliableOperationService();
   final SupabaseService _supabaseService = SupabaseService.instance;
   bool _isInitialized = false;
   bool _isSyncing = false;
@@ -257,8 +256,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Load default questions from server with reliable fallback
   Future<void> _loadDefaultQuestions() async {
-    await _reliableOps.withFallback(
-      primary: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         debugPrint('Loading default interview questions from server...');
         final defaultQuestions =
             await _defaultDataService.loadDefaultInterviewQuestions();
@@ -273,7 +272,7 @@ class InterviewService extends ChangeNotifier {
           _questions = _createFallbackQuestions();
         }
       },
-      fallback: () async => _questions = _createFallbackQuestions(),
+      fallbackOperation: () async => _questions = _createFallbackQuestions(),
       operationName: 'load_default_interview_questions',
     );
   }
@@ -305,8 +304,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Synchronize with server-generated categories safely
   Future<void> synchronizeWithServerCategories() async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         debugPrint(
           'Synchronizing interview questions with server categories...',
         );
@@ -334,8 +333,8 @@ class InterviewService extends ChangeNotifier {
     List<dynamic> serverCategories,
     Map<String, int>? serverCounts,
   ) {
-    _reliableOps.safelySync(
-      operation: () {
+    SimpleErrorHandler.safeSync(
+      () {
         debugPrint('Validating question-category mapping consistency...');
 
         final localCategoryCounts = <String, int>{};
@@ -371,8 +370,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Check if a question belongs to a specific category
   bool _isQuestionInCategory(InterviewQuestion question, String categoryName) {
-    return _reliableOps.safelySync(
-          operation: () {
+    return SimpleErrorHandler.safeSync(
+          () {
             // Handle 'all' category - should match everything
             if (categoryName.toLowerCase() == 'all') {
               debugPrint('🔍 CATEGORY MATCH: "all" category - returning true');
@@ -460,7 +459,7 @@ class InterviewService extends ChangeNotifier {
 
             return result;
           },
-          defaultValue: false,
+          fallback: false,
           operationName: 'is_question_in_category',
         ) ??
         false;
@@ -468,8 +467,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Update question metadata based on server categories safely
   Future<void> _updateQuestionMetadata(List<dynamic> serverCategories) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         debugPrint('Updating question metadata based on server categories...');
 
         bool hasUpdates = false;
@@ -502,8 +501,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Save questions to storage safely
   Future<void> _saveQuestionsToStorage() async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final questionsJson = _questions.map((q) => q.toJson()).toList();
         await StorageService.saveInterviewQuestions(questionsJson);
         debugPrint(
@@ -516,8 +515,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Load questions from storage with fallback
   Future<void> loadQuestionsFromStorage() async {
-    await _reliableOps.withFallback(
-      primary: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         // Check for user-specific migrated data first
         if (_currentUserId != null) {
           final migratedData = await StorageService.getUserMigratedData(_currentUserId!);
@@ -544,7 +543,7 @@ class InterviewService extends ChangeNotifier {
 
         notifyListeners();
       },
-      fallback: () async {
+      fallbackOperation: () async {
         debugPrint('Storage loading failed, loading from server');
         await _loadDefaultQuestions();
       },
@@ -601,8 +600,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Add a new question with reliable storage and cloud sync
   Future<void> addQuestion(InterviewQuestion question) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         _questions.add(question);
         await _saveQuestionsToStorage();
         notifyListeners();
@@ -619,8 +618,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Update an existing question with reliable storage and cloud sync
   Future<void> updateQuestion(InterviewQuestion updatedQuestion) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final index = _questions.indexWhere((q) => q.id == updatedQuestion.id);
         if (index >= 0) {
           _questions[index] = updatedQuestion;
@@ -640,8 +639,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Delete a question with reliable storage and cloud sync
   Future<void> deleteQuestion(String questionId) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         _questions.removeWhere((q) => q.id == questionId);
         await _saveQuestionsToStorage();
         notifyListeners();
@@ -670,8 +669,8 @@ class InterviewService extends ChangeNotifier {
     String category, {
     bool isSubtopic = false,
   }) {
-    return _reliableOps.safelySync(
-          operation: () {
+    return SimpleErrorHandler.safeSync(
+          () {
             debugPrint('Getting questions for category: $category');
 
             final filteredQuestions =
@@ -684,7 +683,7 @@ class InterviewService extends ChangeNotifier {
             );
             return filteredQuestions;
           },
-          defaultValue: <InterviewQuestion>[],
+          fallback: <InterviewQuestion>[],
           operationName: 'get_questions_by_category',
         ) ??
         <InterviewQuestion>[];
@@ -692,8 +691,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Search questions with default empty result
   List<InterviewQuestion> searchQuestions(String query) {
-    return _reliableOps.safelySync(
-          operation: () {
+    return SimpleErrorHandler.safeSync(
+          () {
             if (query.isEmpty) return questions;
 
             final lowercaseQuery = query.toLowerCase();
@@ -714,7 +713,7 @@ class InterviewService extends ChangeNotifier {
                 )
                 .toList();
           },
-          defaultValue: <InterviewQuestion>[],
+          fallback: <InterviewQuestion>[],
           operationName: 'search_questions',
         ) ??
         <InterviewQuestion>[];
@@ -722,9 +721,9 @@ class InterviewService extends ChangeNotifier {
 
   /// Get user answer safely
   String getUserAnswer(String questionId) {
-    return _reliableOps.safelySync(
-          operation: () => _userAnswers[questionId] ?? '',
-          defaultValue: '',
+    return SimpleErrorHandler.safeSync(
+          () => _userAnswers[questionId] ?? '',
+          fallback: '',
           operationName: 'get_user_answer',
         ) ??
         '';
@@ -732,8 +731,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Save user answer safely
   Future<void> saveUserAnswer(String questionId, String answer) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         _userAnswers[questionId] = answer;
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_answer_$questionId', answer);
@@ -745,8 +744,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Toggle completion status safely
   Future<void> toggleCompletion(String questionId) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final question = _questions.firstWhere((q) => q.id == questionId);
         question.isCompleted = !question.isCompleted;
         await _saveQuestionsToStorage();
@@ -761,8 +760,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Mark question as completed (always sets to true, doesn't toggle)
   Future<void> markAsCompleted(String questionId) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final question = _questions.firstWhere((q) => q.id == questionId);
         if (!question.isCompleted) {
           question.isCompleted = true;
@@ -779,8 +778,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Toggle star status safely
   Future<void> toggleStar(String questionId) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final question = _questions.firstWhere((q) => q.id == questionId);
         question.isStarred = !question.isStarred;
         await _saveQuestionsToStorage();
@@ -795,8 +794,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Load user answers safely
   Future<void> loadUserAnswers() async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final prefs = await SharedPreferences.getInstance();
         for (final question in _questions) {
           final answer = prefs.getString('user_answer_${question.id}');
@@ -812,8 +811,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Get statistics safely
   Map<String, int> getStatistics() {
-    return _reliableOps.safelySync(
-          operation: () {
+    return SimpleErrorHandler.safeSync(
+          () {
             final totalQuestions = questions.length;
             final completedQuestions =
                 questions.where((q) => q.isCompleted).length;
@@ -830,7 +829,7 @@ class InterviewService extends ChangeNotifier {
               'answered': answeredQuestions,
             };
           },
-          defaultValue: {
+          fallback: {
             'total': 0,
             'completed': 0,
             'starred': 0,
@@ -843,8 +842,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Clear all user answers safely
   Future<void> clearAllUserAnswers() async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final prefs = await SharedPreferences.getInstance();
         for (final questionId in _userAnswers.keys) {
           await prefs.remove('user_answer_$questionId');
@@ -866,8 +865,8 @@ class InterviewService extends ChangeNotifier {
     String? difficulty,
     String? searchQuery,
   }) {
-    return _reliableOps.safelySync(
-          operation: () {
+    return SimpleErrorHandler.safeSync(
+          () {
             debugPrint(
               '🔧 FILTER START: category="$category", difficulty="$difficulty", searchQuery="$searchQuery"',
             );
@@ -921,7 +920,7 @@ class InterviewService extends ChangeNotifier {
             debugPrint('🔧 FILTER END: Returning ${filtered.length} questions');
             return filtered;
           },
-          defaultValue: <InterviewQuestion>[],
+          fallback: <InterviewQuestion>[],
           operationName: 'get_filtered_questions',
         ) ??
         <InterviewQuestion>[];
@@ -929,8 +928,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Get progress stats (compatibility method)
   Map<String, dynamic> getProgressStats() {
-    return _reliableOps.safelySync(
-          operation: () {
+    return SimpleErrorHandler.safeSync(
+          () {
             final stats = getStatistics();
             final total = stats['total'] ?? 0;
             final completed = stats['completed'] ?? 0;
@@ -951,7 +950,7 @@ class InterviewService extends ChangeNotifier {
               'completionRate': total > 0 ? (completed / total) : 0.0,
             };
           },
-          defaultValue: {
+          fallback: {
             'total': 0,
             'completed': 0,
             'starred': 0,
@@ -983,19 +982,19 @@ class InterviewService extends ChangeNotifier {
 
   /// Get question by ID (compatibility method)
   InterviewQuestion? getQuestionById(String id) {
-    return _reliableOps.safelySync(
-      operation: () {
+    return SimpleErrorHandler.safeSync(
+      () {
         return _questions.firstWhere((q) => q.id == id);
       },
-      defaultValue: null,
+      fallback: null,
       operationName: 'get_question_by_id',
     );
   }
 
   /// Save question set (compatibility method)
   Future<void> saveQuestionSet(QuestionSet questionSet) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         _questionSets.add(questionSet);
         debugPrint('Saved question set: ${questionSet.title}');
         notifyListeners();
@@ -1006,19 +1005,19 @@ class InterviewService extends ChangeNotifier {
 
   /// Get question set by ID (compatibility method)
   QuestionSet? getQuestionSetById(String id) {
-    return _reliableOps.safelySync(
-      operation: () {
+    return SimpleErrorHandler.safeSync(
+      () {
         return _questionSets.firstWhere((set) => set.id == id);
       },
-      defaultValue: null,
+      fallback: null,
       operationName: 'get_question_set_by_id',
     );
   }
 
   /// Get questions for set (compatibility method)
   List<InterviewQuestion> getQuestionsForSet(String setId) {
-    return _reliableOps.safelySync(
-          operation: () {
+    return SimpleErrorHandler.safeSync(
+          () {
             final questionSet = getQuestionSetById(setId);
             if (questionSet != null) {
               return _questions
@@ -1027,7 +1026,7 @@ class InterviewService extends ChangeNotifier {
             }
             return <InterviewQuestion>[];
           },
-          defaultValue: <InterviewQuestion>[],
+          fallback: <InterviewQuestion>[],
           operationName: 'get_questions_for_set',
         ) ??
         <InterviewQuestion>[];
@@ -1035,8 +1034,8 @@ class InterviewService extends ChangeNotifier {
 
   /// Delete question set (compatibility method)
   Future<void> deleteQuestionSet(String setId) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         _questionSets.removeWhere((set) => set.id == setId);
         debugPrint('Deleted question set: $setId');
         notifyListeners();

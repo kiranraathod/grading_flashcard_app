@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'standard_error_handler.dart';
+import 'package:flutter/foundation.dart';
 
 /// Dependency management and race condition prevention
 class InitializationCoordinator {
@@ -7,7 +7,6 @@ class InitializationCoordinator {
   factory InitializationCoordinator() => _instance;
   InitializationCoordinator._internal();
 
-  final StandardErrorHandler _errorHandler = StandardErrorHandler();
   final Map<String, ServiceStatus> _serviceStatus = {};
   final Map<String, Completer<void>> _initializationCompleters = {};
   final Map<String, List<String>> _dependencies = {};
@@ -18,7 +17,7 @@ class InitializationCoordinator {
     _dependencies[serviceName] = List.from(dependencies);
     _initializationCompleters[serviceName] = Completer<void>();
     
-    _errorHandler.logDebug('InitializationCoordinator', 'Registered service: $serviceName');
+    if (kDebugMode) debugPrint('[InitializationCoordinator] Registered service: $serviceName');
   }
 
   /// Mark service as initializing
@@ -28,7 +27,7 @@ class InitializationCoordinator {
     }
     
     _serviceStatus[serviceName] = ServiceStatus.initializing;
-    _errorHandler.logInfo('InitializationCoordinator', 'Service $serviceName is initializing');
+    if (kDebugMode) debugPrint('[InitializationCoordinator] Service $serviceName is initializing');
   }
 
   /// Mark service as initialized
@@ -36,7 +35,7 @@ class InitializationCoordinator {
     _serviceStatus[serviceName] = ServiceStatus.initialized;
     _initializationCompleters[serviceName]?.complete();
     
-    _errorHandler.logSuccess('InitializationCoordinator', 'Service $serviceName initialized');
+    if (kDebugMode) debugPrint('[InitializationCoordinator] Service $serviceName initialized');
   }
 
   /// Mark service as failed to initialize
@@ -44,7 +43,7 @@ class InitializationCoordinator {
     _serviceStatus[serviceName] = ServiceStatus.failed;
     _initializationCompleters[serviceName]?.completeError(error);
     
-    _errorHandler.logError('InitializationCoordinator', 'Service $serviceName failed', null);
+    if (kDebugMode) debugPrint('[InitializationCoordinator] ERROR: Service $serviceName failed');
   }
 
   /// Wait for a service to be initialized
@@ -79,7 +78,7 @@ class InitializationCoordinator {
       await waitForService(dependency);
     }
     
-    _errorHandler.logDebug('InitializationCoordinator', 'All dependencies ready for $serviceName');
+    if (kDebugMode) debugPrint('[InitializationCoordinator] All dependencies ready for $serviceName');
   }
 
   /// Get service status

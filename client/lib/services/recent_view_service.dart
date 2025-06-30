@@ -6,7 +6,7 @@ import '../models/recently_viewed_item.dart';
 import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
 import '../models/interview_question.dart';
-import 'reliable_operation_service.dart';
+import 'simple_error_handler.dart';
 import 'supabase_service.dart';
 
 class RecentViewService {
@@ -25,7 +25,7 @@ class RecentViewService {
     _supabaseService.addListener(_onSyncStatusChanged);
   }
   
-  final ReliableOperationService _reliableOps = ReliableOperationService();
+  
   final SupabaseService _supabaseService = SupabaseService.instance;
 
   void _onSyncStatusChanged() {
@@ -39,8 +39,8 @@ class RecentViewService {
     required FlashcardSet set,
     bool isCompleted = false,
   }) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final recentItem = RecentlyViewedItem.fromFlashcard(
           flashcardId: flashcard.id,
           setId: set.id,
@@ -62,8 +62,8 @@ class RecentViewService {
     required String category,
     bool isCompleted = false,
   }) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final navigationCategory = question.subtopic.isNotEmpty ? question.subtopic : category;
         
         final recentItem = RecentlyViewedItem.fromInterviewQuestion(
@@ -87,8 +87,8 @@ class RecentViewService {
 
   /// Get all recently viewed items with default empty list
   Future<List<RecentlyViewedItem>> getRecentlyViewedItems({int limit = 20}) async {
-    return await _reliableOps.withDefault(
-      operation: () async {
+    return await SimpleErrorHandler.safe(
+      () async {
         final items = await _loadRecentItems();
         
         debugPrint('LOADED ${items.length} RECENT ITEMS');
@@ -99,45 +99,45 @@ class RecentViewService {
         items.sort((a, b) => b.viewedAt.compareTo(a.viewedAt));
         return items.take(limit).toList();
       },
-      defaultValue: <RecentlyViewedItem>[],
+      fallback: <RecentlyViewedItem>[],
       operationName: 'get_recently_viewed_items',
     );
   }
 
   /// Get recently viewed flashcards only with default empty list
   Future<List<RecentlyViewedItem>> getRecentlyViewedFlashcards({int limit = 20}) async {
-    return await _reliableOps.withDefault(
-      operation: () async {
+    return await SimpleErrorHandler.safe(
+      () async {
         final items = await _loadRecentItems();
         
         final flashcards = items.where((item) => item.type == RecentItemType.flashcard).toList();
         flashcards.sort((a, b) => b.viewedAt.compareTo(a.viewedAt));
         return flashcards.take(limit).toList();
       },
-      defaultValue: <RecentlyViewedItem>[],
+      fallback: <RecentlyViewedItem>[],
       operationName: 'get_recently_viewed_flashcards',
     );
   }
 
   /// Get recently viewed interview questions only with default empty list
   Future<List<RecentlyViewedItem>> getRecentlyViewedInterviewQuestions({int limit = 20}) async {
-    return await _reliableOps.withDefault(
-      operation: () async {
+    return await SimpleErrorHandler.safe(
+      () async {
         final items = await _loadRecentItems();
         
         final questions = items.where((item) => item.type == RecentItemType.interviewQuestion).toList();
         questions.sort((a, b) => b.viewedAt.compareTo(a.viewedAt));
         return questions.take(limit).toList();
       },
-      defaultValue: <RecentlyViewedItem>[],
+      fallback: <RecentlyViewedItem>[],
       operationName: 'get_recently_viewed_interview_questions',
     );
   }
 
   /// Clear all view history safely
   Future<void> clearViewHistory() async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove(_storageKey);
         debugPrint('Cleared view history');
@@ -148,8 +148,8 @@ class RecentViewService {
 
   /// Synchronize completion status with recent views for flashcards
   Future<void> syncFlashcardProgress(List<FlashcardSet> sets) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         debugPrint('SYNCHRONIZING FLASHCARD PROGRESS');
         debugPrint('  Sets to sync: ${sets.length}');
         
@@ -218,8 +218,8 @@ class RecentViewService {
 
   /// Private method to add a recently viewed item to storage using reliable operations
   Future<void> _addRecentItem(RecentlyViewedItem item) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         debugPrint('ADDING RECENT ITEM: ${item.type} - ${item.question.substring(0, min(20, item.question.length))}... - ${item.isCompleted ? "COMPLETED" : "not completed"}');
         
         final items = await _loadRecentItems();
@@ -255,8 +255,8 @@ class RecentViewService {
 
   /// Load recent items with default empty list
   Future<List<RecentlyViewedItem>> _loadRecentItems() async {
-    return await _reliableOps.withDefault(
-      operation: () async {
+    return await SimpleErrorHandler.safe(
+      () async {
         final prefs = await SharedPreferences.getInstance();
         final String? itemsJson = prefs.getString(_storageKey);
         
@@ -267,15 +267,15 @@ class RecentViewService {
         final List<dynamic> itemsList = json.decode(itemsJson);
         return itemsList.map((item) => RecentlyViewedItem.fromJson(item)).toList();
       },
-      defaultValue: <RecentlyViewedItem>[],
+      fallback: <RecentlyViewedItem>[],
       operationName: 'load_recent_items',
     );
   }
 
   /// Save recent items to storage safely
   Future<void> _saveRecentItems(List<RecentlyViewedItem> items) async {
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final prefs = await SharedPreferences.getInstance();
         final String itemsJson = json.encode(items.map((item) => item.toJson()).toList());
         await prefs.setString(_storageKey, itemsJson);
@@ -286,15 +286,15 @@ class RecentViewService {
 
   /// Get recent view statistics with safe operations
   Map<String, int> getStatistics() {
-    return _reliableOps.safelySync(
-      operation: () {
+    return SimpleErrorHandler.safeSync(
+      () {
         // This would need async access, so return basic stats
         return {
           'maxItemsToStore': _maxItemsToStore,
           'implementedMethods': 8,
         };
       },
-      defaultValue: {
+      fallback: {
         'maxItemsToStore': _maxItemsToStore,
         'implementedMethods': 8,
       },
@@ -309,8 +309,8 @@ class RecentViewService {
   Future<void> syncRecentActivity() async {
     if (!_supabaseService.isAuthenticated) return;
 
-    await _reliableOps.safely(
-      operation: () async {
+    await SimpleErrorHandler.safe(
+      () async {
         final recentItems = await getRecentlyViewedItems();
         
         for (final item in recentItems) {
