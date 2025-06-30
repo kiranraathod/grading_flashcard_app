@@ -7,14 +7,8 @@ import '../services/user_service.dart';
 import '../services/enhanced_cache_manager.dart';
 import '../services/supabase_service.dart';
 import '../services/network_infrastructure_initializer.dart';
-import '../services/api_service.dart';
-import '../services/speech_to_text_service.dart';
-import '../services/flashcard_service.dart';
-import '../services/network_service.dart';
-import '../services/interview_service.dart';
-import '../services/recent_view_service.dart';
-import '../services/job_description_service.dart';
 import '../utils/storage_migration_utility.dart';
+import 'service_factory.dart';
 
 /// Centralized application initialization for clean main.dart
 /// 
@@ -64,38 +58,12 @@ class AppInitializer {
   /// 
   /// Returns a map of configured services ready for dependency injection
   static Future<Map<String, dynamic>> createApplicationServices() async {
-    debugPrint('🔧 Creating application service instances...');
-
-    // Create service instances
-    final apiService = ApiService();
-    final speechToTextService = SpeechToTextService();
-    final flashcardService = FlashcardService();
-    final userService = UserService();
-    final networkService = NetworkService();
-    final interviewService = InterviewService();
-    final recentViewService = RecentViewService();
-    final jobDescriptionService = JobDescriptionService();
-
-    // Initialize services that require async setup
-    debugPrint('🔧 Initializing InterviewService...');
-    await interviewService.initialize();
-    debugPrint(
-      '✅ InterviewService initialized with ${interviewService.questions.length} questions',
-    );
-
-    // Return configured services
-    final services = {
-      'api': apiService,
-      'speechToText': speechToTextService,
-      'flashcard': flashcardService,
-      'user': userService,
-      'network': networkService,
-      'interview': interviewService,
-      'recentView': recentViewService,
-      'jobDescription': jobDescriptionService,
-    };
-
-    debugPrint('✅ Application services created successfully');
+    debugPrint('🔧 AppInitializer: Delegating service creation to ServiceFactory...');
+    
+    // Use ServiceFactory for centralized service creation and management
+    final services = await ServiceFactory.createAllServices();
+    
+    debugPrint('✅ AppInitializer: Service creation completed via ServiceFactory');
     return services;
   }
 

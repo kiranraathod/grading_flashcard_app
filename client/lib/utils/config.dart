@@ -121,6 +121,38 @@ class AppConfig {
   static const String flashcardSetsKey = 'flashcard_sets';
   static const String userStreakKey = 'weeklyStreak';
   
+  // UI/UX Timing Configuration - Phase 4: Centralized timing constants
+  // Animation durations
+  static const Duration animationFast = Duration(milliseconds: 150);
+  static const Duration animationMedium = Duration(milliseconds: 300);
+  static const Duration animationSlow = Duration(milliseconds: 500);
+  
+  // Button feedback and UI responsiveness
+  static const Duration buttonFeedback = Duration(milliseconds: 100);
+  static const Duration modalAnimation = Duration(milliseconds: 250);
+  static const Duration themeTransition = Duration(milliseconds: 200);
+  
+  // User feedback timings
+  static const Duration errorDisplayDuration = Duration(seconds: 3);
+  static const Duration successMessageDuration = Duration(seconds: 2);
+  static const Duration warningDisplayDuration = Duration(seconds: 5);
+  static const Duration countdownInterval = Duration(seconds: 1);
+  
+  // Speech and input timeouts
+  static const Duration speechTimeout = Duration(seconds: 10);
+  static const Duration inputDebounce = Duration(milliseconds: 300);
+  static const Duration searchDelay = Duration(milliseconds: 300);
+  
+  // Cache and cleanup intervals
+  static const Duration cacheCleanupInterval = Duration(hours: 24);
+  static const Duration syncStatusInterval = Duration(minutes: 5);
+  static const Duration realtimeTimeout = Duration(seconds: 10);
+  
+  // Authentication and session management
+  static const Duration authFeedbackDelay = Duration(milliseconds: 500);
+  static const Duration sessionCheckInterval = Duration(minutes: 5);
+  static const Duration dataRetentionPeriod = Duration(days: 30);
+  
   // Initialize configuration based on environment
   static void initialize() {
     _environment = _determineEnvironment();

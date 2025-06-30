@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'widgets/error_handler.dart';
-// 🆕 NEW UNIFIED IMPORTS
+// Core app initialization and configuration
 import 'utils/app_initializer.dart';
 import 'utils/provider_manager.dart';
 import 'utils/app_widget_manager.dart';
@@ -77,7 +77,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   Widget _buildMainApp() {
-    debugPrint('⭐⭐⭐ INITIALIZING APPLICATION ⭐⭐⭐');
+    debugPrint('🚀 Initializing FlashMaster Application');
     
     return ProviderManager.createProviderTree(
       services: _services,

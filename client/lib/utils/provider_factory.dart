@@ -1,6 +1,6 @@
 // lib/utils/provider_factory.dart
 // Extracted provider setup logic from main.dart
-// Phase 3: Main.dart Simplification
+// Enterprise-grade provider configuration management
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
