@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,28 +19,147 @@ import 'services/speech_to_text_service.dart';
 import 'services/interview_service.dart';
 import 'services/recent_view_service.dart';
 import 'services/job_description_service.dart';
+import 'services/storage_service.dart';
+import 'services/network_infrastructure_initializer.dart';
 import 'services/connectivity_service.dart';
 import 'services/sync_status_tracker.dart';
 import 'blocs/recent_view/recent_view_bloc.dart';
 import 'blocs/search/search_bloc.dart';
 import 'widgets/error_handler.dart';
+import 'services/enhanced_cache_manager.dart';
 import 'services/supabase_service.dart';
 import 'providers/working_auth_provider.dart';
 // 🆕 NEW UNIFIED IMPORTS
-import 'utils/app_initializer.dart';
+import 'utils/storage_migration_utility.dart';
 
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🎯 Configure debug output for environment
-  AppInitializer.configureDebugOutput();
+  // 🎯 Environment-based debug configuration
+  if (!kDebugMode) {
+    // In production, only show errors and critical messages
+    final originalDebugPrint = debugPrint;
+    debugPrint = (String? message, {int? wrapWidth}) {
+      if (message != null && _isImportantMessage(message)) {
+        originalDebugPrint(message, wrapWidth: wrapWidth);
+      }
+    };
+  }
+  // In debug mode, show all messages (default behavior)
 
-  // Initialize all core services
-  await AppInitializer.initializeCore();
+  // Initialize all services
+  await _initializeServices();
 
   // Wrap the app with ProviderScope for Riverpod
   runApp(ProviderScope(child: MyApp()));
+}
+
+/// Simplified service initialization - replaces complex multi-function approach
+Future<void> _initializeServices() async {
+  debugPrint('🚀 Initializing FlashMaster services...');
+
+  // 1. Core Storage - Essential for all functionality
+  try {
+    await StorageService.initialize();
+    debugPrint('✅ Storage service initialized');
+  } catch (e) {
+    debugPrint('⚠️ Storage initialization failed: $e - using memory-only storage');
+  }
+
+  // 2. Storage Migration - User data preservation
+  try {
+    debugPrint('🔄 Starting storage migration...');
+    final migrationResult = await StorageMigrationUtility.performFullMigration();
+    
+    if (migrationResult.success) {
+      debugPrint('✅ Storage migration completed successfully');
+      debugPrint('   - Migrated users: ${migrationResult.migratedUsers.length}');
+      debugPrint('   - Cleaned legacy keys: ${migrationResult.cleanedKeys.length}');
+      
+      // Verify migration integrity
+      final verification = await StorageMigrationUtility.verifyMigration();
+      if (verification.success) {
+        debugPrint('✅ Migration verification passed');
+      } else {
+        debugPrint('⚠️ Migration verification found issues:');
+        for (final error in verification.errors) {
+          debugPrint('   - $error');
+        }
+      }
+      
+      // Generate migration report in debug mode
+      if (kDebugMode) {
+        final report = StorageMigrationUtility.generateMigrationReport(migrationResult, verification);
+        debugPrint('📊 Migration Report:\n$report');
+      }
+    } else {
+      debugPrint('❌ Storage migration failed:');
+      for (final error in migrationResult.errors) {
+        debugPrint('   - $error');
+      }
+      debugPrint('⚠️ Continuing with current storage state...');
+    }
+  } catch (e) {
+    debugPrint('❌ Migration error: $e - continuing with current storage');
+  }
+
+  // 3. Basic Services - User management and caching
+  try {
+    await UserService.initialize();
+    debugPrint('✅ User service initialized');
+  } catch (e) {
+    debugPrint('⚠️ User service failed: $e - using default user');
+  }
+
+  try {
+    final cacheManager = EnhancedCacheManager();
+    await cacheManager.initialize();
+    debugPrint('✅ Cache manager initialized');
+  } catch (e) {
+    debugPrint('⚠️ Cache manager failed: $e - using memory-only cache');
+  }
+
+  // 4. Authentication Services - Supabase setup
+  try {
+    await SupabaseService.instance.initialize();
+    debugPrint('✅ Authentication services initialized');
+  } catch (e) {
+    debugPrint('⚠️ Authentication services failed: $e - guest mode only');
+  }
+
+  // 5. Network Infrastructure - Enhanced HTTP and connectivity
+  try {
+    final networkInitializer = NetworkInfrastructureInitializer();
+    final success = await networkInitializer.initialize();
+    
+    if (success) {
+      debugPrint('✅ Network infrastructure initialized successfully');
+      final status = networkInitializer.getInfrastructureStatus();
+      debugPrint('📊 Network Infrastructure Status:');
+      status.forEach((key, value) {
+        debugPrint('   $key: $value');
+      });
+    } else {
+      debugPrint('⚠️ Network infrastructure initialization completed with errors:');
+      for (final error in networkInitializer.initializationErrors) {
+        debugPrint('   ❌ $error');
+      }
+    }
+  } catch (e) {
+    debugPrint('⚠️ Network infrastructure error: $e - basic networking only');
+  }
+
+  debugPrint('✅ All services initialized - FlashMaster ready');
+}
+
+/// Simple production debug filter - only show critical messages
+bool _isImportantMessage(String message) {
+  return message.contains('❌') ||
+         message.contains('ERROR') ||
+         message.contains('Exception') ||
+         message.contains('Failed') ||
+         message.contains('Critical');
 }
 
 class MyApp extends StatefulWidget {
@@ -106,12 +226,37 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _createServices() async {
-    // Use AppInitializer to create all services
-    _services = await AppInitializer.createApplicationServices();
+    // Create and register services
+    final apiService = ApiService();
+    final speechToTextService = SpeechToTextService();
+    final flashcardService = FlashcardService();
+    final userService = UserService();
+    final networkService = NetworkService();
+    final interviewService = InterviewService();
+    final recentViewService = RecentViewService();
+    final jobDescriptionService = JobDescriptionService();
+
+    // Initialize InterviewService and wait for completion
+    debugPrint('🔧 Initializing InterviewService...');
+    await interviewService.initialize();
+    debugPrint(
+      '✅ InterviewService initialized with ${interviewService.questions.length} questions',
+    );
+
+    // Store services for use in _buildMainApp
+    _services = {
+      'api': apiService,
+      'speechToText': speechToTextService,
+      'flashcard': flashcardService,
+      'user': userService,
+      'network': networkService,
+      'interview': interviewService,
+      'recentView': recentViewService,
+      'jobDescription': jobDescriptionService,
+    };
 
     // 🔗 CRITICAL FIX: Connect auth provider to FlashcardService for data migration
     debugPrint('🔗 Setting up auth-flashcard service connection...');
-    final flashcardService = _services['flashcard'] as FlashcardService;
     _setupAuthServiceConnection(flashcardService);
   }
 
