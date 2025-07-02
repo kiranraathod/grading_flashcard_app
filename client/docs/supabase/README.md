@@ -1,89 +1,104 @@
-# FlashMaster Documentation Index
+# FlashMaster Supabase Integration Documentation
 
-**Last Updated**: June 16, 2025  
-**Current System**: Unified Storage Architecture v3.0  
+## 📁 **Documentation Structure**
 
----
+This directory contains comprehensive documentation for the FlashMaster Supabase integration and Pure BLoC migration project.
 
-## 📚 **Current Documentation** (June 2025)
-
-### **🟢 Active & Current**
-- **[Unified System Integration Guide](unified_system_supabase_integration_2025-06-16.md)** ⭐
-  - **Status**: Current & Complete
-  - **Purpose**: Comprehensive guide for unified system + Supabase
-  - **Use For**: Implementation, troubleshooting, architecture reference
-
-- **[Quick Reference](QUICK_REFERENCE_2025-06-16.md)** ⭐
-  - **Status**: Current 
-  - **Purpose**: Fast lookup for provider names, patterns, debug commands
-  - **Use For**: Daily development, quick answers
-
-### **🟡 Legacy Documentation** (For Historical Reference)
-- `complete_implementation_summary.md` - Overview of v1 vs v2 (outdated provider names)
-- `unified_storage_migration_guide.md` - Migration guide (mostly current)
-- `supabase_integration_guide.md` - Original integration plan (comprehensive but outdated)
-- `v2_testing_guide.md` - Testing procedures (needs provider name updates)
+### **📊 Progress Tracking**
+- **`supabase_implementation_progression/`** - Real-time implementation progress tracking
+- **`bloc_migration/`** - Detailed phase-by-phase migration documentation
 
 ---
 
-## 🎯 **What to Use When**
+## 🎯 **Quick Navigation**
+
+### **Implementation Progress**
+- [Migration Status](./supabase_implementation_progression/MIGRATION_STATUS.md) - Current progress overview
+- [Daily Logs](./supabase_implementation_progression/daily_progress/) - Day-by-day implementation tracking
+- [Issue Tracking](./supabase_implementation_progression/issues/) - Bugs and challenges encountered
+
+### **Migration Documentation** 
+- [Migration Master Plan](./bloc_migration/MIGRATION_MASTER_PLAN.md) - Complete migration strategy
+- [Phase Implementation](./bloc_migration/phases/) - Detailed phase guides
+- [Architecture Documentation](./bloc_migration/architecture/) - System design and patterns
+- [Testing Guides](./bloc_migration/testing/) - Test plans and validation
+
+---
+
+## 🚀 **Current Migration Status**
+
+**Phase**: Not Started
+**Progress**: 0/6 phases complete
+**Critical Bug**: Progress bar disappearing - Root cause identified
+**Target Completion**: 6 weeks from start date
+
+### **Next Action Items**
+1. Review [Migration Master Plan](./bloc_migration/MIGRATION_MASTER_PLAN.md)
+2. Begin [Phase 1: Foundation Setup](./bloc_migration/phases/phase_1_foundation/)
+3. Set up [progress tracking](./supabase_implementation_progression/MIGRATION_STATUS.md)
+
+---
+
+## 📚 **Key Documents**
+
+| Document | Purpose | Status |
+|----------|---------|--------|
+| [MIGRATION_MASTER_PLAN.md](./bloc_migration/MIGRATION_MASTER_PLAN.md) | Complete migration strategy | ✅ Ready |
+| [ARCHITECTURE_CURRENT.md](./bloc_migration/architecture/ARCHITECTURE_CURRENT.md) | Current hybrid architecture analysis | ✅ Ready |
+| [ARCHITECTURE_TARGET.md](./bloc_migration/architecture/ARCHITECTURE_TARGET.md) | Target pure BLoC architecture | ✅ Ready |
+| [BUG_ANALYSIS.md](./bloc_migration/BUG_ANALYSIS.md) | Root cause analysis | ✅ Ready |
+| [MIGRATION_STATUS.md](./supabase_implementation_progression/MIGRATION_STATUS.md) | Live progress tracking | 🔄 In Progress |
+
+---
+
+## 🎯 **Migration Objectives**
+
+### **Primary Goals**
+- ✅ **Eliminate Progress Bar Bug**: Fix race condition in hybrid state management
+- ✅ **Improve Performance**: Reduce UI rebuilds from 4+ to 1-2 per action
+- ✅ **Simplify Architecture**: Single state management system (Pure BLoC)
+- ✅ **Enhance Maintainability**: Clear, testable business logic
+
+### **Success Metrics**
+- **0% Progress Bar Bug Occurrence**: Complete elimination of disappearing progress
+- **75% Reduction in UI Rebuilds**: Improved performance and responsiveness
+- **100% Test Coverage**: For critical business logic in BLoCs
+- **Single Source of Truth**: No competing state systems
+
+---
+
+## 🛠️ **How to Use This Documentation**
 
 ### **For Implementation**
-1. **Start Here**: [Quick Reference](QUICK_REFERENCE_2025-06-16.md) - Get provider names and patterns
-2. **Deep Dive**: [Unified System Integration Guide](unified_system_supabase_integration_2025-06-16.md) - Complete implementation
+1. **Start with** [Migration Master Plan](./bloc_migration/MIGRATION_MASTER_PLAN.md)
+2. **Follow phase guides** in [bloc_migration/phases/](./bloc_migration/phases/)
+3. **Track progress** in [supabase_implementation_progression/](./supabase_implementation_progression/)
+4. **Validate** using phase-specific checklists
 
-### **For Database Setup**
-- **Schema**: `database_schema/2025-06-10_supabase_schema_v2.sql`
-- **Guide**: Section 🗄️ in [Unified System Integration Guide](unified_system_supabase_integration_2025-06-16.md)
-
-### **For Troubleshooting**
-- **Debug Commands**: [Quick Reference](QUICK_REFERENCE_2025-06-16.md) - Common Issues section
-- **Detailed Troubleshooting**: [Unified System Integration Guide](unified_system_supabase_integration_2025-06-16.md) - 🚨 section
-
----
-
-## 🔄 **Migration from Legacy Docs**
-
-If you're following older documentation, update these references:
-
-| Old Reference | New Reference |
-|---------------|---------------|
-| `GuestUserManager` | Built into `UnifiedActionTracker` |
-| `actionTrackerProvider` | `unifiedActionTrackerProvider` |
-| `usageLimitEnforcerProvider` | `unifiedUsageLimitEnforcerProvider` |
-| Individual action limits | Combined quota system (3/5 total) |
+### **For Monitoring**
+1. **Check status** in [MIGRATION_STATUS.md](./supabase_implementation_progression/MIGRATION_STATUS.md)
+2. **Review daily logs** for detailed progress
+3. **Monitor issues** in issue tracking files
+4. **Validate milestones** using validation checklists
 
 ---
 
-## 📋 **Documentation Status**
+## 📞 **Support & Resources**
 
-| Document | Status | Last Update | Next Review |
-|----------|--------|-------------|-------------|
-| Unified System Integration Guide | ✅ Current | 2025-06-16 | 2025-07-16 |
-| Quick Reference | ✅ Current | 2025-06-16 | 2025-07-16 |
-| Database Schema v2 | ✅ Current | 2025-06-10 | As needed |
-| Legacy migration guide | ⚠️ Partially outdated | Various | 2025-07-01 |
-| Testing guide | ⚠️ Needs provider updates | Various | 2025-07-01 |
+### **Architecture Questions**
+- Review [architecture documentation](./bloc_migration/architecture/)
+- Check [guides](./bloc_migration/guides/) for common patterns
 
----
+### **Implementation Issues**
+- Log in [issue tracking](./supabase_implementation_progression/issues/)
+- Reference [troubleshooting guides](./bloc_migration/guides/troubleshooting.md)
 
-## 🚀 **Quick Start for New Developers**
-
-1. **Read**: [Quick Reference](QUICK_REFERENCE_2025-06-16.md) (5 minutes)
-2. **Implement**: Use the provider patterns and examples
-3. **Deep Dive**: [Unified System Integration Guide](unified_system_supabase_integration_2025-06-16.md) when needed
-4. **Database**: Deploy `database_schema/2025-06-10_supabase_schema_v2.sql` for Supabase
+### **Testing & Validation**
+- Follow [testing guides](./bloc_migration/testing/)
+- Use phase-specific validation checklists
 
 ---
 
-## 📞 **Support**
-
-- **Architecture Questions**: Reference [Unified System Integration Guide](unified_system_supabase_integration_2025-06-16.md)
-- **Quick Answers**: Check [Quick Reference](QUICK_REFERENCE_2025-06-16.md)
-- **Implementation Issues**: Use troubleshooting sections in current docs
-
----
-
-**Maintained By**: FlashMaster Development Team  
-**Documentation Version**: 3.0  
-**System Version**: Unified Storage Architecture v3.0
+**📅 Last Updated**: $(date +%Y-%m-%d)
+**🎯 Project Status**: Pre-Migration Analysis Complete
+**👤 Maintainer**: FlashMaster Development Team

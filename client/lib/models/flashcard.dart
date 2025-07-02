@@ -2,10 +2,10 @@ class Flashcard {
   final String id;
   final String question;
   final String answer;
-  bool isMarkedForReview;
-  bool isCompleted;
+  final bool isMarkedForReview;
+  final bool isCompleted;
 
-  Flashcard({
+  const Flashcard({
     required this.id,
     required this.question,
     required this.answer,
@@ -31,5 +31,22 @@ class Flashcard {
       'isMarkedForReview': isMarkedForReview,
       'isCompleted': isCompleted,
     };
+  }
+
+  /// Create a copy of this flashcard with updated values
+  Flashcard copyWith({
+    String? id,
+    String? question,
+    String? answer,
+    bool? isMarkedForReview,
+    bool? isCompleted,
+  }) {
+    return Flashcard(
+      id: id ?? this.id,
+      question: question ?? this.question,
+      answer: answer ?? this.answer,
+      isMarkedForReview: isMarkedForReview ?? this.isMarkedForReview,
+      isCompleted: isCompleted ?? this.isCompleted,
+    );
   }
 }

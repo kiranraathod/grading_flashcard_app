@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'widgets/error_handler.dart';
 // Core app initialization and configuration
 import 'utils/app_initializer.dart';
 import 'utils/provider_manager.dart';
 import 'utils/app_widget_manager.dart';
 import 'utils/auth_connection_manager.dart';
+// BLoC Migration Phase 1 - Service Locator and BLoCs
+import 'core/service_locator.dart';
+import 'blocs/flashcard/flashcard_bloc.dart';
+import 'blocs/flashcard/flashcard_event.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -16,6 +21,15 @@ void main() async {
 
   // Initialize all core services
   await AppInitializer.initializeCore();
+
+  // 🆕 PHASE 1: Initialize BLoC service locator
+  try {
+    await setupServiceLocator();
+    debugPrint('✅ Service locator initialized successfully');
+  } catch (error) {
+    debugPrint('❌ Failed to initialize service locator: $error');
+    // Continue without BLoC infrastructure for now
+  }
 
   // Wrap the app with ProviderScope for Riverpod
   runApp(ProviderScope(child: MyApp()));
@@ -83,17 +97,37 @@ class _MyAppState extends State<MyApp> {
       services: _services,
       onThemeChanged: AuthConnectionManager.logThemeChange,
       child: ErrorHandler(
-        child: Consumer(
-          builder: (context, WidgetRef ref, _) {
-            // 🔗 Set up auth-service connection on first widget build
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              AuthConnectionManager.establishAuthConnection(ref, _services);
-            });
-            
-            return AppWidgetManager.createMainApp(
-              child: Container(), // AppWidgetManager handles the full app
-            );
-          },
+        child: MultiBlocProvider(
+          providers: [
+            // 🆕 PHASE 1: Add FlashcardBloc to the widget tree
+            BlocProvider<FlashcardBloc>(
+              create: (context) {
+                debugPrint('🧠 Creating FlashcardBloc instance');
+                try {
+                  final bloc = sl<FlashcardBloc>();
+                  // Initialize with data loading
+                  bloc.add(const FlashcardLoadRequested());
+                  return bloc;
+                } catch (error) {
+                  debugPrint('❌ Failed to create FlashcardBloc: $error');
+                  // Return a fallback bloc or rethrow
+                  rethrow;
+                }
+              },
+            ),
+          ],
+          child: Consumer(
+            builder: (context, WidgetRef ref, _) {
+              // 🔗 Set up auth-service connection on first widget build
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                AuthConnectionManager.establishAuthConnection(ref, _services);
+              });
+              
+              return AppWidgetManager.createMainApp(
+                child: Container(), // AppWidgetManager handles the full app
+              );
+            },
+          ),
         ),
       ),
     );
