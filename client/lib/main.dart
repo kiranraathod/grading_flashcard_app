@@ -7,10 +7,12 @@ import 'utils/app_initializer.dart';
 import 'utils/provider_manager.dart';
 import 'utils/app_widget_manager.dart';
 import 'utils/auth_connection_manager.dart';
-// BLoC Migration Phase 1 - Service Locator and BLoCs
+// BLoC Migration Phase 1 & 2 - Service Locator and BLoCs
 import 'core/service_locator.dart';
 import 'blocs/flashcard/flashcard_bloc.dart';
 import 'blocs/flashcard/flashcard_event.dart';
+import 'blocs/auth/auth_bloc.dart';
+import 'blocs/auth/auth_event.dart';
 
 void main() async {
   // Ensure Flutter is initialized
@@ -111,6 +113,21 @@ class _MyAppState extends State<MyApp> {
                 } catch (error) {
                   debugPrint('❌ Failed to create FlashcardBloc: $error');
                   // Return a fallback bloc or rethrow
+                  rethrow;
+                }
+              },
+            ),
+            // 🆕 PHASE 2: Add AuthBloc to the widget tree
+            BlocProvider<AuthBloc>(
+              create: (context) {
+                debugPrint('🔐 Creating AuthBloc instance');
+                try {
+                  final bloc = sl<AuthBloc>();
+                  // Initialize authentication
+                  bloc.add(const AuthInitialized());
+                  return bloc;
+                } catch (error) {
+                  debugPrint('❌ Failed to create AuthBloc: $error');
                   rethrow;
                 }
               },

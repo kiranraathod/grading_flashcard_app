@@ -1,14 +1,15 @@
 /// Phase 1 Integration Tests
-/// 
+///
 /// Validates that the new BLoC infrastructure works correctly
 /// alongside the existing Provider/Riverpod system.
-/// 
+///
 /// Tests cover:
 /// - Service locator setup
 /// - Repository pattern functionality
 /// - BLoC state management
 /// - Data flow through new architecture
 /// - Backward compatibility
+library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
@@ -23,7 +24,8 @@ import 'package:flutter_flashcard_app/blocs/flashcard/flashcard_state.dart';
 import 'package:flutter_flashcard_app/models/flashcard_set.dart';
 import 'package:flutter_flashcard_app/models/flashcard.dart';
 import 'package:flutter_flashcard_app/services/storage_service.dart';
-import 'package:flutter_flashcard_app/services/supabase_service.dart' hide SyncStatus;
+import 'package:flutter_flashcard_app/services/supabase_service.dart'
+    hide SyncStatus;
 import 'package:flutter_flashcard_app/services/connectivity_service.dart';
 
 // Mock classes
@@ -62,7 +64,7 @@ void main() {
           isCompleted: false,
         ),
         const Flashcard(
-          id: 'card-2', 
+          id: 'card-2',
           question: 'What is the capital of France?',
           answer: 'Paris',
           isCompleted: true,
@@ -111,19 +113,22 @@ void main() {
         expect(() => sl<FlashcardBloc>(), returnsNormally);
       });
 
-      test('should create new FlashcardBloc instances for each request', () async {
-        await setupServiceLocator();
+      test(
+        'should create new FlashcardBloc instances for each request',
+        () async {
+          await setupServiceLocator();
 
-        final bloc1 = sl<FlashcardBloc>();
-        final bloc2 = sl<FlashcardBloc>();
+          final bloc1 = sl<FlashcardBloc>();
+          final bloc2 = sl<FlashcardBloc>();
 
-        // Should be different instances (factory registration)
-        expect(bloc1, isNot(same(bloc2)));
-        
-        // Clean up
-        await bloc1.close();
-        await bloc2.close();
-      });
+          // Should be different instances (factory registration)
+          expect(bloc1, isNot(same(bloc2)));
+
+          // Clean up
+          await bloc1.close();
+          await bloc2.close();
+        },
+      );
     });
 
     group('Repository Integration Tests', () {
@@ -147,9 +152,9 @@ void main() {
 
       test('should handle data loading through repository', () async {
         // Setup mock data - use static method correctly
-        when(() => MockStorageService.getFlashcardSets()).thenReturn([
-          testFlashcardSet.toJson(),
-        ]);
+        when(
+          () => MockStorageService.getFlashcardSets(),
+        ).thenReturn([testFlashcardSet.toJson()]);
         when(() => mockConnectivityService.isOnline).thenReturn(false);
 
         final repository = FlashcardRepository(
@@ -174,29 +179,36 @@ void main() {
         'should emit loaded state when FlashcardLoadRequested succeeds',
         build: () {
           // Setup mock repository
-          when(() => mockRepository.getAll()).thenAnswer((_) async => [testFlashcardSet]);
-          when(() => mockRepository.watchAll()).thenAnswer(
-            (_) => Stream.value([testFlashcardSet]),
-          );
-          when(() => mockRepository.syncStatus).thenAnswer(
-            (_) => Stream.value(SyncStatus.idle),
-          );
+          when(
+            () => mockRepository.getAll(),
+          ).thenAnswer((_) async => [testFlashcardSet]);
+          when(
+            () => mockRepository.watchAll(),
+          ).thenAnswer((_) => Stream.value([testFlashcardSet]));
+          when(
+            () => mockRepository.syncStatus,
+          ).thenAnswer((_) => Stream.value(SyncStatus.idle));
           when(() => mockRepository.isSyncing).thenReturn(false);
           when(() => mockRepository.lastSyncTime).thenReturn(null);
 
           return FlashcardBloc(repository: mockRepository);
         },
         act: (bloc) => bloc.add(const FlashcardLoadRequested()),
-        expect: () => [
-          isA<FlashcardLoading>().having(
-            (state) => state.operation,
-            'operation',
-            equals('loading'),
-          ),
-          isA<FlashcardLoaded>()
-              .having((state) => state.sets, 'sets', hasLength(1))
-              .having((state) => state.sets.first.title, 'first set title', equals('Test Set')),
-        ],
+        expect:
+            () => [
+              isA<FlashcardLoading>().having(
+                (state) => state.operation,
+                'operation',
+                equals('loading'),
+              ),
+              isA<FlashcardLoaded>()
+                  .having((state) => state.sets, 'sets', hasLength(1))
+                  .having(
+                    (state) => state.sets.first.title,
+                    'first set title',
+                    equals('Test Set'),
+                  ),
+            ],
         verify: (_) {
           verify(() => mockRepository.getAll()).called(1);
         },
@@ -205,69 +217,92 @@ void main() {
       blocTest<FlashcardBloc, FlashcardState>(
         'should handle progress updates sequentially',
         build: () {
-          when(() => mockRepository.updateCardProgress(
-            setId: any(named: 'setId'),
-            cardId: any(named: 'cardId'),
-            isCompleted: any(named: 'isCompleted'),
-          )).thenAnswer((_) async {});
-          when(() => mockRepository.watchAll()).thenAnswer(
-            (_) => Stream.value([testFlashcardSet]),
-          );
-          when(() => mockRepository.syncStatus).thenAnswer(
-            (_) => Stream.value(SyncStatus.idle),
-          );
+          when(
+            () => mockRepository.updateCardProgress(
+              setId: any(named: 'setId'),
+              cardId: any(named: 'cardId'),
+              isCompleted: any(named: 'isCompleted'),
+            ),
+          ).thenAnswer((_) async {});
+          when(
+            () => mockRepository.watchAll(),
+          ).thenAnswer((_) => Stream.value([testFlashcardSet]));
+          when(
+            () => mockRepository.syncStatus,
+          ).thenAnswer((_) => Stream.value(SyncStatus.idle));
 
           return FlashcardBloc(repository: mockRepository);
         },
         act: (bloc) {
           // Send multiple progress updates rapidly
-          bloc.add(const FlashcardProgressUpdated(
-            setId: 'test-set-1',
-            cardId: 'card-1',
-            isCompleted: true,
-          ));
-          bloc.add(const FlashcardProgressUpdated(
-            setId: 'test-set-1',
-            cardId: 'card-2',
-            isCompleted: false,
-          ));
+          bloc.add(
+            const FlashcardProgressUpdated(
+              setId: 'test-set-1',
+              cardId: 'card-1',
+              isCompleted: true,
+            ),
+          );
+          bloc.add(
+            const FlashcardProgressUpdated(
+              setId: 'test-set-1',
+              cardId: 'card-2',
+              isCompleted: false,
+            ),
+          );
         },
         wait: const Duration(milliseconds: 100),
         verify: (_) {
           // Should process both updates sequentially
-          verify(() => mockRepository.updateCardProgress(
-            setId: 'test-set-1',
-            cardId: 'card-1',
-            isCompleted: true,
-          )).called(1);
-          verify(() => mockRepository.updateCardProgress(
-            setId: 'test-set-1',
-            cardId: 'card-2',
-            isCompleted: false,
-          )).called(1);
+          verify(
+            () => mockRepository.updateCardProgress(
+              setId: 'test-set-1',
+              cardId: 'card-1',
+              isCompleted: true,
+            ),
+          ).called(1);
+          verify(
+            () => mockRepository.updateCardProgress(
+              setId: 'test-set-1',
+              cardId: 'card-2',
+              isCompleted: false,
+            ),
+          ).called(1);
         },
       );
 
       blocTest<FlashcardBloc, FlashcardState>(
         'should handle search correctly',
         build: () {
-          when(() => mockRepository.watchAll()).thenAnswer(
-            (_) => Stream.value([testFlashcardSet]),
-          );
-          when(() => mockRepository.syncStatus).thenAnswer(
-            (_) => Stream.value(SyncStatus.idle),
-          );
+          when(
+            () => mockRepository.watchAll(),
+          ).thenAnswer((_) => Stream.value([testFlashcardSet]));
+          when(
+            () => mockRepository.syncStatus,
+          ).thenAnswer((_) => Stream.value(SyncStatus.idle));
 
           return FlashcardBloc(repository: mockRepository);
         },
         seed: () => FlashcardLoaded(sets: [testFlashcardSet]),
         act: (bloc) => bloc.add(const FlashcardSearchRequested('Test')),
-        expect: () => [
-          isA<FlashcardLoaded>()
-              .having((state) => state.searchQuery, 'searchQuery', equals('Test'))
-              .having((state) => state.filteredSets, 'filteredSets', hasLength(1))
-              .having((state) => state.isSearchActive, 'isSearchActive', isTrue),
-        ],
+        expect:
+            () => [
+              isA<FlashcardLoaded>()
+                  .having(
+                    (state) => state.searchQuery,
+                    'searchQuery',
+                    equals('Test'),
+                  )
+                  .having(
+                    (state) => state.filteredSets,
+                    'filteredSets',
+                    hasLength(1),
+                  )
+                  .having(
+                    (state) => state.isSearchActive,
+                    'isSearchActive',
+                    isTrue,
+                  ),
+            ],
       );
     });
 
@@ -292,7 +327,7 @@ void main() {
       test('should not interfere with existing Provider system', () {
         // This test ensures that adding BLoC doesn't break existing functionality
         // In a real scenario, you'd test actual Provider usage here
-        
+
         // For now, just verify that the service locator doesn't interfere
         expect(() => setupServiceLocator(), returnsNormally);
       });
