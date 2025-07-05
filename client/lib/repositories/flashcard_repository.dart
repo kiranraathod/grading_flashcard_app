@@ -24,7 +24,8 @@ import 'base_repository.dart';
 class FlashcardRepository extends BaseRepositoryImpl<FlashcardSet>
     implements SyncableRepository<FlashcardSet> {
   // Dependencies (wrapped existing services)
-  // Note: _storageService kept for future direct usage in Phase 2+
+  // Note: _storageService kept for compatibility during migration
+  // ignore: unused_field
   final StorageService _storageService;
   final SupabaseService _supabaseService;
   final ConnectivityService _connectivityService;
@@ -75,17 +76,6 @@ class FlashcardRepository extends BaseRepositoryImpl<FlashcardSet>
       debugPrint('❌ Failed to initialize FlashcardRepository: $error');
       // Continue with empty state rather than failing
       _setsController.add([]);
-    }
-  }
-
-  /// Handle connectivity changes (simplified for Phase 1)
-  void _onConnectivityChanged() {
-    // For Phase 1: Basic connectivity handling
-    // In later phases, we'll implement full status-based sync
-    if (_connectivityService.isOnline &&
-        _currentSyncStatus != SyncStatus.syncing) {
-      // Auto-sync when coming back online
-      unawaited(_syncFromCloud());
     }
   }
 

@@ -21,10 +21,13 @@ import '../services/authentication_service.dart';
 
 // Repositories (new)
 import '../repositories/flashcard_repository.dart';
+import '../repositories/sync_repository.dart';
 
 // BLoCs (new)
 import '../blocs/flashcard/flashcard_bloc.dart';
 import '../blocs/auth/auth_bloc.dart';
+import '../blocs/sync/sync_bloc.dart';
+import '../blocs/network/network_bloc.dart';
 
 /// Global service locator instance
 final GetIt sl = GetIt.instance;
@@ -109,6 +112,16 @@ Future<void> _registerRepositories() async {
     );
   }
 
+  // SyncRepository - manages coordinated sync operations (Phase 4)
+  if (!sl.isRegistered<SyncRepository>()) {
+    sl.registerLazySingleton<SyncRepository>(
+      () => SyncRepository(
+        connectivityService: sl<ConnectivityService>(),
+        flashcardRepository: sl<FlashcardRepository>(),
+      ),
+    );
+  }
+
   debugPrint('✅ Repositories registered');
 }
 
@@ -132,6 +145,26 @@ Future<void> _registerBlocs() async {
   if (!sl.isRegistered<AuthBloc>()) {
     sl.registerLazySingleton<AuthBloc>(
       () => AuthBloc(authService: sl<AuthenticationService>()),
+    );
+  }
+
+  // NetworkBloc - unified network state management (Phase 4)
+  // Using singleton since network state should be shared
+  if (!sl.isRegistered<NetworkBloc>()) {
+    sl.registerLazySingleton<NetworkBloc>(
+      () => NetworkBloc(connectivityService: sl<ConnectivityService>()),
+    );
+  }
+
+  // SyncBloc - coordinated sync operations (Phase 4)
+  // Using singleton since sync operations should be centralized
+  if (!sl.isRegistered<SyncBloc>()) {
+    sl.registerLazySingleton<SyncBloc>(
+      () => SyncBloc(
+        syncRepository: sl<SyncRepository>(),
+        flashcardBloc: sl<FlashcardBloc>(),
+        networkBloc: sl<NetworkBloc>(),
+      ),
     );
   }
 
@@ -165,9 +198,9 @@ bool areCoreDependenciesRegistered() {
     AuthenticationService,
   ];
 
-  final requiredRepositories = [FlashcardRepository];
+  final requiredRepositories = [FlashcardRepository, SyncRepository];
 
-  final requiredBlocs = [FlashcardBloc, AuthBloc];
+  final requiredBlocs = [FlashcardBloc, AuthBloc, NetworkBloc, SyncBloc];
 
   for (final service in requiredServices) {
     if (!sl.isRegistered(instance: service)) {
@@ -216,7 +249,12 @@ void logRegistrations() {
     '  Repositories: ${sl.isRegistered<FlashcardRepository>() ? '✅' : '❌'} FlashcardRepository',
   );
   debugPrint(
+    '  Repositories: ${sl.isRegistered<SyncRepository>() ? '✅' : '❌'} SyncRepository',
+  );
+  debugPrint(
     '  BLoCs: ${sl.isRegistered<FlashcardBloc>() ? '✅' : '❌'} FlashcardBloc',
   );
   debugPrint('  BLoCs: ${sl.isRegistered<AuthBloc>() ? '✅' : '❌'} AuthBloc');
+  debugPrint('  BLoCs: ${sl.isRegistered<NetworkBloc>() ? '✅' : '❌'} NetworkBloc');
+  debugPrint('  BLoCs: ${sl.isRegistered<SyncBloc>() ? '✅' : '❌'} SyncBloc');
 }

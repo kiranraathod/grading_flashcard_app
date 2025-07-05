@@ -1,0 +1,31 @@
+// Simple replacement patterns for remaining RepositoryException issues
+
+// Replace throw RepositoryException('Full sync failed: $error'); with proper format
+throw RepositoryException(
+  message: 'Full sync failed: $error',
+  operation: 'performFullSync',
+);
+
+// Replace throw RepositoryException('Incremental sync failed: $error'); with proper format  
+throw RepositoryException(
+  message: 'Incremental sync failed: $error', 
+  operation: 'performIncrementalSync',
+);
+
+// Replace throw RepositoryException('Set sync failed: $error'); with proper format
+throw RepositoryException(
+  message: 'Set sync failed: $error',
+  operation: 'syncFlashcardSet', 
+);
+
+// Replace throw RepositoryException('Queue processing failed: $error'); with proper format
+throw RepositoryException(
+  message: 'Queue processing failed: $error',
+  operation: 'processPendingQueue',
+);
+
+// Replace throw RepositoryException('Failed to get cloud data: $error'); with proper format
+throw RepositoryException(
+  message: 'Failed to get cloud data: $error',
+  operation: '_getCloudFlashcardSets',
+);

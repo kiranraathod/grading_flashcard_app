@@ -7,6 +7,8 @@
 /// - Error handling and operation safety
 library;
 
+import 'package:flutter/foundation.dart';
+
 /// Status of sync operations
 enum SyncStatus { idle, syncing, synced, error, offline }
 
@@ -148,6 +150,6 @@ abstract class BaseRepositoryImpl<T> implements BaseRepository<T> {
 
   /// Log repository operations for debugging
   void logOperation(String operation, {Map<String, dynamic>? metadata}) {
-    print('📦 Repository Operation: $operation ${metadata ?? ''}');
+    debugPrint('📦 Repository Operation: $operation ${metadata ?? ''}');
   }
 }
