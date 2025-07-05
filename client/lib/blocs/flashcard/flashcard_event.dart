@@ -205,3 +205,18 @@ class FlashcardDataUpdated extends FlashcardEvent {
   @override
   String toString() => 'FlashcardDataUpdated(${sets.length} sets)';
 }
+
+/// Internal event for repository errors
+///
+/// Used internally by FlashcardBloc when repository encounters errors.
+class FlashcardRepositoryErrorOccurred extends FlashcardEvent {
+  final dynamic error;
+
+  const FlashcardRepositoryErrorOccurred({required this.error});
+
+  @override
+  List<Object?> get props => [error];
+
+  @override
+  String toString() => 'FlashcardRepositoryErrorOccurred($error)';
+}

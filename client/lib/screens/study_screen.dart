@@ -17,6 +17,7 @@ import '../models/simple_auth_state.dart';
 import '../services/api_service.dart';
 import '../services/flashcard_service.dart';
 import '../services/unified_action_middleware.dart';
+import '../core/service_locator.dart';
 import '../utils/theme_utils.dart';
 import '../utils/design_system.dart';
 import '../utils/app_localizations_extension.dart';
@@ -42,14 +43,28 @@ class StudyScreen extends riverpod.ConsumerWidget {
     // 🆕 Use Consumer to get Riverpod ref for action tracking
     return riverpod.Consumer(
       builder: (context, ref, child) {
-        // Create the study bloc with Riverpod ref for action tracking
-        final studyBloc = StudyBloc(
-          apiService: ApiService(), // 🎯 Simple API service - quota handled by middleware in UI
-          flashcardService: flashcardService,
-          ref: ref, // 🆕 Pass Riverpod ref for action tracking
-        )..add(StudyStarted(flashcardSet: set));
-        
-        // No longer create a new RecentViewBloc here as we're using the global one
+        // 🔧 PHASE 3: Create the study bloc with proper service locator integration
+        StudyBloc studyBloc;
+        try {
+          studyBloc = StudyBloc(
+            apiService: sl<ApiService>(), // Use service locator for consistency
+            flashcardService: flashcardService,
+            ref: ref, // 🆕 Pass Riverpod ref for action tracking
+          );
+          
+          // Initialize the study session
+          studyBloc.add(StudyStarted(flashcardSet: set));
+          
+          debugPrint('✅ StudyScreen: StudyBloc created and initialized successfully');
+        } catch (error) {
+          debugPrint('❌ StudyScreen: Failed to create StudyBloc: $error');
+          // Fallback: try creating without service locator
+          studyBloc = StudyBloc(
+            apiService: ApiService(),
+            flashcardService: flashcardService,
+            ref: ref,
+          )..add(StudyStarted(flashcardSet: set));
+        }
         
         return BlocProvider<StudyBloc>.value(
           value: studyBloc,

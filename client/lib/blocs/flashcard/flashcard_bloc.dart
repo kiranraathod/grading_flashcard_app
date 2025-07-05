@@ -57,6 +57,7 @@ class FlashcardBloc extends Bloc<FlashcardEvent, FlashcardState> {
     on<FlashcardClearRequested>(_onClearRequested);
     on<FlashcardSyncStatusUpdated>(_onSyncStatusUpdated);
     on<FlashcardDataUpdated>(_onDataUpdated);
+    on<FlashcardRepositoryErrorOccurred>(_onRepositoryErrorOccurred);
 
     // Set up repository listeners
     _setupRepositoryListeners();
@@ -519,6 +520,25 @@ class FlashcardBloc extends Bloc<FlashcardEvent, FlashcardState> {
     }
   }
 
+  /// Handle repository errors
+  void _onRepositoryErrorOccurred(
+    FlashcardRepositoryErrorOccurred event,
+    Emitter<FlashcardState> emit,
+  ) {
+    if (state is FlashcardLoaded) {
+      final currentState = state as FlashcardLoaded;
+      emit(currentState.copyWith(syncStatus: SyncStatus.error));
+    } else {
+      emit(
+        FlashcardError(
+          message: 'Repository error: ${_getErrorMessage(event.error)}',
+          operation: 'repository_listener',
+          error: event.error,
+        ),
+      );
+    }
+  }
+
   // ============================================================================
   // Helper Methods
   // ============================================================================
@@ -543,18 +563,8 @@ class FlashcardBloc extends Bloc<FlashcardEvent, FlashcardState> {
 
   /// Handle repository errors
   void _handleRepositoryError(dynamic error) {
-    if (state is FlashcardLoaded) {
-      final currentState = state as FlashcardLoaded;
-      emit(currentState.copyWith(syncStatus: SyncStatus.error));
-    } else {
-      emit(
-        FlashcardError(
-          message: 'Repository error: ${_getErrorMessage(error)}',
-          operation: 'repository_listener',
-          error: error,
-        ),
-      );
-    }
+    // Use add() instead of emit() when outside event handlers
+    add(FlashcardRepositoryErrorOccurred(error: error));
   }
 
   /// Extract user-friendly error message

@@ -17,8 +17,7 @@ import 'study_state.dart';
 
 class StudyBloc extends Bloc<StudyEvent, StudyState> {
   final ApiService _apiService;
-  // ignore: unused_field
-  final FlashcardService _flashcardService; // Kept for future direct operations
+  final FlashcardService _flashcardService;
   final ErrorService _errorService = ErrorService();
   final WidgetRef _ref; // 🆕 Add Riverpod ref for action tracking
 
@@ -29,18 +28,6 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
   /// coordination for single source of truth.
   late final FlashcardBloc _flashcardBloc;
 
-  /// Lazy getter for FlashcardBloc with service locator integration
-  FlashcardBloc get flashcardBloc {
-    try {
-      return _flashcardBloc;
-    } catch (_) {
-      // Initialize from service locator if not already done
-      _flashcardBloc = sl<FlashcardBloc>();
-      debugPrint('✅ StudyBloc: FlashcardBloc initialized from service locator');
-      return _flashcardBloc;
-    }
-  }
-
   StudyBloc({
     required ApiService apiService,
     required FlashcardService flashcardService,
@@ -49,6 +36,16 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
        _flashcardService = flashcardService,
        _ref = ref,
        super(const StudyState()) {
+    
+    // 🔧 PHASE 3 FIX: Initialize FlashcardBloc from service locator
+    try {
+      _flashcardBloc = sl<FlashcardBloc>();
+      debugPrint('✅ StudyBloc: FlashcardBloc initialized from service locator');
+    } catch (error) {
+      debugPrint('❌ StudyBloc: Failed to initialize FlashcardBloc: $error');
+      rethrow;
+    }
+    
     on<StudyStarted>(_onStudyStarted);
     on<FlashcardAnswered>(_onFlashcardAnswered);
     on<NextFlashcardRequested>(_onNextFlashcardRequested);
@@ -247,7 +244,7 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
             debugPrint(
               '🔄 StudyBloc: Coordinating progress update with FlashcardBloc...',
             );
-            flashcardBloc.add(
+            _flashcardBloc.add(
               flashcard_events.FlashcardProgressUpdated(
                 setId: state.flashcardSet!.id,
                 cardId: event.flashcard.id,
@@ -539,7 +536,7 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
       debugPrint(
         '🔄 StudyBloc: Coordinating review status update with FlashcardBloc...',
       );
-      flashcardBloc.add(
+      _flashcardBloc.add(
         flashcard_events.FlashcardMarkedForReview(
           setId: state.flashcardSet!.id,
           cardId: event.flashcard.id,
@@ -554,5 +551,11 @@ class StudyBloc extends Bloc<StudyEvent, StudyState> {
     } else {
       debugPrint('❌ Card not found in set for review marking');
     }
+  }
+
+  @override
+  Future<void> close() {
+    debugPrint('🔄 StudyBloc: Disposing resources');
+    return super.close();
   }
 }

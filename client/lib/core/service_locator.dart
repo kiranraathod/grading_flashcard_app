@@ -135,6 +135,9 @@ Future<void> _registerBlocs() async {
     );
   }
 
+  // Note: StudyBloc requires WidgetRef which can't be provided at registration time
+  // StudyBloc is created directly in StudyScreen with required dependencies
+
   debugPrint('✅ BLoCs registered');
 }
 
