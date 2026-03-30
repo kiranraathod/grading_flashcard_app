@@ -18,6 +18,9 @@ import '../services/supabase_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/api_service.dart';
 import '../services/authentication_service.dart';
+import '../services/flashcard_service.dart';
+import '../services/interview_service.dart';
+import '../services/recent_view_service.dart';
 
 // Repositories (new)
 import '../repositories/flashcard_repository.dart';
@@ -28,6 +31,8 @@ import '../blocs/flashcard/flashcard_bloc.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../blocs/sync/sync_bloc.dart';
 import '../blocs/network/network_bloc.dart';
+import '../blocs/search/search_bloc.dart';
+import '../blocs/recent_view/recent_view_bloc.dart';
 
 /// Global service locator instance
 final GetIt sl = GetIt.instance;
@@ -88,6 +93,27 @@ Future<void> _registerServices() async {
   if (!sl.isRegistered<AuthenticationService>()) {
     sl.registerLazySingleton<AuthenticationService>(
       () => AuthenticationService.instance,
+    );
+  }
+
+  // FlashcardService - for search and UI functionality
+  if (!sl.isRegistered<FlashcardService>()) {
+    sl.registerLazySingleton<FlashcardService>(
+      () => FlashcardService(),
+    );
+  }
+
+  // InterviewService - for search and interview functionality
+  if (!sl.isRegistered<InterviewService>()) {
+    sl.registerLazySingleton<InterviewService>(
+      () => InterviewService(),
+    );
+  }
+
+  // RecentViewService - for recent view tracking
+  if (!sl.isRegistered<RecentViewService>()) {
+    sl.registerLazySingleton<RecentViewService>(
+      () => RecentViewService(),
     );
   }
 
@@ -168,6 +194,27 @@ Future<void> _registerBlocs() async {
     );
   }
 
+  // SearchBloc - search functionality (Phase 5)
+  // Using factory since search can be instance-specific
+  if (!sl.isRegistered<SearchBloc>()) {
+    sl.registerFactory<SearchBloc>(
+      () => SearchBloc(
+        flashcardService: sl<FlashcardService>(),
+        interviewService: sl<InterviewService>(),
+      ),
+    );
+  }
+
+  // RecentViewBloc - recent view tracking (Phase 5)
+  // Using singleton since recent view state should be shared
+  if (!sl.isRegistered<RecentViewBloc>()) {
+    sl.registerLazySingleton<RecentViewBloc>(
+      () => RecentViewBloc(
+        recentViewService: sl<RecentViewService>(),
+      ),
+    );
+  }
+
   // Note: StudyBloc requires WidgetRef which can't be provided at registration time
   // StudyBloc is created directly in StudyScreen with required dependencies
 
@@ -196,11 +243,14 @@ bool areCoreDependenciesRegistered() {
     ConnectivityService,
     ApiService,
     AuthenticationService,
+    FlashcardService,
+    InterviewService,
+    RecentViewService,
   ];
 
   final requiredRepositories = [FlashcardRepository, SyncRepository];
 
-  final requiredBlocs = [FlashcardBloc, AuthBloc, NetworkBloc, SyncBloc];
+  final requiredBlocs = [FlashcardBloc, AuthBloc, NetworkBloc, SyncBloc, SearchBloc, RecentViewBloc];
 
   for (final service in requiredServices) {
     if (!sl.isRegistered(instance: service)) {
@@ -257,4 +307,6 @@ void logRegistrations() {
   debugPrint('  BLoCs: ${sl.isRegistered<AuthBloc>() ? '✅' : '❌'} AuthBloc');
   debugPrint('  BLoCs: ${sl.isRegistered<NetworkBloc>() ? '✅' : '❌'} NetworkBloc');
   debugPrint('  BLoCs: ${sl.isRegistered<SyncBloc>() ? '✅' : '❌'} SyncBloc');
+  debugPrint('  BLoCs: ${sl.isRegistered<SearchBloc>() ? '✅' : '❌'} SearchBloc');
+  debugPrint('  BLoCs: ${sl.isRegistered<RecentViewBloc>() ? '✅' : '❌'} RecentViewBloc');
 }
