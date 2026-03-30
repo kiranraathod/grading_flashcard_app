@@ -5,7 +5,7 @@
 **Flutter Flashcard App with LLM Integration**
 This project provides a Flutter flashcard application with a custom Python REST API backend that leverages large language models (LLMs) for grading and suggestions.
 
-![[flash_master.gif]]
+![flash_master](flash_master.gif)
 
 **Features**
 - **Flashcard Interface**: Interactive flashcards with flip animation
